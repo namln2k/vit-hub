@@ -2,9 +2,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { ImagePlus, UserPlus, X } from 'lucide-react';
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { useAuth } from '@/contexts/useAuth';
+import PasswordInput from '@/components/input/PasswordInput';
+import { validateAvatarFile } from '@/api/avatarUpload';
 
 const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),
@@ -25,6 +27,9 @@ export default function RegisterPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [avatarError, setAvatarError] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | undefined>();
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
   const {
@@ -34,6 +39,44 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setAvatarPreviewUrl('');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(avatarFile);
+    setAvatarPreviewUrl(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [avatarFile]);
+
+  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    setAvatarError('');
+
+    if (!file) {
+      setAvatarFile(undefined);
+      return;
+    }
+
+    const validationError = validateAvatarFile(file);
+
+    if (validationError) {
+      setAvatarFile(undefined);
+      setAvatarError(validationError);
+      event.target.value = '';
+      return;
+    }
+
+    setAvatarFile(file);
+  }
+
+  function removeAvatar() {
+    setAvatarFile(undefined);
+    setAvatarError('');
+  }
 
   async function onSubmit(data: RegisterFormData) {
     try {
@@ -46,6 +89,7 @@ export default function RegisterPage() {
         lastName: data.lastName,
         middleName: data.middleName ?? '',
         username: data.username,
+        avatarFile,
       });
       navigate('/dashboard');
     } catch (err) {
@@ -72,6 +116,50 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Ảnh đại diện <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
+            </label>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                {avatarPreviewUrl ? (
+                  <img
+                    src={avatarPreviewUrl}
+                    alt="Ảnh đại diện đã chọn"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <ImagePlus className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+                    Chọn ảnh
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleAvatarChange}
+                      className="sr-only"
+                    />
+                  </label>
+                  {avatarFile && (
+                    <button
+                      type="button"
+                      onClick={removeAvatar}
+                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-200 cursor-pointer"
+                      title="Xoá ảnh đã chọn"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">JPG, PNG hoặc WebP, tối đa 1 MB.</p>
+              </div>
+            </div>
+            {avatarError && <p className="text-red-500 text-xs mt-1">{avatarError}</p>}
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Họ</label>
@@ -130,10 +218,9 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
-            <input
-              type="password"
+            <PasswordInput
               {...register('password')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
               placeholder="Ít nhất 8 ký tự"
             />
             {errors.password && (

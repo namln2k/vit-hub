@@ -1,6 +1,7 @@
-import { LogOut, User } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { LogOut } from 'lucide-react';
+import { useAuth } from '@/contexts/useAuth';
 import { useNavigate } from 'react-router-dom';
+import defaultAvatar from '@/assets/default-avatar.png';
 
 export default function Header() {
   const { userProfile, signOut } = useAuth();
@@ -15,13 +16,21 @@ export default function Header() {
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold text-indigo-600">VIT Hub</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-xl font-bold text-indigo-600 cursor-pointer"
+          >
+            VIT Hub
+          </button>
 
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-gray-700">
-              <User className="w-4 h-4" />
+              <img
+                src={userProfile?.avatarUrl || defaultAvatar}
+                alt=""
+                className="w-8 h-8 rounded-full object-cover border border-gray-200"
+              />
               <span className="text-sm font-medium">
                 {userProfile
                   ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()

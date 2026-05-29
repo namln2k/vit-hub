@@ -1,73 +1,84 @@
-# React + TypeScript + Vite
+# VIT Hub
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+VIT Hub is a React web application for VIT Volunteers management.
 
-Currently, two official plugins are available:
+## Project Highlights
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Email/password authentication with Firebase Authentication
+- User profile data stored in Cloud Firestore
+- Optional avatar uploads through Cloudflare R2
+- React 19, Vite, TypeScript, and Tailwind CSS
 
-## React Compiler
+## Requirements
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js `20.19.0+` or `22.12.0+`
+- npm `10+`
+- A Firebase project with Authentication and Firestore enabled
+- Optional Cloudflare R2 bucket for avatar uploads
+- A modern browser such as Chrome, Edge, Firefox, or Safari
 
-## Expanding the ESLint configuration
+## Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Install dependencies:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+   ```bash
+   npm install
+   ```
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+2. Create a local environment file:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Set up Firebase. This is required for authentication and user profiles.
+
+   Follow the [Firebase setup guide](docs/firebase-setup.md), then copy the Firebase Web App config values into `.env`.
+
+4. Set up Cloudflare R2 if avatar uploads are enabled.
+
+   Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then add the server-only R2 values wherever `/api/avatars/presign` runs. Do not expose R2 secrets with the `VITE_` prefix.
+
+5. Start the development server:
+
+   ```bash
+   npm run dev
+   ```
+
+   Open the local URL printed by Vite, usually:
+
+   ```text
+   http://localhost:5173
+   ```
+
+   For Vercel-style local development with the avatar API route:
+
+   ```bash
+   vercel dev
+   ```
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+npm run format
+npm run format:check
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Documentation
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
+- [Firebase setup guide](docs/firebase-setup.md)
+- [Cloudflare setup guide](docs/cloudflare-setup.md)
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-]);
+## Deployment
+
+Create a production build:
+
+```bash
+npm run build
 ```
+
+The generated files are placed in `dist`. Deploy `dist` to a static hosting provider that supports single-page applications, such as Firebase Hosting, Vercel, Netlify, or Cloudflare Pages.

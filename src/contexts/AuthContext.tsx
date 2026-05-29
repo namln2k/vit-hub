@@ -1,12 +1,18 @@
 import { auth, db } from '@/api/firebase';
+import { deleteAvatar, uploadAvatar } from '@/api/avatarUpload';
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  updatePassword,
   type User,
 } from 'firebase/auth';
+import { AuthContext, type AuthContextType, type SignUpData, type UserProfile } from './auth';
 import {
   collection,
   doc,
@@ -15,49 +21,11 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-
-interface UserProfile {
-  uid: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
-  username: string;
-  role: string;
-  status: string;
-}
-
-interface SignUpData {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
-  username: string;
-}
-
-interface AuthContextType {
-  currentUser: User | null;
-  userProfile: UserProfile | null;
-  loading: boolean;
-  signUp: (data: SignUpData) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
+import { useEffect, useState, type ReactNode } from 'react';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -101,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (error instanceof FirebaseError && error.code === 'permission-denied') {
         throw new Error(
-          'Firestore chưa cho phép đọc collection users. Hãy cập nhật Firestore Rules rồi thử lại.'
+          'Firestore chưa cho phép đọc collection users. Hãy cập nhật Firestore Rules rồi thử lại.',
         );
       }
       throw error;
@@ -110,6 +78,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const credential = await createUserWithEmailAndPassword(auth, data.email, data.password);
 
     try {
+      const avatar = data.avatarFile ? await uploadAvatar(data.avatarFile, credential.user) : null;
+
       await setDoc(doc(db, 'users', credential.user.uid), {
         uid: credential.user.uid,
         email: data.email,
@@ -117,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         lastName: data.lastName,
         middleName: data.middleName,
         username: data.username,
+        avatarUrl: avatar?.avatarUrl ?? '',
+        avatarKey: avatar?.avatarKey ?? '',
         role: 'member',
         status: 'pending',
         createdAt: serverTimestamp(),
@@ -126,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error instanceof FirebaseError && error.code === 'permission-denied') {
         throw new Error(
-          'Firestore chưa cho phép tạo hồ sơ user. Hãy cập nhật Firestore Rules rồi đăng ký lại.'
+          'Firestore chưa cho phép tạo hồ sơ user. Hãy cập nhật Firestore Rules rồi đăng ký lại.',
         );
       }
       throw error;
@@ -141,6 +113,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   }
 
+  async function resetPassword(email: string) {
+    await sendPasswordResetEmail(auth, email);
+  }
+
+  async function updateUserPassword(currentPassword: string, newPassword: string) {
+    if (!auth.currentUser?.email) {
+      throw new Error('Bạn cần đăng nhập lại trước khi đổi mật khẩu.');
+    }
+
+    const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+    await reauthenticateWithCredential(auth.currentUser, credential);
+    await updatePassword(auth.currentUser, newPassword);
+  }
+
+  async function updateUserAvatar(avatarFile: File) {
+    if (!currentUser || !userProfile) {
+      throw new Error('Bạn cần đăng nhập trước khi cập nhật ảnh đại diện.');
+    }
+
+    const previousAvatarKey = userProfile.avatarKey;
+    const avatar = await uploadAvatar(avatarFile, currentUser);
+
+    await updateDoc(doc(db, 'users', currentUser.uid), {
+      avatarUrl: avatar.avatarUrl,
+      avatarKey: avatar.avatarKey,
+    });
+
+    setUserProfile({
+      ...userProfile,
+      avatarUrl: avatar.avatarUrl,
+      avatarKey: avatar.avatarKey,
+    });
+
+    if (previousAvatarKey) {
+      try {
+        await deleteAvatar(previousAvatarKey, currentUser);
+      } catch {
+        // The profile already points at the new avatar; stale object cleanup can be retried manually.
+      }
+    }
+  }
+
   const value: AuthContextType = {
     currentUser,
     userProfile,
@@ -148,6 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signUp,
     signIn,
     signOut,
+    resetPassword,
+    updateUserPassword,
+    updateUserAvatar,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
