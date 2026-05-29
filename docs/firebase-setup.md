@@ -63,7 +63,7 @@ service cloud.firestore {
 }
 ```
 
-Review and harden these rules before production. In particular, restrict which fields users can write if profile roles or statuses are managed by admins.
+Review and harden these rules before production. In particular, restrict which fields users can write if profile roles are managed by admins.
 
 ## Common Issues
 

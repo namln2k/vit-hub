@@ -185,6 +185,23 @@ function getExtension(contentType) {
   return 'webp';
 }
 
+function getPublicBaseUrl() {
+  const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, '');
+  const url = new URL(publicBaseUrl);
+
+  if (url.hostname.endsWith('.r2.cloudflarestorage.com')) {
+    throw new Error(
+      'R2_PUBLIC_BASE_URL must be a public R2 custom domain or r2.dev URL, not the private r2.cloudflarestorage.com API endpoint.',
+    );
+  }
+
+  if (url.pathname !== '/') {
+    throw new Error('R2_PUBLIC_BASE_URL must be an origin without an object path.');
+  }
+
+  return url.origin;
+}
+
 export default async function handler(request, response) {
   if (request.method !== 'POST' && request.method !== 'DELETE') {
     json(response, 405, { error: 'Method not allowed.' });
@@ -274,7 +291,7 @@ export default async function handler(request, response) {
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
       key: avatarKey,
     });
-    const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, '');
+    const publicBaseUrl = getPublicBaseUrl();
 
     json(response, 200, {
       uploadUrl,

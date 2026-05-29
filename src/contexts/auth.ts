@@ -11,7 +11,6 @@ export interface UserProfile {
   avatarUrl?: string;
   avatarKey?: string;
   role: string;
-  status: string;
 }
 
 export interface SignUpData {

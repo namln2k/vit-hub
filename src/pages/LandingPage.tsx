@@ -1,3 +1,4 @@
+import defaultAvatar from '@/assets/default-avatar.png';
 import volunteerHero from '@/assets/hero.png';
 import { useAuth } from '@/contexts/useAuth';
 import {
@@ -8,7 +9,6 @@ import {
   Laptop,
   LogIn,
   MapPin,
-  User,
   UsersRound,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -43,7 +43,6 @@ export default function LandingPage() {
     ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()
     : '';
   const avatarLabel = fullName || userProfile?.username || currentUser?.email || 'Dashboard';
-  const avatarInitial = avatarLabel.charAt(0).toUpperCase();
 
   return (
     <div className="min-h-screen bg-white text-slate-950">
@@ -56,11 +55,16 @@ export default function LandingPage() {
             {currentUser ? (
               <Link
                 to="/dashboard"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50"
+                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50"
                 title={avatarLabel}
                 aria-label="Mở dashboard"
               >
-                {avatarInitial ? avatarInitial : <User className="h-4 w-4" />}
+                <img
+                  src={userProfile?.avatarUrl || defaultAvatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </Link>
             ) : (
               <Link

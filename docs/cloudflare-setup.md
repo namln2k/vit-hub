@@ -5,7 +5,7 @@ VIT Hub can store optional user avatars in Cloudflare R2. The browser asks `/api
 ## Create The R2 Bucket
 
 1. Open Cloudflare Dashboard.
-2. Go to `R2 Object Storage`.
+2. Go to `Storage & databases` -> `R2 Object Storage` -> `Overview`.
 3. Create a bucket named `vit-hub-avatars`.
 4. Choose Standard storage. Do not choose Infrequent Access for avatars.
 5. Enable public access using either a custom domain for production or the bucket's public `r2.dev` domain for quick testing.
@@ -36,7 +36,7 @@ Prefer a custom domain for production if your domain is already on Cloudflare. C
 Create an R2 API token with access scoped only to the avatar bucket.
 
 1. In Cloudflare Dashboard, go to `R2 Object Storage`.
-2. Open `Manage R2 API Tokens` or `S3 API Tokens`.
+2. Open `Manage API Tokens`.
 3. Create an API token.
 4. Scope it to `vit-hub-avatars` only.
 5. Give it object read/write permission. The app needs write permission for uploads and delete permission for replacing old avatars.
@@ -65,6 +65,12 @@ R2_ACCOUNT_ID=your-cloudflare-account-id
 
 Add a CORS rule that allows your app origin to upload directly to R2:
 
+1. In Cloudflare Dashboard, go to `Storage & databases` -> `R2 Object Storage` -> `Overview`.
+2. Open the `vit-hub-avatars` bucket.
+3. Open the bucket `Settings` tab.
+4. Find `CORS policy` and choose `Add CORS policy` or `Edit CORS policy`.
+5. Paste this JSON and save:
+
 ```json
 [
   {
@@ -83,10 +89,10 @@ For local testing, keep `http://localhost:5173`. For Vercel preview deployments,
 
 ## Local End-To-End Test
 
-The Vite dev server alone does not serve `api/avatars/presign.js`. Use Vercel's local dev server when you want to test avatar uploads locally:
+The Vite dev server serves `api/avatars/presign.js` through a local dev middleware, so avatar uploads can be tested with the normal app server:
 
 ```bash
-vercel dev
+npm run dev
 ```
 
 Then:
@@ -98,6 +104,23 @@ Then:
 5. Visit the `avatarUrl` in a browser and confirm the image loads.
 
 If upload fails with CORS, check the R2 bucket CORS rule first. If upload fails with an auth or missing environment error, check the server-only environment variables.
+
+If the saved avatar URL returns this XML in a browser:
+
+```xml
+<Error>
+  <Code>InvalidArgument</Code>
+  <Message>Authorization</Message>
+</Error>
+```
+
+then `R2_PUBLIC_BASE_URL` is pointing at the private S3-compatible API endpoint. Do not use:
+
+```env
+R2_PUBLIC_BASE_URL=https://your-account-id.r2.cloudflarestorage.com
+```
+
+Use the bucket's public `r2.dev` URL or a custom public domain instead. `R2_PUBLIC_BASE_URL` must be only the public origin, without `/avatars/...` or any other object path.
 
 ## Environment Variables
 

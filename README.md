@@ -51,12 +51,6 @@ VIT Hub is a React web application for VIT Volunteers management.
    http://localhost:5173
    ```
 
-   For Vercel-style local development with the avatar API route:
-
-   ```bash
-   vercel dev
-   ```
-
 ## Scripts
 
 ```bash

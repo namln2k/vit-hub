@@ -90,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         avatarUrl: avatar?.avatarUrl ?? '',
         avatarKey: avatar?.avatarKey ?? '',
         role: 'member',
-        status: 'pending',
         createdAt: serverTimestamp(),
       });
     } catch (error) {
