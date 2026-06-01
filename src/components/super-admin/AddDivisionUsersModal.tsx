@@ -1,0 +1,254 @@
+import { addProfilesToDivision } from '@/api/divisions';
+import { searchProfiles } from '@/api/profiles';
+import Avatar from '@/components/layout/Avatar';
+import type { UserProfile } from '@/contexts/auth';
+import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { getFullName, normalizeSearchValue } from './ProfileUtils';
+
+interface AddDivisionUsersModalProps {
+  divisionId: string;
+  divisionName: string;
+  existingUserIds: string[];
+  onClose: () => void;
+  onAdded: () => Promise<void>;
+}
+
+export default function AddDivisionUsersModal({
+  divisionId,
+  divisionName,
+  existingUserIds,
+  onClose,
+  onAdded,
+}: AddDivisionUsersModalProps) {
+  const [searchValue, setSearchValue] = useState('');
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserProfile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+
+  const queryText = normalizeSearchValue(searchValue);
+  const existingUserIdSet = useMemo(() => new Set(existingUserIds), [existingUserIds]);
+  const selectedUserIdSet = useMemo(
+    () => new Set(selectedUsers.map((user) => user.uid)),
+    [selectedUsers],
+  );
+  const availableUsers = useMemo(
+    () =>
+      users.filter((user) => !existingUserIdSet.has(user.uid) && !selectedUserIdSet.has(user.uid)),
+    [existingUserIdSet, selectedUserIdSet, users],
+  );
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isAdding) {
+        onClose();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isAdding, onClose]);
+
+  useEffect(() => {
+    if (queryText.length < 2) {
+      setUsers([]);
+      setSearchError('');
+      setIsSearching(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      setIsSearching(true);
+      setSearchError('');
+
+      try {
+        setUsers(await searchProfiles(queryText));
+      } catch {
+        setSearchError('Không thể tìm kiếm thành viên lúc này.');
+        setUsers([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [queryText]);
+
+  function selectUser(user: UserProfile) {
+    setSelectedUsers((currentUsers) => [...currentUsers, user]);
+    setSubmitError('');
+  }
+
+  function removeSelectedUser(userId: string) {
+    setSelectedUsers((currentUsers) => currentUsers.filter((user) => user.uid !== userId));
+    setSubmitError('');
+  }
+
+  async function handleSubmit() {
+    if (selectedUsers.length === 0) {
+      return;
+    }
+
+    setIsAdding(true);
+    setSubmitError('');
+
+    try {
+      await addProfilesToDivision(
+        divisionId,
+        selectedUsers.map((user) => user.uid),
+      );
+      await onAdded();
+      onClose();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      setSubmitError(message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.');
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-division-users-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isAdding) {
+          onClose();
+        }
+      }}
+    >
+      <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div className="min-w-0">
+            <h2 id="add-division-users-title" className="text-lg font-bold text-slate-950">
+              Thêm thành viên vào mảng
+            </h2>
+            <p className="mt-1 truncate text-sm font-medium text-slate-500">{divisionName}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isAdding}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Đóng"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              autoFocus
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Tìm theo username, email hoặc tên"
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-10 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-500"
+            />
+            {isSearching && (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+            )}
+          </label>
+
+          {selectedUsers.length > 0 && (
+            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+              <div className="mb-2 text-xs font-bold uppercase text-indigo-700">
+                Đã chọn {selectedUsers.length}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedUsers.map((user) => (
+                  <button
+                    key={user.uid}
+                    type="button"
+                    onClick={() => removeSelectedUser(user.uid)}
+                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-indigo-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100"
+                  >
+                    <Avatar src={user.avatarUrl} size="sm" />
+                    <span className="max-w-48 truncate">{getFullName(user)}</span>
+                    <X className="h-3.5 w-3.5 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+            {searchError ? (
+              <p className="px-4 py-6 text-center text-sm font-medium text-red-600">
+                {searchError}
+              </p>
+            ) : queryText.length < 2 ? (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Nhập ít nhất 2 ký tự để tìm thành viên.
+              </p>
+            ) : isSearching ? (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Đang tìm kiếm...
+              </p>
+            ) : availableUsers.length > 0 ? (
+              <div className="max-h-80 divide-y divide-slate-200 overflow-y-auto">
+                {availableUsers.map((user) => (
+                  <button
+                    key={user.uid}
+                    type="button"
+                    onClick={() => selectUser(user)}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Avatar src={user.avatarUrl} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-950">
+                          {getFullName(user)}
+                        </span>
+                        <span className="block truncate text-xs font-medium text-slate-500">
+                          @{user.username} · {user.email}
+                        </span>
+                      </span>
+                    </span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+                      <UserPlus className="h-4 w-4" />
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Không tìm thấy thành viên phù hợp hoặc tất cả đã thuộc mảng này.
+              </p>
+            )}
+          </div>
+
+          {submitError && <p className="mt-3 text-sm font-medium text-red-600">{submitError}</p>}
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isAdding}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={selectedUsers.length === 0 || isAdding}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            Thêm {selectedUsers.length > 0 ? selectedUsers.length : ''} thành viên
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -3,6 +3,7 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
+import SuperAdminPage from '@/pages/SuperAdminPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
 import AuthCallbackPage from '@/pages/AuthCallbackPage';
@@ -22,6 +23,14 @@ function App() {
         element={
           <ProtectedRoute>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/super-admin"
+        element={
+          <ProtectedRoute requiredRole="super_admin">
+            <SuperAdminPage />
           </ProtectedRoute>
         }
       />
