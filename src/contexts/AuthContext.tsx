@@ -30,7 +30,7 @@ function getAuthErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
 
   if (/invalid login credentials/i.test(message)) {
-    return 'Email hoặc mật khẩu không chính xác.';
+    return 'Email hoặc mật khẩu không chính xác. Nếu bạn đã đăng ký bằng Google, vui lòng đăng nhập bằng Google hoặc dùng Quên mật khẩu.';
   }
 
   if (/user already registered|already registered/i.test(message)) {
