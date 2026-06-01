@@ -4,11 +4,13 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   EmailAuthProvider,
+  GoogleAuthProvider,
   reauthenticateWithCredential,
   sendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
   updatePassword,
   type User,
 } from 'firebase/auth';
@@ -60,6 +62,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return !snapshot.empty;
   }
 
+  async function createUniqueUsername(email: string): Promise<string> {
+    const fallback = `user${Date.now().toString(36)}`;
+    const baseUsername =
+      email
+        .split('@')[0]
+        ?.toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 20) || fallback;
+
+    let username =
+      baseUsername.length >= 3 ? baseUsername : `${baseUsername}${fallback}`.slice(0, 20);
+    let suffix = 1;
+
+    while (await checkUsernameExists(username)) {
+      const suffixText = suffix.toString();
+      username = `${baseUsername.slice(0, 20 - suffixText.length)}${suffixText}`;
+      suffix += 1;
+    }
+
+    return username;
+  }
+
+  function getProfileName(displayName: string | null, email: string) {
+    const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
+
+    if (nameParts.length === 0) {
+      return {
+        firstName: email.split('@')[0] || 'User',
+        middleName: '',
+        lastName: '',
+      };
+    }
+
+    if (nameParts.length === 1) {
+      return {
+        firstName: nameParts[0],
+        middleName: '',
+        lastName: '',
+      };
+    }
+
+    return {
+      firstName: nameParts[nameParts.length - 1],
+      middleName: nameParts.slice(1, -1).join(' '),
+      lastName: nameParts[0],
+    };
+  }
+
+  async function ensureGoogleUserProfile(user: User): Promise<UserProfile> {
+    const profileRef = doc(db, 'users', user.uid);
+    const docSnap = await getDoc(profileRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
+    }
+
+    const email = user.email ?? '';
+    const username = await createUniqueUsername(email);
+    const profileName = getProfileName(user.displayName, email);
+    const profile: UserProfile = {
+      uid: user.uid,
+      email,
+      firstName: profileName.firstName,
+      lastName: profileName.lastName,
+      middleName: profileName.middleName,
+      username,
+      avatarUrl: user.photoURL ?? '',
+      avatarKey: '',
+      role: 'member',
+    };
+
+    await setDoc(profileRef, {
+      ...profile,
+      createdAt: serverTimestamp(),
+    });
+
+    return profile;
+  }
+
   async function signUp(data: SignUpData) {
     try {
       const usernameExists = await checkUsernameExists(data.username);
@@ -106,6 +189,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signIn(email: string, password: string) {
     await signInWithEmailAndPassword(auth, email, password);
+  }
+
+  async function signInWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    try {
+      const credential = await signInWithPopup(auth, provider);
+      const profile = await ensureGoogleUserProfile(credential.user);
+      setUserProfile(profile);
+    } catch (error) {
+      if (error instanceof FirebaseError && error.code === 'permission-denied') {
+        throw new Error(
+          'Firestore chưa cho phép tạo hồ sơ Google. Hãy cập nhật Firestore Rules rồi thử lại.',
+        );
+      }
+      throw error;
+    }
   }
 
   async function signOut() {
@@ -160,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     resetPassword,
     updateUserPassword,

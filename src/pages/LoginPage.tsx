@@ -6,6 +6,7 @@ import { LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/components/input/PasswordInput';
+import GoogleSignIn from '@/components/auth/GoogleSignIn';
 
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -15,7 +16,7 @@ const loginSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,19 @@ export default function LoginPage() {
       navigate('/dashboard');
     } catch {
       setError('Email hoặc mật khẩu không chính xác.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    try {
+      setError('');
+      setLoading(true);
+      await signInWithGoogle();
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể đăng nhập bằng Google.');
     } finally {
       setLoading(false);
     }
@@ -98,6 +112,16 @@ export default function LoginPage() {
             {loading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs font-medium text-gray-400">hoặc</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <div className="w-full text-center">
+          <GoogleSignIn handleGoogleSignIn={handleGoogleSignIn} loading={loading} />
+        </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Chưa có tài khoản?{' '}

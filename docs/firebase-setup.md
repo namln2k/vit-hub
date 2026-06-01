@@ -7,7 +7,7 @@ VIT Hub uses Firebase Authentication for email/password accounts and Cloud Fires
 1. Create a Firebase project at <https://console.firebase.google.com/>.
 2. Add a Web App to the Firebase project.
 3. Enable Firebase Authentication.
-4. Enable the Email/Password sign-in provider.
+4. Enable the Email/Password and Google sign-in providers.
 5. Create a Cloud Firestore database.
 6. Copy the Firebase Web App config values.
 
@@ -40,7 +40,7 @@ Restart the dev server after changing environment variables.
 
 ## Required Services
 
-- Authentication: email/password user accounts
+- Authentication: email/password user accounts and Google user accounts
 - Firestore: `users` collection for user profile documents
 
 ## Firestore Rules
@@ -85,6 +85,20 @@ Enable the provider in:
 
 ```text
 Authentication -> Sign-in method -> Email/Password
+```
+
+### Google login is not available
+
+Enable the provider in:
+
+```text
+Authentication -> Sign-in method -> Google
+```
+
+Also confirm that the current domain is listed under:
+
+```text
+Authentication -> Settings -> Authorized domains
 ```
 
 ### Reset password email is not sent
