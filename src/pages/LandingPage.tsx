@@ -56,44 +56,54 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-950">
       <header className="absolute inset-x-0 top-0 z-20">
-        <nav className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="text-lg font-bold text-white">
-            VIT Hub
-          </Link>
-          <div className="mx-auto w-full max-w-md">
-            <UserSearch variant="dark" />
+        <nav className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="grid min-h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+            <Link to="/" className="text-lg font-bold text-white">
+              VIT Hub
+            </Link>
+            <div className="mx-auto w-full max-w-md">
+              <UserSearch variant="dark" />
+            </div>
+            <div className="flex items-center gap-2">
+              {currentUser ? (
+                <AvatarMenu
+                  avatarSrc={userProfile?.avatarUrl}
+                  label={avatarLabel}
+                  avatarSize="md"
+                  avatarClassName="border-0"
+                  buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
+                  items={[
+                    {
+                      label: 'Hồ sơ cá nhân',
+                      icon: <UserRound className="h-4 w-4" />,
+                      to: '/dashboard',
+                    },
+                    {
+                      label: 'Đăng xuất',
+                      icon: <LogOut className="h-4 w-4" />,
+                      onClick: handleSignOut,
+                      danger: true,
+                    },
+                  ]}
+                />
+              ) : (
+                <Link
+                  to="/login"
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-50"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Đăng nhập
+                </Link>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            {currentUser ? (
-              <AvatarMenu
-                avatarSrc={userProfile?.avatarUrl}
-                label={avatarLabel}
-                avatarSize="md"
-                avatarClassName="border-0"
-                buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
-                items={[
-                  {
-                    label: 'Hồ sơ cá nhân',
-                    icon: <UserRound className="h-4 w-4" />,
-                    to: '/dashboard',
-                  },
-                  {
-                    label: 'Đăng xuất',
-                    icon: <LogOut className="h-4 w-4" />,
-                    onClick: handleSignOut,
-                    danger: true,
-                  },
-                ]}
-              />
-            ) : (
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-50"
-              >
-                <LogIn className="h-4 w-4" />
-                Đăng nhập
-              </Link>
-            )}
+          <div className="mt-3 flex items-center justify-center">
+            <Link
+              to="/divisions"
+              className="rounded-lg px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              Các mảng hoạt động
+            </Link>
           </div>
         </nav>
       </header>
