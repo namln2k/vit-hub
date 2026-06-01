@@ -1,5 +1,6 @@
 import Header from '@/components/layout/Header';
 import PasswordChangeModal from '@/components/dashboard/PasswordChangeModal';
+import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import { useAuth } from '@/contexts/useAuth';
 import { validateAvatarFile } from '@/api/avatarUpload';
 import defaultAvatar from '@/assets/default-avatar.png';
@@ -62,7 +63,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Hồ sơ cá nhân</h1>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -144,7 +145,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Vai trò</p>
-                <p className="font-medium text-gray-900 capitalize">{userProfile.role}</p>
+                <p className="font-medium text-gray-900">{USER_ROLE_LABELS[userProfile.role]}</p>
               </div>
             </div>
           )}

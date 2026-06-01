@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { User } from 'firebase/auth';
+import type { UserRole } from '@/constants/userRoles';
 
 export interface UserProfile {
   uid: string;
@@ -10,7 +11,7 @@ export interface UserProfile {
   username: string;
   avatarUrl?: string;
   avatarKey?: string;
-  role: string;
+  role: UserRole;
 }
 
 export interface SignUpData {

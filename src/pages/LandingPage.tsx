@@ -1,4 +1,4 @@
-import defaultAvatar from '@/assets/default-avatar.png';
+import AvatarMenu from '@/components/layout/AvatarMenu';
 import volunteerHero from '@/assets/hero.png';
 import { useAuth } from '@/contexts/useAuth';
 import {
@@ -8,10 +8,12 @@ import {
   HandHeart,
   Laptop,
   LogIn,
+  LogOut,
   MapPin,
+  UserRound,
   UsersRound,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const highlights = [
   {
@@ -38,11 +40,17 @@ const activities = [
 ];
 
 export default function LandingPage() {
-  const { currentUser, userProfile } = useAuth();
+  const { currentUser, userProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   const fullName = userProfile
     ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()
     : '';
-  const avatarLabel = fullName || userProfile?.username || currentUser?.email || 'Dashboard';
+  const avatarLabel = fullName || userProfile?.username || currentUser?.email || '';
+
+  async function handleSignOut() {
+    await signOut();
+    navigate('/login');
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-950">
@@ -53,19 +61,26 @@ export default function LandingPage() {
           </Link>
           <div className="flex items-center gap-2">
             {currentUser ? (
-              <Link
-                to="/dashboard"
-                className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50"
-                title={avatarLabel}
-                aria-label="Mở dashboard"
-              >
-                <img
-                  src={userProfile?.avatarUrl || defaultAvatar}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              </Link>
+              <AvatarMenu
+                avatarSrc={userProfile?.avatarUrl}
+                label={avatarLabel}
+                avatarSize="md"
+                avatarClassName="border-0"
+                buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
+                items={[
+                  {
+                    label: 'Hồ sơ cá nhân',
+                    icon: <UserRound className="h-4 w-4" />,
+                    to: '/dashboard',
+                  },
+                  {
+                    label: 'Đăng xuất',
+                    icon: <LogOut className="h-4 w-4" />,
+                    onClick: handleSignOut,
+                    danger: true,
+                  },
+                ]}
+              />
             ) : (
               <Link
                 to="/login"
