@@ -1,5 +1,6 @@
 import { db } from '@/api/firebase';
 import Avatar from '@/components/layout/Avatar';
+import { useAuth } from '@/contexts/useAuth';
 import type { UserProfile } from '@/contexts/auth';
 import { FirebaseError } from 'firebase/app';
 import { collection, getDocs } from 'firebase/firestore';
@@ -35,6 +36,7 @@ function getFullName(user: UserProfile) {
 }
 
 export default function UserSearch({ variant = 'light' }: UserSearchProps) {
+  const { currentUser } = useAuth();
   const [searchValue, setSearchValue] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,13 +51,15 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
     }
 
     return users
-      .filter((user) =>
-        [user.username, user.email, user.firstName, user.lastName].some((value) =>
-          normalizeSearchValue(value).includes(queryText),
-        ),
+      .filter(
+        (user) =>
+          user.uid !== currentUser?.uid &&
+          [user.username, user.email, user.firstName, user.lastName].some((value) =>
+            normalizeSearchValue(value).includes(queryText),
+          ),
       )
       .slice(0, 6);
-  }, [queryText, users]);
+  }, [currentUser?.uid, queryText, users]);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -122,7 +126,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
-          type="search"
+          type="text"
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
           onFocus={() => setIsFocused(true)}

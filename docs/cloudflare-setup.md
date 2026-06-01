@@ -63,10 +63,12 @@ R2_ACCOUNT_ID=your-cloudflare-account-id
 
 ## Configure R2 CORS
 
-Add a CORS rule that allows your app origin to upload directly to R2:
+Add a CORS rule to the same bucket named by `R2_BUCKET_NAME`. The browser uploads to the
+private S3-compatible API endpoint for that bucket, so setting CORS on a different bucket will
+still fail even if the public `r2.dev` URL works.
 
 1. In Cloudflare Dashboard, go to `Storage & databases` -> `R2 Object Storage` -> `Overview`.
-2. Open the `vit-hub-avatars` bucket.
+2. Open the bucket from `R2_BUCKET_NAME` such as `vit-hub-avatars`.
 3. Open the bucket `Settings` tab.
 4. Find `CORS policy` and choose `Add CORS policy` or `Edit CORS policy`.
 5. Paste this JSON and save:
@@ -85,7 +87,12 @@ Add a CORS rule that allows your app origin to upload directly to R2:
 
 Replace `https://your-app.example.com` with your Vercel or VPS domain.
 
-For local testing, keep `http://localhost:5173`. For Vercel preview deployments, add the preview URL if you want avatar uploads to work before production.
+For local testing, keep `http://localhost:5173` exactly, with no trailing slash or path. For Vercel preview deployments, add the preview URL if you want avatar uploads to work before production.
+
+If the browser reports `No 'Access-Control-Allow-Origin' header is present` for a URL like
+`https://<account-id>.r2.cloudflarestorage.com/<bucket>/avatars/...`, check that the CORS policy is
+saved on the `<bucket>` shown in that failing URL and that `AllowedOrigins` contains the exact app
+origin shown in the browser error.
 
 ## Local End-To-End Test
 

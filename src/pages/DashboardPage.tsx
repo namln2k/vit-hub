@@ -1,9 +1,10 @@
 import Header from '@/components/layout/Header';
 import PasswordChangeModal from '@/components/dashboard/PasswordChangeModal';
+import AvatarEditor from '@/components/avatar/AvatarEditor';
+import Avatar from '@/components/layout/Avatar';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import { useAuth } from '@/contexts/useAuth';
 import { validateAvatarFile } from '@/api/avatarUpload';
-import defaultAvatar from '@/assets/default-avatar.png';
 import { Camera, KeyRound } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
 
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [avatarError, setAvatarError] = useState('');
   const [avatarSuccess, setAvatarSuccess] = useState('');
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarFileToEdit, setAvatarFileToEdit] = useState<File | null>(null);
 
   function openPasswordModal() {
     setPasswordSuccess('');
@@ -29,7 +31,7 @@ export default function DashboardPage() {
     setPasswordSuccess('Mật khẩu đã được cập nhật thành công.');
   }
 
-  async function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
+  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
     setAvatarError('');
@@ -46,14 +48,17 @@ export default function DashboardPage() {
       return;
     }
 
+    setAvatarFileToEdit(file);
+  }
+
+  async function saveEditedAvatar(avatarFile: File) {
     try {
       setAvatarUploading(true);
-      await updateUserAvatar(file);
+      await updateUserAvatar(avatarFile);
+      setAvatarFileToEdit(null);
       setAvatarSuccess('Ảnh đại diện đã được cập nhật.');
     } catch (error) {
-      setAvatarError(
-        error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.',
-      );
+      setAvatarError(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.');
     } finally {
       setAvatarUploading(false);
     }
@@ -100,8 +105,9 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 flex items-center gap-4">
                 <label className="relative block w-20 h-20 rounded-full cursor-pointer group">
-                  <img
-                    src={userProfile.avatarUrl || defaultAvatar}
+                  <Avatar
+                    src={userProfile.avatarUrl}
+                    size="lg"
                     alt=""
                     className="w-20 h-20 rounded-full object-cover border border-gray-200"
                   />
@@ -154,6 +160,15 @@ export default function DashboardPage() {
 
       {isPasswordModalOpen && (
         <PasswordChangeModal onClose={closePasswordModal} onSuccess={handlePasswordChangeSuccess} />
+      )}
+
+      {avatarFileToEdit && (
+        <AvatarEditor
+          file={avatarFileToEdit}
+          onCancel={() => setAvatarFileToEdit(null)}
+          onSave={saveEditedAvatar}
+          saving={avatarUploading}
+        />
       )}
     </div>
   );

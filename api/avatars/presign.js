@@ -189,6 +189,10 @@ function getPublicBaseUrl() {
   const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, '');
   const url = new URL(publicBaseUrl);
 
+  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
+    throw new Error('R2_PUBLIC_BASE_URL must be an absolute HTTP(S) URL.');
+  }
+
   if (url.hostname.endsWith('.r2.cloudflarestorage.com')) {
     throw new Error(
       'R2_PUBLIC_BASE_URL must be a public R2 custom domain or r2.dev URL, not the private r2.cloudflarestorage.com API endpoint.',

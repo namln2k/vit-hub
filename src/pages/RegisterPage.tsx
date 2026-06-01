@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/components/input/PasswordInput';
 import { validateAvatarFile } from '@/api/avatarUpload';
 import GoogleSignIn from '@/components/auth/GoogleSignIn';
+import AvatarEditor from '@/components/avatar/AvatarEditor';
 
 const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),
@@ -30,6 +31,7 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [avatarError, setAvatarError] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | undefined>();
+  const [avatarFileToEdit, setAvatarFileToEdit] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -47,35 +49,56 @@ export default function RegisterPage() {
       return;
     }
 
-    const previewUrl = URL.createObjectURL(avatarFile);
-    setAvatarPreviewUrl(previewUrl);
+    let isActive = true;
+    const reader = new FileReader();
 
-    return () => URL.revokeObjectURL(previewUrl);
+    setAvatarPreviewUrl('');
+    reader.onload = () => {
+      if (isActive && typeof reader.result === 'string') {
+        setAvatarPreviewUrl(reader.result);
+      }
+    };
+    reader.onerror = () => {
+      if (isActive) {
+        setAvatarError('Không thể đọc ảnh đã chọn.');
+      }
+    };
+    reader.readAsDataURL(avatarFile);
+
+    return () => {
+      isActive = false;
+      reader.abort();
+    };
   }, [avatarFile]);
 
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
+    event.target.value = '';
     setAvatarError('');
 
     if (!file) {
-      setAvatarFile(undefined);
       return;
     }
 
     const validationError = validateAvatarFile(file);
 
     if (validationError) {
-      setAvatarFile(undefined);
       setAvatarError(validationError);
-      event.target.value = '';
       return;
     }
 
-    setAvatarFile(file);
+    setAvatarFileToEdit(file);
   }
 
   function removeAvatar() {
     setAvatarFile(undefined);
+    setAvatarFileToEdit(null);
+    setAvatarError('');
+  }
+
+  function saveEditedAvatar(editedAvatar: File) {
+    setAvatarFile(editedAvatar);
+    setAvatarFileToEdit(null);
     setAvatarError('');
   }
 
@@ -280,6 +303,14 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+
+      {avatarFileToEdit && (
+        <AvatarEditor
+          file={avatarFileToEdit}
+          onCancel={() => setAvatarFileToEdit(null)}
+          onSave={saveEditedAvatar}
+        />
+      )}
     </div>
   );
 }
