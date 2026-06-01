@@ -9,7 +9,7 @@ export interface AuthUser {
   photoURL: string | null;
 }
 
-export interface UserProfile {
+export interface AppUser {
   uid: string;
   email: string;
   firstName: string;
@@ -37,7 +37,7 @@ export interface SignUpResult {
 
 export interface AuthContextType {
   currentUser: AuthUser | null;
-  userProfile: UserProfile | null;
+  appUser: AppUser | null;
   loading: boolean;
   signUp: (data: SignUpData) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<void>;

@@ -1,6 +1,6 @@
 # Supabase Setup Guide
 
-VIT Hub uses Supabase Auth for email/password and Google accounts, and a `profiles` table in Supabase Postgres for user profile data.
+VIT Hub uses Supabase Auth for email/password and Google accounts, and a `user` table in Supabase Postgres for user data.
 
 ## Create Supabase Resources
 
@@ -9,7 +9,7 @@ VIT Hub uses Supabase Auth for email/password and Google accounts, and a `profil
 3. Open `Project Settings` -> `API Keys` and copy a publishable key. A legacy anon key also works, but a publishable key is preferred for browser clients.
 4. Enable the Email provider in `Authentication` -> `Providers` -> `Email`.
 5. Enable the Google provider in `Authentication` -> `Providers` -> `Google` if Google login is needed.
-6. Create the `profiles` table and policies required by the app.
+6. Create the `user` table and policies required by the app.
 
 ## Environment Variables
 
@@ -36,7 +36,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_ANON_KEY=your-anon-key
 ```
 
-The avatar and registration APIs validate users and write pending signup profiles server-side.
+The avatar and registration APIs validate users and write pending signup users server-side.
 Wherever `/api/avatars/presign` and `/api/auth/register` run, provide:
 
 ```env
@@ -81,8 +81,8 @@ Copy the Google client ID and client secret into the Supabase Google provider se
 ## Required Services
 
 - Supabase Auth: email/password accounts and optional Google accounts
-- Supabase Postgres: `public.profiles` table for profile documents
-- Row Level Security: enabled on `public.profiles`
+- Supabase Postgres: `public.user` table for user data
+- Row Level Security: enabled on `public.user`
 - Optional Cloudflare R2: avatar object storage
 
 ## Common Issues
@@ -94,11 +94,11 @@ For API routes, also confirm `SUPABASE_URL`, either `SUPABASE_PUBLISHABLE_KEY` o
 
 ### Register fails with permission errors
 
-Check that `public.profiles` exists, RLS is enabled, and the authenticated role has `select`, `insert`, and `update` grants. Also confirm the insert and update policies limit writes with `(select auth.uid()) = id`.
+Check that `public.user` exists, RLS is enabled, and the authenticated role has `select`, `insert`, and `update` grants. Also confirm the insert and update policies limit writes with `(select auth.uid()) = id`.
 
 ### Username checks fail
 
-The app queries `profiles.username` during registration and when creating Google profiles. Confirm authenticated users can read `public.profiles` and that `username` has a unique constraint.
+The app queries `user.username` during registration and when creating Google users. Confirm authenticated users can read `public.user` and that `username` has a unique constraint.
 
 ### Email/password login is not available
 

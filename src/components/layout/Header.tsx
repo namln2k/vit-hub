@@ -5,7 +5,7 @@ import AvatarMenu from '@/components/layout/AvatarMenu';
 import UserSearch from '@/components/layout/UserSearch';
 
 export default function Header() {
-  const { userProfile, signOut } = useAuth();
+  const { appUser, signOut } = useAuth();
   const navigate = useNavigate();
 
   async function handleSignOut() {
@@ -13,11 +13,11 @@ export default function Header() {
     navigate('/login');
   }
 
-  const fullName = userProfile
-    ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()
+  const fullName = appUser
+    ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : 'Người dùng';
   const avatarItems = [
-    ...(userProfile?.role === 'super_admin'
+    ...(appUser?.role === 'super_admin'
       ? [
           {
             label: 'Quản trị',
@@ -52,14 +52,12 @@ export default function Header() {
 
           <div className="flex items-center gap-4">
             <AvatarMenu
-              avatarSrc={userProfile?.avatarUrl}
+              avatarSrc={appUser?.avatarUrl}
               label={fullName}
               buttonClassName="flex items-center gap-2 text-gray-700 cursor-pointer"
               items={avatarItems}
             >
-              <span className="text-sm font-medium">
-                {fullName}
-              </span>
+              <span className="text-sm font-medium">{fullName}</span>
             </AvatarMenu>
           </div>
         </div>

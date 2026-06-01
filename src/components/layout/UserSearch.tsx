@@ -1,7 +1,7 @@
-import { searchProfiles } from '@/api/profiles';
+import { searchUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import { useAuth } from '@/contexts/useAuth';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import { Loader2, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -13,14 +13,14 @@ function normalizeSearchValue(value: string) {
   return value.trim().toLowerCase();
 }
 
-function getFullName(user: UserProfile) {
+function getFullName(user: AppUser) {
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }
 
 export default function UserSearch({ variant = 'light' }: UserSearchProps) {
   const { currentUser } = useAuth();
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -77,7 +77,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       setError('');
 
       try {
-        setUsers(await searchProfiles(queryText));
+        setUsers(await searchUsers(queryText));
       } catch {
         setError('Không thể tìm kiếm thành viên lúc này.');
       } finally {

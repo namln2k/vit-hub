@@ -1,10 +1,10 @@
-import { addProfilesToDivision } from '@/api/divisions';
-import { searchProfiles } from '@/api/profiles';
+import { addUsersToDivision } from '@/api/divisions';
+import { searchUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
 interface AddDivisionUsersModalProps {
   divisionId: string;
@@ -22,8 +22,8 @@ export default function AddDivisionUsersModal({
   onAdded,
 }: AddDivisionUsersModalProps) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -66,7 +66,7 @@ export default function AddDivisionUsersModal({
       setSearchError('');
 
       try {
-        setUsers(await searchProfiles(queryText));
+        setUsers(await searchUsers(queryText));
       } catch {
         setSearchError('Không thể tìm kiếm thành viên lúc này.');
         setUsers([]);
@@ -78,7 +78,7 @@ export default function AddDivisionUsersModal({
     return () => window.clearTimeout(timeoutId);
   }, [queryText]);
 
-  function selectUser(user: UserProfile) {
+  function selectUser(user: AppUser) {
     setSelectedUsers((currentUsers) => [...currentUsers, user]);
     setSubmitError('');
   }
@@ -97,7 +97,7 @@ export default function AddDivisionUsersModal({
     setSubmitError('');
 
     try {
-      await addProfilesToDivision(
+      await addUsersToDivision(
         divisionId,
         selectedUsers.map((user) => user.uid),
       );
@@ -105,7 +105,9 @@ export default function AddDivisionUsersModal({
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setSubmitError(message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.');
+      setSubmitError(
+        message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.',
+      );
     } finally {
       setIsAdding(false);
     }
@@ -244,7 +246,11 @@ export default function AddDivisionUsersModal({
             disabled={selectedUsers.length === 0 || isAdding}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             Thêm {selectedUsers.length > 0 ? selectedUsers.length : ''} thành viên
           </button>
         </div>

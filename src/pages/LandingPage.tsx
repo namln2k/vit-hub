@@ -42,12 +42,12 @@ const activities = [
 ];
 
 export default function LandingPage() {
-  const { currentUser, userProfile, signOut } = useAuth();
+  const { currentUser, appUser, signOut } = useAuth();
   const navigate = useNavigate();
-  const fullName = userProfile
-    ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()
+  const fullName = appUser
+    ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : '';
-  const avatarLabel = fullName || userProfile?.username || currentUser?.email || '';
+  const avatarLabel = fullName || appUser?.username || currentUser?.email || '';
 
   async function handleSignOut() {
     await signOut();
@@ -68,13 +68,13 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               {currentUser ? (
                 <AvatarMenu
-                  avatarSrc={userProfile?.avatarUrl}
+                  avatarSrc={appUser?.avatarUrl}
                   label={avatarLabel}
                   avatarSize="md"
                   avatarClassName="border-0"
                   buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
                   items={[
-                    ...(userProfile?.role === 'super_admin'
+                    ...(appUser?.role === 'super_admin'
                       ? [
                           {
                             label: 'Quản trị',
@@ -138,8 +138,8 @@ export default function LandingPage() {
                 Đội Tình nguyện SOICT
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-7 text-slate-100 sm:text-lg">
-                Không gian dành cho sinh viên yêu thích hoạt động cộng đồng, muốn góp sức bằng
-                tinh thần trách nhiệm, kỹ năng tổ chức và màu sắc công nghệ của SOICT.
+                Không gian dành cho sinh viên yêu thích hoạt động cộng đồng, muốn góp sức bằng tinh
+                thần trách nhiệm, kỹ năng tổ chức và màu sắc công nghệ của SOICT.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <a

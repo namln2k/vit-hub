@@ -1,6 +1,6 @@
 # Cloudflare Setup Guide
 
-VIT Hub can store optional user avatars in Cloudflare R2. During registration, `/api/auth/register` creates the Supabase user, uploads the avatar from the server, and stores `avatar_url` plus `avatar_key` in the user's Supabase profile row even while email confirmation is pending. Signed-in avatar changes still use `/api/avatars/presign` for short-lived direct uploads.
+VIT Hub can store optional user avatars in Cloudflare R2. During registration, `/api/auth/register` creates the Supabase user, uploads the avatar from the server, and stores `avatar_url` plus `avatar_key` in the user's Supabase row even while email confirmation is pending. Signed-in avatar changes still use `/api/avatars/presign` for short-lived direct uploads.
 
 ## Create The R2 Bucket
 
@@ -106,7 +106,7 @@ Then:
 
 1. Register a new account.
 2. Pick a JPG, PNG, or WebP avatar under 1 MB.
-3. Confirm the user's `profiles` row in Supabase contains `avatar_url` and `avatar_key`.
+3. Confirm the user's `user` row in Supabase contains `avatar_url` and `avatar_key`.
 4. Open the R2 bucket and confirm the object exists under `avatars/{uid}/...`.
 5. Visit the saved `avatar_url` in a browser and confirm the image loads.
 
@@ -198,7 +198,7 @@ The included handler is written with Node's request/response APIs, so it can be 
 
 ## Supabase Avatar Fields
 
-User profile rows include:
+User rows include:
 
 ```sql
 avatar_url text

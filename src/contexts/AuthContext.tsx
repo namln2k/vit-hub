@@ -1,12 +1,12 @@
 import { deleteAvatar, uploadAvatar } from '@/api/avatarUpload';
-import { getProfile, upsertProfile, usernameExists } from '@/api/profiles';
+import { getUser, upsertUser, usernameExists } from '@/api/users';
 import { supabase } from '@/api/supabase';
 import {
   AuthContext,
   type AuthContextType,
   type AuthUser,
   type SignUpData,
-  type UserProfile,
+  type AppUser,
 } from './auth';
 import type { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -68,7 +68,7 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-function getProfileName(displayName: string | null, email: string) {
+function getUserNameParts(displayName: string | null, email: string) {
   const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
 
   if (nameParts.length === 0) {
@@ -118,35 +118,35 @@ async function createUniqueUsername(email: string): Promise<string> {
   return username;
 }
 
-async function createProfileFromUser(user: User): Promise<UserProfile> {
+async function createAppUserFromAuthUser(user: User): Promise<AppUser> {
   const email = user.email ?? '';
   const displayName =
     getStringMetadata(user, 'full_name') || getStringMetadata(user, 'name') || null;
-  const profileName = getProfileName(displayName, email);
+  const userNameParts = getUserNameParts(displayName, email);
   const username = getStringMetadata(user, 'username') || (await createUniqueUsername(email));
-  const profile: UserProfile = {
+  const appUser: AppUser = {
     uid: user.id,
     email,
-    firstName: getStringMetadata(user, 'first_name') || profileName.firstName,
-    lastName: getStringMetadata(user, 'last_name') || profileName.lastName,
-    middleName: getStringMetadata(user, 'middle_name') || profileName.middleName,
+    firstName: getStringMetadata(user, 'first_name') || userNameParts.firstName,
+    lastName: getStringMetadata(user, 'last_name') || userNameParts.lastName,
+    middleName: getStringMetadata(user, 'middle_name') || userNameParts.middleName,
     username,
     avatarUrl: getStringMetadata(user, 'avatar_url'),
     avatarKey: getStringMetadata(user, 'avatar_key'),
     role: 'member',
   };
 
-  return upsertProfile(profile);
+  return upsertUser(appUser);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadUserProfile(user: User) {
-    const profile = (await getProfile(user.id)) ?? (await createProfileFromUser(user));
-    setUserProfile(profile);
+  async function loadAppUser(user: User) {
+    const loadedUser = (await getUser(user.id)) ?? (await createAppUserFromAuthUser(user));
+    setAppUser(loadedUser);
   }
 
   async function applySession(session: Session | null) {
@@ -154,16 +154,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!user) {
       setCurrentUser(null);
-      setUserProfile(null);
+      setAppUser(null);
       return;
     }
 
     setCurrentUser(mapSupabaseUser(user));
 
     try {
-      await loadUserProfile(user);
+      await loadAppUser(user);
     } catch {
-      setUserProfile(null);
+      setAppUser(null);
     }
   }
 
@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         setCurrentUser(null);
-        setUserProfile(null);
+        setAppUser(null);
       } else {
         await applySession(session);
       }
@@ -323,14 +323,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function updateUserAvatar(avatarFile: File) {
-    if (!currentUser || !userProfile) {
+    if (!currentUser || !appUser) {
       throw new Error('Bạn cần đăng nhập trước khi cập nhật ảnh đại diện.');
     }
 
-    const previousAvatarKey = userProfile.avatarKey;
+    const previousAvatarKey = appUser.avatarKey;
     const avatar = await uploadAvatar(avatarFile);
-    const nextProfile = await upsertProfile({
-      ...userProfile,
+    const nextAppUser = await upsertUser({
+      ...appUser,
       avatarUrl: avatar.avatarUrl,
       avatarKey: avatar.avatarKey,
     });
@@ -342,20 +342,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    setUserProfile(nextProfile);
+    setAppUser(nextAppUser);
 
     if (previousAvatarKey) {
       try {
         await deleteAvatar(previousAvatarKey);
       } catch {
-        // The profile already points at the new avatar; stale object cleanup can be retried manually.
+        // The user row already points at the new avatar; stale object cleanup can be retried manually.
       }
     }
   }
 
   const value: AuthContextType = {
     currentUser,
-    userProfile,
+    appUser,
     loading,
     signUp,
     signIn,

@@ -9,7 +9,7 @@ import { Camera, KeyRound } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
 
 export default function DashboardPage() {
-  const { userProfile, updateUserAvatar } = useAuth();
+  const { appUser, updateUserAvatar } = useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [avatarError, setAvatarError] = useState('');
@@ -101,12 +101,12 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {userProfile && (
+          {appUser && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2 flex items-center gap-4">
                 <label className="relative block w-20 h-20 rounded-full cursor-pointer group">
                   <Avatar
-                    src={userProfile.avatarUrl}
+                    src={appUser.avatarUrl}
                     size="lg"
                     alt=""
                     className="w-20 h-20 rounded-full object-cover border border-gray-200"
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 <div>
                   <p className="text-sm text-gray-500">Ảnh đại diện</p>
                   <p className="font-medium text-gray-900">
-                    {userProfile.avatarUrl ? 'Nhấn vào ảnh để thay đổi' : 'Nhấn vào ảnh để tải lên'}
+                    {appUser.avatarUrl ? 'Nhấn vào ảnh để thay đổi' : 'Nhấn vào ảnh để tải lên'}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">JPG, PNG hoặc WebP, tối đa 1 MB.</p>
                 </div>
@@ -138,20 +138,20 @@ export default function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-500">Họ và tên</p>
                 <p className="font-medium text-gray-900">
-                  {`${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()}
+                  {`${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Username</p>
-                <p className="font-medium text-gray-900">@{userProfile.username}</p>
+                <p className="font-medium text-gray-900">@{appUser.username}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Email</p>
-                <p className="font-medium text-gray-900">{userProfile.email}</p>
+                <p className="font-medium text-gray-900">{appUser.email}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Vai trò</p>
-                <p className="font-medium text-gray-900">{USER_ROLE_LABELS[userProfile.role]}</p>
+                <p className="font-medium text-gray-900">{USER_ROLE_LABELS[appUser.role]}</p>
               </div>
             </div>
           )}

@@ -1,6 +1,6 @@
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 
-export function getFullName(user: UserProfile) {
+export function getFullName(user: AppUser) {
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }
 

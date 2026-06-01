@@ -1,8 +1,8 @@
 import { supabase } from '@/api/supabase';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
 
-export interface ProfileRow {
+export interface UserRow {
   id: string;
   email: string;
   first_name: string;
@@ -14,7 +14,7 @@ export interface ProfileRow {
   role: UserRole;
 }
 
-export interface ProfileWrite {
+export interface UserWrite {
   id: string;
   email: string;
   first_name: string;
@@ -26,7 +26,7 @@ export interface ProfileWrite {
   role: UserRole;
 }
 
-export function mapProfileRow(row: ProfileRow): UserProfile {
+export function mapUserRow(row: UserRow): AppUser {
   return {
     uid: row.id,
     email: row.email,
@@ -40,39 +40,37 @@ export function mapProfileRow(row: ProfileRow): UserProfile {
   };
 }
 
-export function mapProfileToWrite(profile: UserProfile): ProfileWrite {
+export function mapUserToWrite(user: AppUser): UserWrite {
   return {
-    id: profile.uid,
-    email: profile.email,
-    first_name: profile.firstName,
-    last_name: profile.lastName,
-    middle_name: profile.middleName,
-    username: profile.username,
-    avatar_url: profile.avatarUrl ?? '',
-    avatar_key: profile.avatarKey ?? '',
-    role: profile.role,
+    id: user.uid,
+    email: user.email,
+    first_name: user.firstName,
+    last_name: user.lastName,
+    middle_name: user.middleName,
+    username: user.username,
+    avatar_url: user.avatarUrl ?? '',
+    avatar_key: user.avatarKey ?? '',
+    role: user.role,
   };
 }
 
-export async function getProfile(userId: string): Promise<UserProfile | null> {
+export async function getUser(userId: string): Promise<AppUser | null> {
   const { data, error } = await supabase
-    .from('profiles')
-    .select(
-      'id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role',
-    )
+    .from('user')
+    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
     .eq('id', userId)
-    .maybeSingle<ProfileRow>();
+    .maybeSingle<UserRow>();
 
   if (error) {
     throw error;
   }
 
-  return data ? mapProfileRow(data) : null;
+  return data ? mapUserRow(data) : null;
 }
 
 export async function usernameExists(username: string): Promise<boolean> {
   const { data, error } = await supabase
-    .from('profiles')
+    .from('user')
     .select('id')
     .eq('username', username)
     .maybeSingle<{ id: string }>();
@@ -84,40 +82,36 @@ export async function usernameExists(username: string): Promise<boolean> {
   return Boolean(data);
 }
 
-export async function upsertProfile(profile: UserProfile): Promise<UserProfile> {
+export async function upsertUser(user: AppUser): Promise<AppUser> {
   const { data, error } = await supabase
-    .from('profiles')
-    .upsert(mapProfileToWrite(profile), { onConflict: 'id' })
-    .select(
-      'id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role',
-    )
-    .single<ProfileRow>();
+    .from('user')
+    .upsert(mapUserToWrite(user), { onConflict: 'id' })
+    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
+    .single<UserRow>();
 
   if (error) {
     throw error;
   }
 
-  return mapProfileRow(data);
+  return mapUserRow(data);
 }
 
-export async function searchProfiles(queryText: string): Promise<UserProfile[]> {
+export async function searchUsers(queryText: string): Promise<AppUser[]> {
   const escapedQuery = queryText.replaceAll('%', '\\%').replaceAll('_', '\\_');
   const pattern = `%${escapedQuery}%`;
   const { data, error } = await supabase
-    .from('profiles')
-    .select(
-      'id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role',
-    )
+    .from('user')
+    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
     .or(
       `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`,
     )
     .order('username', { ascending: true })
     .limit(12)
-    .returns<ProfileRow[]>();
+    .returns<UserRow[]>();
 
   if (error) {
     throw error;
   }
 
-  return data.map(mapProfileRow);
+  return data.map(mapUserRow);
 }

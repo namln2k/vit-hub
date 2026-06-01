@@ -1,12 +1,12 @@
-import { createGroup, listProfilesByGroup, type Group } from '@/api/groups';
+import { createGroup, listUsersByGroup, type Group } from '@/api/groups';
 import Avatar from '@/components/layout/Avatar';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import { Check, Loader2, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
 interface GroupsManagementProps {
   activeGroup: Group | null;
@@ -14,7 +14,7 @@ interface GroupsManagementProps {
 }
 
 export default function GroupsManagement({ activeGroup, onGroupCreated }: GroupsManagementProps) {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
@@ -42,7 +42,7 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
       setUserError('');
 
       try {
-        const nextUsers = await listProfilesByGroup(groupId);
+        const nextUsers = await listUsersByGroup(groupId);
 
         if (isMounted()) {
           setUsers(nextUsers);
@@ -254,7 +254,7 @@ function CreateGroupModal({ onClose, onCreated }: CreateGroupModalProps) {
 }
 
 interface GroupMembersTableProps {
-  users: UserProfile[];
+  users: AppUser[];
   isLoading: boolean;
   error: string;
 }

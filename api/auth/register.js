@@ -161,7 +161,7 @@ async function usernameExists(username) {
     username: `eq.${username}`,
     limit: '1',
   });
-  const { response, data } = await supabaseFetch(`/rest/v1/profiles?${query.toString()}`, {});
+  const { response, data } = await supabaseFetch(`/rest/v1/user?${query.toString()}`, {});
 
   if (!response.ok) {
     throw new Error(data?.message ?? 'Không thể kiểm tra username.');
@@ -170,18 +170,18 @@ async function usernameExists(username) {
   return Array.isArray(data) && data.length > 0;
 }
 
-function getUserMetadata(profile, avatar) {
-  const fullName = `${profile.lastName} ${profile.middleName} ${profile.firstName}`.trim();
+function getUserMetadata(userData, avatar) {
+  const fullName = `${userData.lastName} ${userData.middleName} ${userData.firstName}`.trim();
 
   return {
     avatar_key: avatar?.avatarKey ?? '',
     avatar_url: avatar?.avatarUrl ?? '',
-    first_name: profile.firstName,
+    first_name: userData.firstName,
     full_name: fullName,
-    last_name: profile.lastName,
-    middle_name: profile.middleName,
+    last_name: userData.lastName,
+    middle_name: userData.middleName,
     role: 'member',
-    username: profile.username,
+    username: userData.username,
   };
 }
 
@@ -199,12 +199,12 @@ function normalizeSignUpResponse(authData) {
   return { user, session };
 }
 
-async function signUpUser(profile, password) {
+async function signUpUser(userData, password) {
   const { supabaseUrl, publishableKey } = getSupabaseAdminServerConfig();
   const signupUrl = new URL(`${supabaseUrl}/auth/v1/signup`);
 
-  if (profile.emailRedirectTo) {
-    signupUrl.searchParams.set('redirect_to', profile.emailRedirectTo);
+  if (userData.emailRedirectTo) {
+    signupUrl.searchParams.set('redirect_to', userData.emailRedirectTo);
   }
 
   const authResponse = await fetch(signupUrl, {
@@ -214,9 +214,9 @@ async function signUpUser(profile, password) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      email: profile.email,
+      email: userData.email,
       password,
-      data: getUserMetadata(profile, null),
+      data: getUserMetadata(userData, null),
     }),
   });
 
@@ -237,11 +237,11 @@ async function signUpUser(profile, password) {
   return normalizedAuthData;
 }
 
-async function updateAuthUserMetadata(uid, profile, avatar) {
+async function updateAuthUserMetadata(uid, userData, avatar) {
   const { response, data } = await supabaseFetch(`/auth/v1/admin/users/${uid}`, {
     method: 'PUT',
     body: {
-      user_metadata: getUserMetadata(profile, avatar),
+      user_metadata: getUserMetadata(userData, avatar),
     },
   });
 
@@ -278,19 +278,19 @@ async function uploadAvatar(uid, avatarBuffer, contentType) {
   };
 }
 
-async function upsertProfile(uid, profile, avatar) {
+async function upsertUser(uid, userData, avatar) {
   const row = {
     id: uid,
-    email: profile.email,
-    first_name: profile.firstName,
-    last_name: profile.lastName,
-    middle_name: profile.middleName,
-    username: profile.username,
+    email: userData.email,
+    first_name: userData.firstName,
+    last_name: userData.lastName,
+    middle_name: userData.middleName,
+    username: userData.username,
     avatar_url: avatar?.avatarUrl ?? '',
     avatar_key: avatar?.avatarKey ?? '',
     role: 'member',
   };
-  const { response, data } = await supabaseFetch('/rest/v1/profiles?on_conflict=id', {
+  const { response, data } = await supabaseFetch('/rest/v1/user?on_conflict=id', {
     method: 'POST',
     body: row,
     headers: {
@@ -340,7 +340,7 @@ export default async function handler(request, response) {
       await updateAuthUserMetadata(authData.user.id, registerResult.data, avatar);
     }
 
-    await upsertProfile(authData.user.id, registerResult.data, avatar);
+    await upsertUser(authData.user.id, registerResult.data, avatar);
 
     json(response, 200, {
       needsEmailConfirmation: !authData.session,

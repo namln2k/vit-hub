@@ -1,19 +1,19 @@
-import { listProfilesByDivision, type Division } from '@/api/divisions';
+import { listUsersByDivision, type Division } from '@/api/divisions';
 import Avatar from '@/components/layout/Avatar';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import { Plus, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddDivisionUsersModal from './AddDivisionUsersModal';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
 interface DivisionsManagementProps {
   activeDivision: Division | null;
 }
 
 export default function DivisionsManagement({ activeDivision }: DivisionsManagementProps) {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
@@ -40,7 +40,7 @@ export default function DivisionsManagement({ activeDivision }: DivisionsManagem
       setUserError('');
 
       try {
-        const nextUsers = await listProfilesByDivision(divisionId);
+        const nextUsers = await listUsersByDivision(divisionId);
 
         if (isMounted()) {
           setUsers(nextUsers);
@@ -125,7 +125,7 @@ export default function DivisionsManagement({ activeDivision }: DivisionsManagem
 }
 
 interface DivisionMembersTableProps {
-  users: UserProfile[];
+  users: AppUser[];
   isLoading: boolean;
   error: string;
 }

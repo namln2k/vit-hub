@@ -1,6 +1,6 @@
 import { supabase } from '@/api/supabase';
-import { mapProfileRow, type ProfileRow } from '@/api/profiles';
-import type { UserProfile } from '@/contexts/auth';
+import { mapUserRow, type UserRow } from '@/api/users';
+import type { AppUser } from '@/contexts/auth';
 
 export interface Group {
   id: string;
@@ -14,8 +14,8 @@ interface GroupRow {
   description?: string | null;
 }
 
-interface ProfileGroupRow {
-  profiles: ProfileRow | null;
+interface UserGroupRow {
+  user: UserRow | null;
 }
 
 interface GroupWrite {
@@ -23,9 +23,9 @@ interface GroupWrite {
   description: string | null;
 }
 
-interface ProfileGroupWrite {
+interface UserGroupWrite {
   group_id: string;
-  profile_id: string;
+  user_id: string;
 }
 
 function mapGroupRow(row: GroupRow): Group {
@@ -69,45 +69,45 @@ export async function createGroup(name: string, description: string): Promise<Gr
   return mapGroupRow(data);
 }
 
-export async function listProfilesByGroup(groupId: string): Promise<UserProfile[]> {
+export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
-    .from('profile_groups')
+    .from('user_groups')
     .select(
-      'profiles(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
+      'user(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
     )
     .eq('group_id', groupId)
-    .returns<ProfileGroupRow[]>();
+    .returns<UserGroupRow[]>();
 
   if (error) {
     throw error;
   }
 
   return data
-    .map((row) => row.profiles)
-    .filter((profile): profile is ProfileRow => Boolean(profile))
-    .map(mapProfileRow)
-    .sort((first, second) => getProfileSortName(first).localeCompare(getProfileSortName(second)));
+    .map((row) => row.user)
+    .filter((user): user is UserRow => Boolean(user))
+    .map(mapUserRow)
+    .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
 }
 
-export async function addProfilesToGroup(groupId: string, profileIds: string[]): Promise<void> {
-  if (profileIds.length === 0) {
+export async function addUsersToGroup(groupId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) {
     return;
   }
 
-  const rows: ProfileGroupWrite[] = profileIds.map((profileId) => ({
+  const rows: UserGroupWrite[] = userIds.map((userId) => ({
     group_id: groupId,
-    profile_id: profileId,
+    user_id: userId,
   }));
 
   const { error } = await supabase
-    .from('profile_groups')
-    .upsert(rows, { onConflict: 'group_id,profile_id', ignoreDuplicates: true });
+    .from('user_groups')
+    .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true });
 
   if (error) {
     throw error;
   }
 }
 
-function getProfileSortName(profile: UserProfile) {
-  return `${profile.lastName} ${profile.middleName} ${profile.firstName}`.trim();
+function getUserSortName(user: AppUser) {
+  return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }

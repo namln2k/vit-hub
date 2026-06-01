@@ -1,6 +1,6 @@
 import { supabase } from '@/api/supabase';
-import { mapProfileRow, type ProfileRow } from '@/api/profiles';
-import type { UserProfile } from '@/contexts/auth';
+import { mapUserRow, type UserRow } from '@/api/users';
+import type { AppUser } from '@/contexts/auth';
 
 export interface Division {
   id: string;
@@ -14,13 +14,13 @@ interface DivisionRow {
   description?: string | null;
 }
 
-interface ProfileDivisionRow {
-  profiles: ProfileRow | null;
+interface UserDivisionRow {
+  user: UserRow | null;
 }
 
-interface ProfileDivisionWrite {
+interface UserDivisionWrite {
   division_id: string;
-  profile_id: string;
+  user_id: string;
 }
 
 function mapDivisionRow(row: DivisionRow): Division {
@@ -45,48 +45,45 @@ export async function listDivisions(): Promise<Division[]> {
   return data.map(mapDivisionRow);
 }
 
-export async function listProfilesByDivision(divisionId: string): Promise<UserProfile[]> {
+export async function listUsersByDivision(divisionId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
-    .from('profile_divisions')
+    .from('user_divisions')
     .select(
-      'profiles(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
+      'user(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
     )
     .eq('division_id', divisionId)
-    .returns<ProfileDivisionRow[]>();
+    .returns<UserDivisionRow[]>();
 
   if (error) {
     throw error;
   }
 
   return data
-    .map((row) => row.profiles)
-    .filter((profile): profile is ProfileRow => Boolean(profile))
-    .map(mapProfileRow)
-    .sort((first, second) => getProfileSortName(first).localeCompare(getProfileSortName(second)));
+    .map((row) => row.user)
+    .filter((user): user is UserRow => Boolean(user))
+    .map(mapUserRow)
+    .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
 }
 
-export async function addProfilesToDivision(
-  divisionId: string,
-  profileIds: string[],
-): Promise<void> {
-  if (profileIds.length === 0) {
+export async function addUsersToDivision(divisionId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) {
     return;
   }
 
-  const rows: ProfileDivisionWrite[] = profileIds.map((profileId) => ({
+  const rows: UserDivisionWrite[] = userIds.map((userId) => ({
     division_id: divisionId,
-    profile_id: profileId,
+    user_id: userId,
   }));
 
   const { error } = await supabase
-    .from('profile_divisions')
-    .upsert(rows, { onConflict: 'division_id,profile_id', ignoreDuplicates: true });
+    .from('user_divisions')
+    .upsert(rows, { onConflict: 'division_id,user_id', ignoreDuplicates: true });
 
   if (error) {
     throw error;
   }
 }
 
-function getProfileSortName(profile: UserProfile) {
-  return `${profile.lastName} ${profile.middleName} ${profile.firstName}`.trim();
+function getUserSortName(user: AppUser) {
+  return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }

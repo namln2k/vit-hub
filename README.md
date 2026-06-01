@@ -5,7 +5,7 @@ VIT Hub is a React web application for VIT Volunteers management.
 ## Project Highlights
 
 - Email/password and Google authentication with Supabase Auth
-- User profile data stored in Supabase Postgres
+- User data stored in Supabase Postgres
 - Optional avatar uploads through Cloudflare R2
 - React 19, Vite, TypeScript, and Tailwind CSS
 
@@ -31,7 +31,7 @@ VIT Hub is a React web application for VIT Volunteers management.
    cp .env.example .env
    ```
 
-3. Set up Supabase. This is required for authentication and user profiles.
+3. Set up Supabase. This is required for authentication and users.
 
    Follow the [Supabase setup guide](docs/supabase-setup.md), then copy the Supabase project URL, publishable key, and service role key into `.env`.
 

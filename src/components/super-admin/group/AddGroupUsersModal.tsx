@@ -1,10 +1,10 @@
-import { addProfilesToGroup } from '@/api/groups';
-import { searchProfiles } from '@/api/profiles';
+import { addUsersToGroup } from '@/api/groups';
+import { searchUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
-import type { UserProfile } from '@/contexts/auth';
+import type { AppUser } from '@/contexts/auth';
 import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
 interface AddGroupUsersModalProps {
   groupId: string;
@@ -22,8 +22,8 @@ export default function AddGroupUsersModal({
   onAdded,
 }: AddGroupUsersModalProps) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchError, setSearchError] = useState('');
@@ -66,7 +66,7 @@ export default function AddGroupUsersModal({
       setSearchError('');
 
       try {
-        setUsers(await searchProfiles(queryText));
+        setUsers(await searchUsers(queryText));
       } catch {
         setSearchError('Không thể tìm kiếm thành viên lúc này.');
         setUsers([]);
@@ -78,7 +78,7 @@ export default function AddGroupUsersModal({
     return () => window.clearTimeout(timeoutId);
   }, [queryText]);
 
-  function selectUser(user: UserProfile) {
+  function selectUser(user: AppUser) {
     setSelectedUsers((currentUsers) => [...currentUsers, user]);
     setSubmitError('');
   }
@@ -97,7 +97,7 @@ export default function AddGroupUsersModal({
     setSubmitError('');
 
     try {
-      await addProfilesToGroup(
+      await addUsersToGroup(
         groupId,
         selectedUsers.map((user) => user.uid),
       );
