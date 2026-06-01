@@ -146,7 +146,6 @@ export default function RegisterPage() {
       setError('');
       setLoading(true);
       await signInWithGoogle();
-      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể đăng ký bằng Google.');
     } finally {

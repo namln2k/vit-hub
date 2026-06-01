@@ -48,6 +48,14 @@ function getAuthErrorMessage(error: unknown) {
   return message || 'Không thể xử lý yêu cầu xác thực.';
 }
 
+function getAppOrigin() {
+  return (import.meta.env.VITE_APP_ORIGIN || window.location.origin).replace(/\/$/, '');
+}
+
+function getAuthRedirectUrl(path: string) {
+  return `${getAppOrigin()}${path}`;
+}
+
 function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -221,7 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
       body: JSON.stringify({
         email: data.email,
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: getAuthRedirectUrl('/login'),
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
@@ -270,7 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryParams: {
           prompt: 'select_account',
         },
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthRedirectUrl('/auth/callback'),
       },
     });
 
@@ -289,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function resetPassword(email: string) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: getAuthRedirectUrl('/login'),
     });
 
     if (error) {
