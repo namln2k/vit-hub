@@ -1,4 +1,4 @@
-import { LogOut } from 'lucide-react';
+import { LogOut, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import { useNavigate } from 'react-router-dom';
 import AvatarMenu from '@/components/layout/AvatarMenu';
@@ -16,6 +16,23 @@ export default function Header() {
   const fullName = userProfile
     ? `${userProfile.lastName} ${userProfile.middleName} ${userProfile.firstName}`.trim()
     : 'Người dùng';
+  const avatarItems = [
+    ...(userProfile?.role === 'super_admin'
+      ? [
+          {
+            label: 'Quản trị',
+            icon: <ShieldCheck className="h-4 w-4" />,
+            to: '/super-admin',
+          },
+        ]
+      : []),
+    {
+      label: 'Đăng xuất',
+      icon: <LogOut className="h-4 w-4" />,
+      onClick: handleSignOut,
+      danger: true,
+    },
+  ];
 
   return (
     <header className="bg-white border-b border-gray-200">
@@ -38,14 +55,7 @@ export default function Header() {
               avatarSrc={userProfile?.avatarUrl}
               label={fullName}
               buttonClassName="flex items-center gap-2 text-gray-700 cursor-pointer"
-              items={[
-                {
-                  label: 'Đăng xuất',
-                  icon: <LogOut className="h-4 w-4" />,
-                  onClick: handleSignOut,
-                  danger: true,
-                },
-              ]}
+              items={avatarItems}
             >
               <span className="text-sm font-medium">
                 {fullName}
