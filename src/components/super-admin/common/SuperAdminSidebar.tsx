@@ -1,7 +1,7 @@
 import { ChevronRight, Loader2 } from 'lucide-react';
 import type { Division } from '@/api/divisions';
 import type { Group } from '@/api/groups';
-import type { AdminSection, AdminSectionId } from './types';
+import type { AdminSection, AdminSectionId } from '@/components/super-admin/common/types';
 
 interface SuperAdminSidebarProps {
   sections: AdminSection[];

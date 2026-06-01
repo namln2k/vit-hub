@@ -1,12 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from '@/pages/LoginPage';
-import RegisterPage from '@/pages/RegisterPage';
-import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import LoginPage from '@/pages/auth/LoginPage';
+import RegisterPage from '@/pages/auth/RegisterPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import SuperAdminPage from '@/pages/SuperAdminPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
-import AuthCallbackPage from '@/pages/AuthCallbackPage';
+import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 function App() {

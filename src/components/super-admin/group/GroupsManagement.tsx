@@ -4,9 +4,9 @@ import type { UserProfile } from '@/contexts/auth';
 import { Check, Loader2, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
-import AdminContentPanel from './AdminContentPanel';
-import { ADMIN_SECTIONS } from './AdminSections';
-import { getFullName, normalizeSearchValue } from './ProfileUtils';
+import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
+import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
 
 interface GroupsManagementProps {
   activeGroup: Group | null;

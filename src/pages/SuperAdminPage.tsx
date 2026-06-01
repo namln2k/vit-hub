@@ -1,12 +1,12 @@
 import { listDivisions, type Division } from '@/api/divisions';
 import { listGroups, type Group } from '@/api/groups';
 import Header from '@/components/layout/Header';
-import { ADMIN_SECTIONS } from '@/components/super-admin/AdminSections';
-import DivisionsManagement from '@/components/super-admin/DivisionsManagement';
-import PlaceholderManagement from '@/components/super-admin/PlaceholderManagement';
-import SuperAdminSidebar from '@/components/super-admin/SuperAdminSidebar';
-import GroupsManagement from '@/components/super-admin/GroupsManagement';
-import type { AdminSectionId } from '@/components/super-admin/types';
+import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import PlaceholderManagement from '@/components/super-admin/common/PlaceholderManagement';
+import type { AdminSectionId } from '@/components/super-admin/common/types';
+import DivisionsManagement from '@/components/super-admin/division/DivisionsManagement';
+import GroupsManagement from '@/components/super-admin/group/GroupsManagement';
+import SuperAdminSidebar from '@/components/super-admin/common/SuperAdminSidebar';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 

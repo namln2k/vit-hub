@@ -4,9 +4,9 @@ import type { UserProfile } from '@/contexts/auth';
 import { Plus, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddDivisionUsersModal from './AddDivisionUsersModal';
-import AdminContentPanel from './AdminContentPanel';
-import { ADMIN_SECTIONS } from './AdminSections';
-import { getFullName, normalizeSearchValue } from './ProfileUtils';
+import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
+import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
 
 interface DivisionsManagementProps {
   activeDivision: Division | null;
