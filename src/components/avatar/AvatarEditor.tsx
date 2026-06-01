@@ -59,8 +59,12 @@ export default function AvatarEditor({
     let isActive = true;
     const reader = new FileReader();
 
-    setImageUrl('');
-    setImageSize(null);
+    reader.onloadstart = () => {
+      if (isActive) {
+        setImageUrl('');
+        setImageSize(null);
+      }
+    };
     reader.onload = () => {
       if (isActive && typeof reader.result === 'string') {
         setImageUrl(reader.result);

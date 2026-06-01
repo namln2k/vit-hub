@@ -5,6 +5,7 @@ import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
+import AuthCallbackPage from '@/pages/AuthCallbackPage';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
         path="/dashboard"
         element={

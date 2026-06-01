@@ -1,4 +1,5 @@
 import { createHmac, createHash, randomUUID } from 'node:crypto';
+import { getSupabasePublicServerConfig } from '../supabase-env.js';
 
 const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024;
@@ -57,7 +58,7 @@ function getSigningKey(secretAccessKey, dateStamp, region, service) {
   return hmac(dateRegionServiceKey, 'aws4_request');
 }
 
-function createPresignedPutUrl({ bucketName, accountId, accessKeyId, secretAccessKey, key }) {
+export function createPresignedPutUrl({ bucketName, accountId, accessKeyId, secretAccessKey, key }) {
   const region = 'auto';
   const service = 's3';
   const now = new Date();
@@ -149,31 +150,25 @@ function createSignedR2Request({ method, bucketName, accountId, accessKeyId, sec
   };
 }
 
-async function getFirebaseUid(idToken) {
-  const apiKey = process.env.FIREBASE_API_KEY;
+async function getSupabaseUid(accessToken) {
+  const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
 
-  if (!apiKey) {
-    throw new Error('FIREBASE_API_KEY is not configured.');
-  }
-
-  const response = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idToken }),
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+  });
 
   if (!response.ok) {
     return null;
   }
 
   const data = await response.json();
-  return data.users?.[0]?.localId ?? null;
+  return data.id ?? null;
 }
 
-function getExtension(contentType) {
+export function getExtension(contentType) {
   if (contentType === 'image/jpeg') {
     return 'jpg';
   }
@@ -185,7 +180,7 @@ function getExtension(contentType) {
   return 'webp';
 }
 
-function getPublicBaseUrl() {
+export function getPublicBaseUrl() {
   const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL.replace(/\/$/, '');
   const url = new URL(publicBaseUrl);
 
@@ -227,18 +222,18 @@ export default async function handler(request, response) {
   }
 
   const authHeader = request.headers.authorization ?? '';
-  const idToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
 
-  if (!idToken) {
-    json(response, 401, { error: 'Missing Firebase ID token.' });
+  if (!accessToken) {
+    json(response, 401, { error: 'Missing Supabase access token.' });
     return;
   }
 
   try {
-    const uid = await getFirebaseUid(idToken);
+    const uid = await getSupabaseUid(accessToken);
 
     if (!uid) {
-      json(response, 401, { error: 'Invalid Firebase ID token.' });
+      json(response, 401, { error: 'Invalid Supabase access token.' });
       return;
     }
 

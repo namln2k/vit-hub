@@ -8,19 +8,30 @@ import tailwindcss from '@tailwindcss/vite';
 type ApiHandler = (request: IncomingMessage, response: ServerResponse) => Promise<void>;
 
 function localApiRoutes(): Plugin {
-  const avatarPresignRoute = pathToFileURL(path.resolve(__dirname, 'api/avatars/presign.js')).href;
+  const apiRoutes = new Map([
+    [
+      '/api/auth/register',
+      pathToFileURL(path.resolve(__dirname, 'api/auth/register.js')).href,
+    ],
+    [
+      '/api/avatars/presign',
+      pathToFileURL(path.resolve(__dirname, 'api/avatars/presign.js')).href,
+    ],
+  ]);
 
   return {
     name: 'local-api-routes',
     configureServer(server) {
       server.middlewares.use(async (request, response, next) => {
-        if (request.url?.split('?')[0] !== '/api/avatars/presign') {
+        const route = request.url ? apiRoutes.get(request.url.split('?')[0]) : undefined;
+
+        if (!route) {
           next();
           return;
         }
 
         try {
-          const { default: handler } = (await import(avatarPresignRoute)) as {
+          const { default: handler } = (await import(route)) as {
             default: ApiHandler;
           };
           await handler(request, response);

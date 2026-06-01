@@ -1,7 +1,6 @@
 import PasswordInput from '@/components/input/PasswordInput';
 import { useAuth } from '@/contexts/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FirebaseError } from 'firebase/app';
 import { KeyRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -47,11 +46,11 @@ export default function PasswordChangeModal({ onClose, onSuccess }: PasswordChan
       reset();
       onSuccess();
     } catch (caughtError) {
-      if (caughtError instanceof FirebaseError && caughtError.code === 'auth/invalid-credential') {
-        setError('Mật khẩu hiện tại không chính xác.');
-      } else {
-        setError('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
-      }
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : 'Không thể cập nhật mật khẩu. Vui lòng thử lại.',
+      );
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-import type { User } from 'firebase/auth';
+import { supabase } from '@/api/supabase';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
 const MAX_AVATAR_DIMENSION = 512;
@@ -60,7 +60,20 @@ async function validateStoredAvatar(file: File): Promise<void> {
   }
 }
 
-export async function uploadAvatar(file: File, user: User): Promise<UploadedAvatar> {
+async function getAccessToken(): Promise<string> {
+  const {
+    data: { session },
+    error,
+  } = await supabase.auth.getSession();
+
+  if (error || !session?.access_token) {
+    throw new Error('Bạn cần đăng nhập trước khi cập nhật ảnh đại diện.');
+  }
+
+  return session.access_token;
+}
+
+export async function uploadAvatar(file: File): Promise<UploadedAvatar> {
   const validationError = validateAvatarFile(file);
 
   if (validationError) {
@@ -69,11 +82,11 @@ export async function uploadAvatar(file: File, user: User): Promise<UploadedAvat
 
   await validateStoredAvatar(file);
 
-  const idToken = await user.getIdToken();
+  const accessToken = await getAccessToken();
   const presignResponse = await fetch('/api/avatars/presign', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${idToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -113,16 +126,16 @@ export async function uploadAvatar(file: File, user: User): Promise<UploadedAvat
   };
 }
 
-export async function deleteAvatar(avatarKey: string, user: User): Promise<void> {
+export async function deleteAvatar(avatarKey: string): Promise<void> {
   if (!avatarKey) {
     return;
   }
 
-  const idToken = await user.getIdToken();
+  const accessToken = await getAccessToken();
   const response = await fetch('/api/avatars/presign', {
     method: 'DELETE',
     headers: {
-      Authorization: `Bearer ${idToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ avatarKey }),

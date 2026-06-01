@@ -1,12 +1,12 @@
 # Cloudflare Setup Guide
 
-VIT Hub can store optional user avatars in Cloudflare R2. The browser asks `/api/avatars/presign` for a short-lived upload URL, uploads the image directly to R2, then stores `avatarUrl` and `avatarKey` in `users/{uid}`.
+VIT Hub can store optional user avatars in Cloudflare R2. During registration, `/api/auth/register` creates the Supabase user, uploads the avatar from the server, and stores `avatar_url` plus `avatar_key` in the user's Supabase profile row even while email confirmation is pending. Signed-in avatar changes still use `/api/avatars/presign` for short-lived direct uploads.
 
 ## Create The R2 Bucket
 
 1. Open Cloudflare Dashboard.
 2. Go to `Storage & databases` -> `R2 Object Storage` -> `Overview`.
-3. Create a bucket named `vit-hub-avatars`.
+3. Create a bucket named `vit-hub`, or use another bucket name and set `R2_BUCKET_NAME` to match it exactly.
 4. Choose Standard storage. Do not choose Infrequent Access for avatars.
 5. Enable public access using either a custom domain for production or the bucket's public `r2.dev` domain for quick testing.
 6. Set `R2_PUBLIC_BASE_URL` to that public origin, without a trailing slash.
@@ -38,7 +38,7 @@ Create an R2 API token with access scoped only to the avatar bucket.
 1. In Cloudflare Dashboard, go to `R2 Object Storage`.
 2. Open `Manage API Tokens`.
 3. Create an API token.
-4. Scope it to `vit-hub-avatars` only.
+4. Scope it to the bucket named by `R2_BUCKET_NAME`, such as `vit-hub`.
 5. Give it object read/write permission. The app needs write permission for uploads and delete permission for replacing old avatars.
 6. Copy the generated `Access Key ID` and `Secret Access Key` immediately.
 
@@ -68,7 +68,7 @@ private S3-compatible API endpoint for that bucket, so setting CORS on a differe
 still fail even if the public `r2.dev` URL works.
 
 1. In Cloudflare Dashboard, go to `Storage & databases` -> `R2 Object Storage` -> `Overview`.
-2. Open the bucket from `R2_BUCKET_NAME` such as `vit-hub-avatars`.
+2. Open the bucket from `R2_BUCKET_NAME`, such as `vit-hub`.
 3. Open the bucket `Settings` tab.
 4. Find `CORS policy` and choose `Add CORS policy` or `Edit CORS policy`.
 5. Paste this JSON and save:
@@ -96,7 +96,7 @@ origin shown in the browser error.
 
 ## Local End-To-End Test
 
-The Vite dev server serves `api/avatars/presign.js` through a local dev middleware, so avatar uploads can be tested with the normal app server:
+The Vite dev server serves `api/auth/register.js` and `api/avatars/presign.js` through a local dev middleware, so avatar uploads can be tested with the normal app server:
 
 ```bash
 npm run dev
@@ -106,9 +106,9 @@ Then:
 
 1. Register a new account.
 2. Pick a JPG, PNG, or WebP avatar under 1 MB.
-3. Confirm the user document in Firestore contains `avatarUrl` and `avatarKey`.
+3. Confirm the user's `profiles` row in Supabase contains `avatar_url` and `avatar_key`.
 4. Open the R2 bucket and confirm the object exists under `avatars/{uid}/...`.
-5. Visit the `avatarUrl` in a browser and confirm the image loads.
+5. Visit the saved `avatar_url` in a browser and confirm the image loads.
 
 If upload fails with CORS, check the R2 bucket CORS rule first. If upload fails with an auth or missing environment error, check the server-only environment variables.
 
@@ -134,16 +134,18 @@ Use the bucket's public `r2.dev` URL or a custom public domain instead. `R2_PUBL
 Set these server-only values wherever the API route runs:
 
 ```env
-FIREBASE_API_KEY=your-api-key
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 R2_ACCOUNT_ID=your-cloudflare-account-id
 R2_ACCESS_KEY_ID=your-r2-access-key-id
 R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
-R2_BUCKET_NAME=vit-hub-avatars
+R2_BUCKET_NAME=vit-hub
 R2_PUBLIC_BASE_URL=https://your-public-r2-domain.example.com
 R2_FREE_TIER_MAX_UPLOAD_BYTES=1048576
 ```
 
-Do not prefix R2 secrets with `VITE_`. Vite exposes `VITE_*` values to the browser, and R2 access keys must stay server-side.
+Do not prefix R2 secrets with `VITE_` or `NEXT_PUBLIC_`. Vite exposes `VITE_*` values to the browser, and public-prefixed variables in frontend frameworks are browser-readable. R2 access keys must stay server-side.
 
 ## Free Tier Guardrails
 
@@ -170,7 +172,9 @@ Vercel Project -> Settings -> Environment Variables
 ```
 
 ```env
-FIREBASE_API_KEY
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
 R2_ACCOUNT_ID
 R2_ACCESS_KEY_ID
 R2_SECRET_ACCESS_KEY
@@ -179,25 +183,26 @@ R2_PUBLIC_BASE_URL
 R2_FREE_TIER_MAX_UPLOAD_BYTES
 ```
 
-Also keep the existing `VITE_FIREBASE_*` values configured for the frontend.
+Also keep the existing `VITE_SUPABASE_*` values configured for the frontend.
 
 ## VPS Deployment
 
 For a VPS, serve the Vite `dist` directory with Nginx or another web server, and run an API service that exposes the same route:
 
 ```text
+POST /api/auth/register
 POST /api/avatars/presign
 ```
 
-The included handler is written with Node's request/response APIs, so it can be reused from a small Node server or adapted into Express/Fastify. Keep the R2 and Firebase server-only environment variables on the VPS, not in `.env` files served to the browser.
+The included handler is written with Node's request/response APIs, so it can be reused from a small Node server or adapted into Express/Fastify. Keep the R2 server-only environment variables on the VPS, not in `.env` files served to the browser.
 
-## Firestore Avatar Fields
+## Supabase Avatar Fields
 
-User profile documents include:
+User profile rows include:
 
-```js
-avatarUrl: string
-avatarKey: string
+```sql
+avatar_url text
+avatar_key text
 ```
 
-`avatarUrl` is used for display. `avatarKey` is kept so a future avatar replacement flow can delete the previous R2 object.
+`avatar_url` is used for display. `avatar_key` is kept so avatar replacement can delete the previous R2 object.

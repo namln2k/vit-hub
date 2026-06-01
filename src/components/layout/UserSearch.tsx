@@ -1,9 +1,7 @@
-import { db } from '@/api/firebase';
+import { searchProfiles } from '@/api/profiles';
 import Avatar from '@/components/layout/Avatar';
 import { useAuth } from '@/contexts/useAuth';
 import type { UserProfile } from '@/contexts/auth';
-import { FirebaseError } from 'firebase/app';
-import { collection, getDocs } from 'firebase/firestore';
 import { Loader2, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -13,22 +11,6 @@ interface UserSearchProps {
 
 function normalizeSearchValue(value: string) {
   return value.trim().toLowerCase();
-}
-
-function isSearchableUserProfile(value: unknown): value is UserProfile {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
-
-  const profile = value as Partial<UserProfile>;
-
-  return (
-    typeof profile.uid === 'string' &&
-    typeof profile.email === 'string' &&
-    typeof profile.firstName === 'string' &&
-    typeof profile.lastName === 'string' &&
-    typeof profile.username === 'string'
-  );
 }
 
 function getFullName(user: UserProfile) {
@@ -95,18 +77,9 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       setError('');
 
       try {
-        const snapshot = await getDocs(collection(db, 'users'));
-        const nextUsers = snapshot.docs
-          .map((userDoc) => userDoc.data())
-          .filter(isSearchableUserProfile);
-
-        setUsers(nextUsers);
-      } catch (searchError) {
-        if (searchError instanceof FirebaseError && searchError.code === 'permission-denied') {
-          setError('Bạn chưa có quyền tìm kiếm thành viên.');
-        } else {
-          setError('Không thể tìm kiếm thành viên lúc này.');
-        }
+        setUsers(await searchProfiles(queryText));
+      } catch {
+        setError('Không thể tìm kiếm thành viên lúc này.');
       } finally {
         setIsLoading(false);
       }
@@ -127,6 +100,10 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <input
           type="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="none"
+          spellCheck={false}
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
           onFocus={() => setIsFocused(true)}

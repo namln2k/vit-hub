@@ -25,6 +25,14 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.input<typeof registerSchema>;
 
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="ml-0.5 text-red-500">
+      *
+    </span>
+  );
+}
+
 export default function RegisterPage() {
   const { signInWithGoogle, signUp } = useAuth();
   const navigate = useNavigate();
@@ -106,7 +114,7 @@ export default function RegisterPage() {
     try {
       setError('');
       setLoading(true);
-      await signUp({
+      const result = await signUp({
         email: data.email,
         password: data.password,
         firstName: data.firstName,
@@ -115,6 +123,16 @@ export default function RegisterPage() {
         username: data.username,
         avatarFile,
       });
+
+      if (result.needsEmailConfirmation) {
+        navigate('/login', {
+          state: {
+            message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
+          },
+        });
+        return;
+      }
+
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đăng ký.');
@@ -207,7 +225,10 @@ export default function RegisterPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Họ</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Họ
+                <RequiredMark />
+              </label>
               <input
                 {...register('lastName')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
@@ -226,7 +247,10 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tên
+                <RequiredMark />
+              </label>
               <input
                 {...register('firstName')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
@@ -239,7 +263,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Username
+              <RequiredMark />
+            </label>
             <input
               {...register('username')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
@@ -251,7 +278,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+              <RequiredMark />
+            </label>
             <input
               type="email"
               {...register('email')}
@@ -262,7 +292,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mật khẩu
+              <RequiredMark />
+            </label>
             <PasswordInput
               {...register('password')}
               className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"

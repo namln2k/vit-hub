@@ -100,7 +100,7 @@ export default function LandingPage() {
           <div className="mt-3 flex items-center justify-center">
             <Link
               to="/divisions"
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10 hover:text-white"
+              className="rounded-full bg-white/18 px-5 py-2.5 text-sm font-bold text-white shadow-sm ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-cyan-400 hover:text-slate-950 hover:ring-cyan-300"
             >
               Các mảng hoạt động
             </Link>

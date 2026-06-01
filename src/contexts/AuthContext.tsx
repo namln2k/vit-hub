@@ -1,230 +1,325 @@
-import { auth, db } from '@/api/firebase';
 import { deleteAvatar, uploadAvatar } from '@/api/avatarUpload';
+import { getProfile, upsertProfile, usernameExists } from '@/api/profiles';
+import { supabase } from '@/api/supabase';
 import {
-  createUserWithEmailAndPassword,
-  deleteUser,
-  EmailAuthProvider,
-  GoogleAuthProvider,
-  reauthenticateWithCredential,
-  sendPasswordResetEmail,
-  signOut as firebaseSignOut,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  updatePassword,
-  type User,
-} from 'firebase/auth';
-import { AuthContext, type AuthContextType, type SignUpData, type UserProfile } from './auth';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore';
-import { FirebaseError } from 'firebase/app';
+  AuthContext,
+  type AuthContextType,
+  type AuthUser,
+  type SignUpData,
+  type UserProfile,
+} from './auth';
+import type { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState, type ReactNode } from 'react';
 
+function getStringMetadata(user: User, key: string) {
+  const value = user.user_metadata[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function mapSupabaseUser(user: User): AuthUser {
+  return {
+    id: user.id,
+    uid: user.id,
+    email: user.email ?? null,
+    displayName: getStringMetadata(user, 'full_name') || getStringMetadata(user, 'name') || null,
+    photoURL: getStringMetadata(user, 'avatar_url') || null,
+  };
+}
+
+function getAuthErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : '';
+
+  if (/invalid login credentials/i.test(message)) {
+    return 'Email hoặc mật khẩu không chính xác.';
+  }
+
+  if (/user already registered|already registered/i.test(message)) {
+    return 'Email đã được sử dụng. Vui lòng đăng nhập hoặc dùng email khác.';
+  }
+
+  if (/email not confirmed/i.test(message)) {
+    return 'Please verify your email before signing in';
+  }
+
+  if (/error sending confirmation email/i.test(message)) {
+    return 'Không thể gửi email xác nhận. Vui lòng kiểm tra cấu hình SMTP trong Supabase Auth.';
+  }
+
+  return message || 'Không thể xử lý yêu cầu xác thực.';
+}
+
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      const [, dataBase64 = ''] = result.split(',');
+
+      if (!dataBase64) {
+        reject(new Error('Không thể đọc ảnh đại diện.'));
+        return;
+      }
+
+      resolve(dataBase64);
+    };
+    reader.onerror = () => reject(new Error('Không thể đọc ảnh đại diện.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getProfileName(displayName: string | null, email: string) {
+  const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
+
+  if (nameParts.length === 0) {
+    return {
+      firstName: email.split('@')[0] || 'User',
+      middleName: '',
+      lastName: '',
+    };
+  }
+
+  if (nameParts.length === 1) {
+    return {
+      firstName: nameParts[0],
+      middleName: '',
+      lastName: '',
+    };
+  }
+
+  return {
+    firstName: nameParts[nameParts.length - 1],
+    middleName: nameParts.slice(1, -1).join(' '),
+    lastName: nameParts[0],
+  };
+}
+
+async function createUniqueUsername(email: string): Promise<string> {
+  const fallback = `user${Date.now().toString(36)}`;
+  const baseUsername =
+    email
+      .split('@')[0]
+      ?.toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 20) || fallback;
+
+  let username =
+    baseUsername.length >= 3 ? baseUsername : `${baseUsername}${fallback}`.slice(0, 20);
+  let suffix = 1;
+
+  while (await usernameExists(username)) {
+    const suffixText = suffix.toString();
+    username = `${baseUsername.slice(0, 20 - suffixText.length)}${suffixText}`;
+    suffix += 1;
+  }
+
+  return username;
+}
+
+async function createProfileFromUser(user: User): Promise<UserProfile> {
+  const email = user.email ?? '';
+  const displayName =
+    getStringMetadata(user, 'full_name') || getStringMetadata(user, 'name') || null;
+  const profileName = getProfileName(displayName, email);
+  const username = getStringMetadata(user, 'username') || (await createUniqueUsername(email));
+  const profile: UserProfile = {
+    uid: user.id,
+    email,
+    firstName: getStringMetadata(user, 'first_name') || profileName.firstName,
+    lastName: getStringMetadata(user, 'last_name') || profileName.lastName,
+    middleName: getStringMetadata(user, 'middle_name') || profileName.middleName,
+    username,
+    avatarUrl: getStringMetadata(user, 'avatar_url'),
+    avatarKey: getStringMetadata(user, 'avatar_key'),
+    role: 'member',
+  };
+
+  return upsertProfile(profile);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  async function loadUserProfile(user: User) {
+    const profile = (await getProfile(user.id)) ?? (await createProfileFromUser(user));
+    setUserProfile(profile);
+  }
+
+  async function applySession(session: Session | null) {
+    const user = session?.user ?? null;
+
+    if (!user) {
+      setCurrentUser(null);
+      setUserProfile(null);
+      return;
+    }
+
+    setCurrentUser(mapSupabaseUser(user));
+
+    try {
+      await loadUserProfile(user);
+    } catch {
+      setUserProfile(null);
+    }
+  }
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const docSnap = await getDoc(doc(db, 'users', user.uid));
-          if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as UserProfile);
-          } else {
-            setUserProfile(null);
-          }
-        } catch {
-          setUserProfile(null);
-        }
-      } else {
-        setUserProfile(null);
+    let isMounted = true;
+
+    async function initializeAuth() {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (!isMounted) {
+        return;
       }
-      setLoading(false);
+
+      if (error) {
+        setCurrentUser(null);
+        setUserProfile(null);
+      } else {
+        await applySession(session);
+      }
+
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      void applySession(session);
     });
-    return unsubscribe;
+
+    void initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
-  async function checkUsernameExists(username: string): Promise<boolean> {
-    const q = query(collection(db, 'users'), where('username', '==', username));
-    const snapshot = await getDocs(q);
-    return !snapshot.empty;
-  }
-
-  async function createUniqueUsername(email: string): Promise<string> {
-    const fallback = `user${Date.now().toString(36)}`;
-    const baseUsername =
-      email
-        .split('@')[0]
-        ?.toLowerCase()
-        .replace(/[^a-z0-9_]/g, '_')
-        .replace(/_+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .slice(0, 20) || fallback;
-
-    let username =
-      baseUsername.length >= 3 ? baseUsername : `${baseUsername}${fallback}`.slice(0, 20);
-    let suffix = 1;
-
-    while (await checkUsernameExists(username)) {
-      const suffixText = suffix.toString();
-      username = `${baseUsername.slice(0, 20 - suffixText.length)}${suffixText}`;
-      suffix += 1;
-    }
-
-    return username;
-  }
-
-  function getProfileName(displayName: string | null, email: string) {
-    const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
-
-    if (nameParts.length === 0) {
-      return {
-        firstName: email.split('@')[0] || 'User',
-        middleName: '',
-        lastName: '',
-      };
-    }
-
-    if (nameParts.length === 1) {
-      return {
-        firstName: nameParts[0],
-        middleName: '',
-        lastName: '',
-      };
-    }
-
-    return {
-      firstName: nameParts[nameParts.length - 1],
-      middleName: nameParts.slice(1, -1).join(' '),
-      lastName: nameParts[0],
-    };
-  }
-
-  async function ensureGoogleUserProfile(user: User): Promise<UserProfile> {
-    const profileRef = doc(db, 'users', user.uid);
-    const docSnap = await getDoc(profileRef);
-
-    if (docSnap.exists()) {
-      return docSnap.data() as UserProfile;
-    }
-
-    const email = user.email ?? '';
-    const username = await createUniqueUsername(email);
-    const profileName = getProfileName(user.displayName, email);
-    const profile: UserProfile = {
-      uid: user.uid,
-      email,
-      firstName: profileName.firstName,
-      lastName: profileName.lastName,
-      middleName: profileName.middleName,
-      username,
-      avatarUrl: user.photoURL ?? '',
-      avatarKey: '',
-      role: 'member',
-    };
-
-    await setDoc(profileRef, {
-      ...profile,
-      createdAt: serverTimestamp(),
-    });
-
-    return profile;
-  }
-
   async function signUp(data: SignUpData) {
-    try {
-      const usernameExists = await checkUsernameExists(data.username);
-      if (usernameExists) {
-        throw new Error('Username đã tồn tại. Vui lòng chọn username khác.');
-      }
-    } catch (error) {
-      if (error instanceof FirebaseError && error.code === 'permission-denied') {
-        throw new Error(
-          'Firestore chưa cho phép đọc collection users. Hãy cập nhật Firestore Rules rồi thử lại.',
-        );
-      }
-      throw error;
-    }
-
-    const credential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-
-    try {
-      const avatar = data.avatarFile ? await uploadAvatar(data.avatarFile, credential.user) : null;
-
-      await setDoc(doc(db, 'users', credential.user.uid), {
-        uid: credential.user.uid,
+    const avatar = data.avatarFile
+      ? {
+          contentType: data.avatarFile.type,
+          dataBase64: await readFileAsBase64(data.avatarFile),
+          size: data.avatarFile.size,
+        }
+      : null;
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         email: data.email,
+        emailRedirectTo: `${window.location.origin}/login`,
+        password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
         middleName: data.middleName,
         username: data.username,
-        avatarUrl: avatar?.avatarUrl ?? '',
-        avatarKey: avatar?.avatarKey ?? '',
-        role: 'member',
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      await deleteUser(credential.user);
+        avatar,
+      }),
+    });
+    const result = await response.json();
 
-      if (error instanceof FirebaseError && error.code === 'permission-denied') {
-        throw new Error(
-          'Firestore chưa cho phép tạo hồ sơ user. Hãy cập nhật Firestore Rules rồi đăng ký lại.',
-        );
-      }
-      throw error;
+    if (!response.ok) {
+      throw new Error(result.error ?? 'Không thể đăng ký tài khoản.');
     }
+
+    if (result.session?.access_token && result.session?.refresh_token) {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.setSession({
+        access_token: result.session.access_token,
+        refresh_token: result.session.refresh_token,
+      });
+
+      if (error) {
+        throw new Error(getAuthErrorMessage(error));
+      }
+
+      await applySession(session);
+    }
+
+    return { needsEmailConfirmation: Boolean(result.needsEmailConfirmation) };
   }
 
   async function signIn(email: string, password: string) {
-    await signInWithEmailAndPassword(auth, email, password);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
   }
 
   async function signInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        queryParams: {
+          prompt: 'select_account',
+        },
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
 
-    try {
-      const credential = await signInWithPopup(auth, provider);
-      const profile = await ensureGoogleUserProfile(credential.user);
-      setUserProfile(profile);
-    } catch (error) {
-      if (error instanceof FirebaseError && error.code === 'permission-denied') {
-        throw new Error(
-          'Firestore chưa cho phép tạo hồ sơ Google. Hãy cập nhật Firestore Rules rồi thử lại.',
-        );
-      }
-      throw error;
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
     }
   }
 
   async function signOut() {
-    await firebaseSignOut(auth);
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
   }
 
   async function resetPassword(email: string) {
-    await sendPasswordResetEmail(auth, email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
   }
 
   async function updateUserPassword(currentPassword: string, newPassword: string) {
-    if (!auth.currentUser?.email) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) {
       throw new Error('Bạn cần đăng nhập lại trước khi đổi mật khẩu.');
     }
 
-    const credential = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
-    await reauthenticateWithCredential(auth.currentUser, credential);
-    await updatePassword(auth.currentUser, newPassword);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      throw new Error('Mật khẩu hiện tại không chính xác.');
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
   }
 
   async function updateUserAvatar(avatarFile: File) {
@@ -233,22 +328,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const previousAvatarKey = userProfile.avatarKey;
-    const avatar = await uploadAvatar(avatarFile, currentUser);
-
-    await updateDoc(doc(db, 'users', currentUser.uid), {
-      avatarUrl: avatar.avatarUrl,
-      avatarKey: avatar.avatarKey,
-    });
-
-    setUserProfile({
+    const avatar = await uploadAvatar(avatarFile);
+    const nextProfile = await upsertProfile({
       ...userProfile,
       avatarUrl: avatar.avatarUrl,
       avatarKey: avatar.avatarKey,
     });
 
+    await supabase.auth.updateUser({
+      data: {
+        avatar_key: avatar.avatarKey,
+        avatar_url: avatar.avatarUrl,
+      },
+    });
+
+    setUserProfile(nextProfile);
+
     if (previousAvatarKey) {
       try {
-        await deleteAvatar(previousAvatarKey, currentUser);
+        await deleteAvatar(previousAvatarKey);
       } catch {
         // The profile already points at the new avatar; stale object cleanup can be retried manually.
       }

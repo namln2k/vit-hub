@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
@@ -18,8 +18,16 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const message =
+    location.state &&
+    typeof location.state === 'object' &&
+    'message' in location.state &&
+    typeof location.state.message === 'string'
+      ? location.state.message
+      : '';
 
   const {
     register,
@@ -77,6 +85,11 @@ export default function LoginPage() {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
             {error}
+          </div>
+        )}
+        {message && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-4 text-sm">
+            {message}
           </div>
         )}
 

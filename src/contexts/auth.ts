@@ -1,6 +1,13 @@
 import { createContext } from 'react';
-import type { User } from 'firebase/auth';
 import type { UserRole } from '@/constants/userRoles';
+
+export interface AuthUser {
+  id: string;
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
 
 export interface UserProfile {
   uid: string;
@@ -24,11 +31,15 @@ export interface SignUpData {
   avatarFile?: File;
 }
 
+export interface SignUpResult {
+  needsEmailConfirmation: boolean;
+}
+
 export interface AuthContextType {
-  currentUser: User | null;
+  currentUser: AuthUser | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (data: SignUpData) => Promise<void>;
+  signUp: (data: SignUpData) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
