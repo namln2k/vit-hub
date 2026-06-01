@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { Home, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/components/input/PasswordInput';
@@ -58,6 +58,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors mb-6"
+        >
+          <Home className="w-4 h-4" />
+          Trang chủ
+        </Link>
+
         <div className="flex flex-col items-center mb-6">
           <div className="bg-indigo-100 p-3 rounded-full mb-3">
             <LogIn className="w-6 h-6 text-indigo-600" />

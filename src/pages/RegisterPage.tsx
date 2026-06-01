@@ -2,11 +2,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { ImagePlus, UserPlus, X } from 'lucide-react';
+import { Home, ImagePlus, UserPlus, X } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/components/input/PasswordInput';
 import { validateAvatarFile } from '@/api/avatarUpload';
+import GoogleSignIn from '@/components/auth/GoogleSignIn';
 
 const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),
@@ -24,7 +25,7 @@ const registerSchema = z.object({
 type RegisterFormData = z.input<typeof registerSchema>;
 
 export default function RegisterPage() {
-  const { signUp } = useAuth();
+  const { signInWithGoogle, signUp } = useAuth();
   const navigate = useNavigate();
   const [error, setError] = useState('');
   const [avatarError, setAvatarError] = useState('');
@@ -99,9 +100,30 @@ export default function RegisterPage() {
     }
   }
 
+  async function handleGoogleSignIn() {
+    try {
+      setError('');
+      setLoading(true);
+      await signInWithGoogle();
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể đăng ký bằng Google.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors mb-6"
+        >
+          <Home className="w-4 h-4" />
+          Trang chủ
+        </Link>
+
         <div className="flex flex-col items-center mb-10">
           <div className="bg-indigo-100 p-3 rounded-full mb-3">
             <UserPlus className="w-6 h-6 text-indigo-600" />
@@ -236,6 +258,20 @@ export default function RegisterPage() {
             {loading ? 'Đang xử lý...' : 'Đăng ký'}
           </button>
         </form>
+
+        <div className="flex items-center gap-3 my-6">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs font-medium text-gray-400">hoặc</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <div className="w-full text-center">
+          <GoogleSignIn
+            handleGoogleSignIn={handleGoogleSignIn}
+            label="Đăng ký với Google"
+            loading={loading}
+          />
+        </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Đã có tài khoản?{' '}

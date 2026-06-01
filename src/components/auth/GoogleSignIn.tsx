@@ -2,9 +2,11 @@ import styles from './GoogleSignIn.module.scss';
 
 export default function GoogleSignIn({
   handleGoogleSignIn,
+  label = 'Đăng nhập với Google',
   loading,
 }: {
   handleGoogleSignIn: () => Promise<void>;
+  label?: string;
   loading: boolean;
 }) {
   return (
@@ -43,7 +45,7 @@ export default function GoogleSignIn({
             <path fill="none" d="M0 0h48v48H0z"></path>
           </svg>
         </div>
-        <span className={styles['gsi-material-button-contents']}>Đăng nhập với Google</span>
+        <span className={styles['gsi-material-button-contents']}>{label}</span>
       </div>
     </button>
   );

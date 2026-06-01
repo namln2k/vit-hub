@@ -1,4 +1,5 @@
 import AvatarMenu from '@/components/layout/AvatarMenu';
+import UserSearch from '@/components/layout/UserSearch';
 import volunteerHero from '@/assets/hero.png';
 import { useAuth } from '@/contexts/useAuth';
 import {
@@ -55,10 +56,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white text-slate-950">
       <header className="absolute inset-x-0 top-0 z-20">
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto grid h-16 max-w-7xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link to="/" className="text-lg font-bold text-white">
             VIT Hub
           </Link>
+          <div className="mx-auto w-full max-w-md">
+            <UserSearch variant="dark" />
+          </div>
           <div className="flex items-center gap-2">
             {currentUser ? (
               <AvatarMenu

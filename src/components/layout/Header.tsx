@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import { useNavigate } from 'react-router-dom';
 import AvatarMenu from '@/components/layout/AvatarMenu';
+import UserSearch from '@/components/layout/UserSearch';
 
 export default function Header() {
   const { userProfile, signOut } = useAuth();
@@ -19,7 +20,7 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <button
             type="button"
             onClick={() => navigate('/')}
@@ -27,6 +28,10 @@ export default function Header() {
           >
             VIT Hub
           </button>
+
+          <div className="mx-auto w-full max-w-md">
+            <UserSearch />
+          </div>
 
           <div className="flex items-center gap-4">
             <AvatarMenu
