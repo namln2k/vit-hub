@@ -11,6 +11,7 @@ import {
   LogIn,
   LogOut,
   MapPin,
+  ShieldCheck,
   UserRound,
   UsersRound,
 } from 'lucide-react';
@@ -73,6 +74,15 @@ export default function LandingPage() {
                   avatarClassName="border-0"
                   buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
                   items={[
+                    ...(userProfile?.role === 'super_admin'
+                      ? [
+                          {
+                            label: 'Quản trị',
+                            icon: <ShieldCheck className="h-4 w-4" />,
+                            to: '/super-admin',
+                          },
+                        ]
+                      : []),
                     {
                       label: 'Hồ sơ cá nhân',
                       icon: <UserRound className="h-4 w-4" />,

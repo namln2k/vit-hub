@@ -1,26 +1,26 @@
-import { addProfilesToDivision } from '@/api/divisions';
+import { addProfilesToGroup } from '@/api/groups';
 import { searchProfiles } from '@/api/profiles';
 import Avatar from '@/components/layout/Avatar';
 import type { UserProfile } from '@/contexts/auth';
 import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getFullName, normalizeSearchValue } from './ProfileUtils';
+import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/ProfileUtils';
 
-interface AddDivisionUsersModalProps {
-  divisionId: string;
-  divisionName: string;
+interface AddGroupUsersModalProps {
+  groupId: string;
+  groupName: string;
   existingUserIds: string[];
   onClose: () => void;
   onAdded: () => Promise<void>;
 }
 
-export default function AddDivisionUsersModal({
-  divisionId,
-  divisionName,
+export default function AddGroupUsersModal({
+  groupId,
+  groupName,
   existingUserIds,
   onClose,
   onAdded,
-}: AddDivisionUsersModalProps) {
+}: AddGroupUsersModalProps) {
   const [searchValue, setSearchValue] = useState('');
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<UserProfile[]>([]);
@@ -97,15 +97,17 @@ export default function AddDivisionUsersModal({
     setSubmitError('');
 
     try {
-      await addProfilesToDivision(
-        divisionId,
+      await addProfilesToGroup(
+        groupId,
         selectedUsers.map((user) => user.uid),
       );
       await onAdded();
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setSubmitError(message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.');
+      setSubmitError(
+        message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.',
+      );
     } finally {
       setIsAdding(false);
     }
@@ -116,7 +118,7 @@ export default function AddDivisionUsersModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-division-users-title"
+      aria-labelledby="add-group-users-title"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isAdding) {
           onClose();
@@ -126,10 +128,10 @@ export default function AddDivisionUsersModal({
       <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div className="min-w-0">
-            <h2 id="add-division-users-title" className="text-lg font-bold text-slate-950">
-              Thêm thành viên vào mảng
+            <h2 id="add-group-users-title" className="text-lg font-bold text-slate-950">
+              Thêm thành viên vào nhóm
             </h2>
-            <p className="mt-1 truncate text-sm font-medium text-slate-500">{divisionName}</p>
+            <p className="mt-1 truncate text-sm font-medium text-slate-500">{groupName}</p>
           </div>
           <button
             type="button"
@@ -159,8 +161,8 @@ export default function AddDivisionUsersModal({
           </label>
 
           {selectedUsers.length > 0 && (
-            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-              <div className="mb-2 text-xs font-bold uppercase text-indigo-700">
+            <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+              <div className="mb-2 text-xs font-bold uppercase text-emerald-700">
                 Đã chọn {selectedUsers.length}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -169,7 +171,7 @@ export default function AddDivisionUsersModal({
                     key={user.uid}
                     type="button"
                     onClick={() => removeSelectedUser(user.uid)}
-                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-indigo-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100"
+                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold text-emerald-700 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
                   >
                     <Avatar src={user.avatarUrl} size="sm" />
                     <span className="max-w-48 truncate">{getFullName(user)}</span>
@@ -221,7 +223,7 @@ export default function AddDivisionUsersModal({
               </div>
             ) : (
               <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
-                Không tìm thấy thành viên phù hợp hoặc tất cả đã thuộc mảng này.
+                Không tìm thấy thành viên phù hợp hoặc tất cả đã thuộc nhóm này.
               </p>
             )}
           </div>
@@ -242,9 +244,13 @@ export default function AddDivisionUsersModal({
             type="button"
             onClick={handleSubmit}
             disabled={selectedUsers.length === 0 || isAdding}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Check className="h-4 w-4" />
+            )}
             Thêm {selectedUsers.length > 0 ? selectedUsers.length : ''} thành viên
           </button>
         </div>
