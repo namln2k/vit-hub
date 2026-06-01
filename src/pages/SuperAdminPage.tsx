@@ -1,9 +1,11 @@
 import { listDivisions, type Division } from '@/api/divisions';
+import { listGroups, type Group } from '@/api/groups';
 import Header from '@/components/layout/Header';
 import { ADMIN_SECTIONS } from '@/components/super-admin/AdminSections';
 import DivisionsManagement from '@/components/super-admin/DivisionsManagement';
 import PlaceholderManagement from '@/components/super-admin/PlaceholderManagement';
 import SuperAdminSidebar from '@/components/super-admin/SuperAdminSidebar';
+import GroupsManagement from '@/components/super-admin/GroupsManagement';
 import type { AdminSectionId } from '@/components/super-admin/types';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -14,6 +16,10 @@ export default function SuperAdminPage() {
   const [activeDivisionId, setActiveDivisionId] = useState('');
   const [isLoadingDivisions, setIsLoadingDivisions] = useState(true);
   const [divisionError, setDivisionError] = useState('');
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState('');
+  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
+  const [groupError, setGroupError] = useState('');
 
   const activeSection = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.id === activeSectionId) ?? ADMIN_SECTIONS[0],
@@ -22,6 +28,10 @@ export default function SuperAdminPage() {
   const activeDivision = useMemo(
     () => divisions.find((division) => division.id === activeDivisionId) ?? null,
     [activeDivisionId, divisions],
+  );
+  const activeGroup = useMemo(
+    () => groups.find((group) => group.id === activeGroupId) ?? null,
+    [activeGroupId, groups],
   );
 
   useEffect(() => {
@@ -61,6 +71,50 @@ export default function SuperAdminPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadGroups() {
+      setIsLoadingGroups(true);
+      setGroupError('');
+
+      try {
+        const nextGroups = await listGroups();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setGroups(nextGroups);
+        setActiveGroupId((current) => current || nextGroups[0]?.id || '');
+      } catch (error) {
+        if (isMounted) {
+          const message = error instanceof Error ? error.message : '';
+          setGroupError(
+            message ? `Không thể tải danh sách nhóm: ${message}` : 'Không thể tải danh sách nhóm.',
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingGroups(false);
+        }
+      }
+    }
+
+    void loadGroups();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  function handleGroupCreated(group: Group) {
+    setGroups((currentGroups) =>
+      [...currentGroups, group].sort((first, second) => first.name.localeCompare(second.name)),
+    );
+    setActiveGroupId(group.id);
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
@@ -85,10 +139,17 @@ export default function SuperAdminPage() {
             onDivisionChange={setActiveDivisionId}
             isLoadingDivisions={isLoadingDivisions}
             divisionError={divisionError}
+            groups={groups}
+            activeGroupId={activeGroupId}
+            onGroupChange={setActiveGroupId}
+            isLoadingGroups={isLoadingGroups}
+            groupError={groupError}
           />
 
           {activeSectionId === 'divisions' ? (
             <DivisionsManagement activeDivision={activeDivision} />
+          ) : activeSectionId === 'groups' ? (
+            <GroupsManagement activeGroup={activeGroup} onGroupCreated={handleGroupCreated} />
           ) : (
             <PlaceholderManagement section={activeSection} />
           )}

@@ -10,7 +10,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     accentClassName: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
   {
-    id: 'teams',
+    id: 'groups',
     label: 'Quản lý nhóm',
     icon: <UsersRound className="h-4 w-4" />,
     countLabel: 'nhóm',
