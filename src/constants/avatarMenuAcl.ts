@@ -17,7 +17,7 @@ export const AVATAR_MENU_FEATURES = {
   profile: {
     id: 'profile',
     label: 'Hồ sơ cá nhân',
-    to: '/dashboard',
+    to: '/profile',
   },
 } as const satisfies Record<AvatarMenuFeatureId, AvatarMenuFeature>;
 
@@ -37,7 +37,7 @@ function normalizePathname(pathname: string) {
 function getCurrentFeatureId(pathname: string): AvatarMenuFeatureId | null {
   const normalizedPathname = normalizePathname(pathname);
 
-  if (normalizedPathname === '/dashboard') {
+  if (normalizedPathname === '/profile') {
     return 'profile';
   }
 

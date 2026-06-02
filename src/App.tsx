@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
-import DashboardPage from '@/pages/DashboardPage';
+import ProfilePage from '@/pages/ProfilePage';
 import SuperAdminPage from '@/pages/SuperAdminPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
@@ -19,10 +19,10 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route
-        path="/dashboard"
+        path="/profile"
         element={
           <ProtectedRoute>
-            <DashboardPage />
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

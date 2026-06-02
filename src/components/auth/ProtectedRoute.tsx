@@ -23,7 +23,7 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   }
 
   if (requiredRole && appUser?.role !== requiredRole) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/profile" replace />;
   }
 
   return <>{children}</>;
