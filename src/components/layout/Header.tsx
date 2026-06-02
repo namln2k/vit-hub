@@ -1,12 +1,23 @@
-import { LogOut, ShieldCheck } from 'lucide-react';
+import { LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import AvatarMenu from '@/components/layout/AvatarMenu';
 import UserSearch from '@/components/layout/UserSearch';
+import {
+  getAllowedAvatarMenuFeatures,
+  type AvatarMenuFeatureId,
+} from '@/constants/avatarMenuAcl';
+import type { ReactNode } from 'react';
+
+const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
+  admin: <ShieldCheck className="h-4 w-4" />,
+  profile: <UserRound className="h-4 w-4" />,
+};
 
 export default function Header() {
   const { appUser, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   async function handleSignOut() {
     await signOut();
@@ -17,15 +28,11 @@ export default function Header() {
     ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : 'Người dùng';
   const avatarItems = [
-    ...(appUser?.role === 'super_admin'
-      ? [
-          {
-            label: 'Quản trị',
-            icon: <ShieldCheck className="h-4 w-4" />,
-            to: '/super-admin',
-          },
-        ]
-      : []),
+    ...getAllowedAvatarMenuFeatures(appUser?.role, location.pathname).map((feature) => ({
+      label: feature.label,
+      icon: avatarMenuIcons[feature.id],
+      to: feature.to,
+    })),
     {
       label: 'Đăng xuất',
       icon: <LogOut className="h-4 w-4" />,

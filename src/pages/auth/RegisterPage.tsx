@@ -14,6 +14,7 @@ const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),
   middleName: z.string().optional(),
   firstName: z.string().min(1, 'Tên không được để trống'),
+  nickname: z.string().optional(),
   username: z
     .string()
     .min(3, 'Username phải có ít nhất 3 ký tự')
@@ -120,6 +121,7 @@ export default function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
         middleName: data.middleName ?? '',
+        nickname: data.nickname ?? '',
         username: data.username,
         avatarFile,
       });
@@ -133,7 +135,7 @@ export default function RegisterPage() {
         return;
       }
 
-      navigate('/dashboard');
+      navigate('/profile');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đăng ký.');
     } finally {
@@ -259,6 +261,15 @@ export default function RegisterPage() {
                 <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
+            <input
+              {...register('nickname')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+              placeholder="Nickname"
+            />
           </div>
 
           <div>

@@ -7,3 +7,7 @@ export function getFullName(user: AppUser) {
 export function normalizeSearchValue(value: string) {
   return value.trim().toLowerCase();
 }
+
+export function getSearchableUserValues(user: AppUser) {
+  return [getFullName(user), user.nickname, user.username, user.email];
+}

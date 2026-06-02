@@ -1,20 +1,19 @@
 import { ChevronRight, Loader2 } from 'lucide-react';
 import type { Division } from '@/api/divisions';
 import type { Group } from '@/api/groups';
+import { getAdminItemPath, getAdminSectionPath } from '@/components/super-admin/common/adminRoutes';
 import type { AdminSection, AdminSectionId } from '@/components/super-admin/common/types';
+import { Link } from 'react-router-dom';
 
 interface SuperAdminSidebarProps {
   sections: AdminSection[];
   activeSectionId: AdminSectionId;
-  onSectionChange: (sectionId: AdminSectionId) => void;
   divisions: Division[];
   activeDivisionId: string;
-  onDivisionChange: (divisionId: string) => void;
   isLoadingDivisions: boolean;
   divisionError: string;
   groups: Group[];
   activeGroupId: string;
-  onGroupChange: (groupId: string) => void;
   isLoadingGroups: boolean;
   groupError: string;
 }
@@ -22,15 +21,12 @@ interface SuperAdminSidebarProps {
 export default function SuperAdminSidebar({
   sections,
   activeSectionId,
-  onSectionChange,
   divisions,
   activeDivisionId,
-  onDivisionChange,
   isLoadingDivisions,
   divisionError,
   groups,
   activeGroupId,
-  onGroupChange,
   isLoadingGroups,
   groupError,
 }: SuperAdminSidebarProps) {
@@ -42,9 +38,8 @@ export default function SuperAdminSidebar({
 
           return (
             <div key={section.id}>
-              <button
-                type="button"
-                onClick={() => onSectionChange(section.id)}
+              <Link
+                to={getAdminSectionPath(section.id)}
                 className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                   isActive
                     ? 'bg-slate-950 text-white'
@@ -60,13 +55,13 @@ export default function SuperAdminSidebar({
                     className={`h-4 w-4 transition-transform ${isActive ? 'rotate-90' : ''}`}
                   />
                 )}
-              </button>
+              </Link>
 
               {section.id === 'divisions' && isActive && (
                 <NestedNavItems
+                  sectionId="divisions"
                   items={divisions}
                   activeItemId={activeDivisionId}
-                  onItemChange={onDivisionChange}
                   isLoading={isLoadingDivisions}
                   error={divisionError}
                   loadingLabel="Đang tải mảng"
@@ -77,9 +72,9 @@ export default function SuperAdminSidebar({
 
               {section.id === 'groups' && isActive && (
                 <NestedNavItems
+                  sectionId="groups"
                   items={groups}
                   activeItemId={activeGroupId}
-                  onItemChange={onGroupChange}
                   isLoading={isLoadingGroups}
                   error={groupError}
                   loadingLabel="Đang tải nhóm"
@@ -101,9 +96,9 @@ interface NestedNavItem {
 }
 
 interface NestedNavItemsProps {
+  sectionId: 'divisions' | 'groups';
   items: NestedNavItem[];
   activeItemId: string;
-  onItemChange: (itemId: string) => void;
   isLoading: boolean;
   error: string;
   loadingLabel: string;
@@ -112,9 +107,9 @@ interface NestedNavItemsProps {
 }
 
 function NestedNavItems({
+  sectionId,
   items,
   activeItemId,
-  onItemChange,
   isLoading,
   error,
   loadingLabel,
@@ -144,10 +139,9 @@ function NestedNavItems({
         const isItemActive = item.id === activeItemId;
 
         return (
-          <button
+          <Link
             key={item.id}
-            type="button"
-            onClick={() => onItemChange(item.id)}
+            to={getAdminItemPath(sectionId, item)}
             className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors ${
               isItemActive
                 ? activeClassName
@@ -155,7 +149,7 @@ function NestedNavItems({
             }`}
           >
             <span className="truncate">{item.name}</span>
-          </button>
+          </Link>
         );
       })}
     </div>

@@ -1,4 +1,4 @@
-import { searchUsers } from '@/api/users';
+import { queryUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import { useAuth } from '@/contexts/useAuth';
 import type { AppUser } from '@/contexts/auth';
@@ -36,7 +36,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       .filter(
         (user) =>
           user.uid !== currentUser?.uid &&
-          [user.username, user.email, user.firstName, user.lastName].some((value) =>
+          [user.username, user.email, user.firstName, user.lastName, user.nickname].some((value) =>
             normalizeSearchValue(value).includes(queryText),
           ),
       )
@@ -77,7 +77,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       setError('');
 
       try {
-        setUsers(await searchUsers(queryText));
+        setUsers(await queryUsers({ search: queryText, limit: 12 }));
       } catch {
         setError('Không thể tìm kiếm thành viên lúc này.');
       } finally {
@@ -107,7 +107,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
           value={searchValue}
           onChange={(event) => setSearchValue(event.target.value)}
           onFocus={() => setIsFocused(true)}
-          placeholder="Tìm thành viên khác theo username, email, tên..."
+          placeholder="Tìm thành viên khác theo username, email, tên, nickname..."
           aria-label="Tìm kiếm thành viên"
           className={`h-10 w-full rounded-full border py-2 pl-9 pr-10 text-sm font-medium outline-none transition-colors focus:ring-4 ${inputClassName}`}
         />
@@ -145,7 +145,8 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
                       {getFullName(user)}
                     </p>
                     <p className="truncate text-xs text-slate-500">
-                      @{user.username} · {user.email}
+                      @{user.username} · {user.nickname ? `${user.nickname} · ` : ''}
+                      {user.email}
                     </p>
                   </div>
                 </div>

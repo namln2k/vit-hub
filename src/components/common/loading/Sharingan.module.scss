@@ -1,0 +1,104 @@
+.sharingan {
+  --base-size: 48px;
+  --tomoe-size: calc(var(--base-size) / 6.5);
+
+  box-sizing: border-box;
+  width: var(--base-size);
+  height: var(--base-size);
+  border: calc(var(--base-size) / 30) solid #000;
+  border-radius: 50%;
+  background: rgba(184, 0, 0, 0.75);
+  box-shadow: 0 0 (var(--base-size) / 4) (var(--base-size) / 40) #000 inset;
+  position: relative;
+}
+
+.sharingan *,
+.sharingan *::before,
+.sharingan *::after {
+  box-sizing: border-box;
+}
+
+.pupil {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--base-size) / 5);
+  height: calc(var(--base-size) / 5);
+  background: #000;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 (var(--base-size) / 4) (var(--base-size) / 40) #000;
+}
+
+.iris {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--base-size) / 2);
+  height: calc(var(--base-size) / 2);
+  transform: translate(-50%, -50%);
+  border: 1px solid #000;
+  border-radius: 50%;
+}
+
+.tomoes {
+  height: 100%;
+  width: 100%;
+  animation: rotateIris 1.4s infinite;
+}
+
+.tomoe-area {
+  position: absolute;
+  width: calc(var(--base-size) / 2);
+  height: calc(var(--base-size) / 2);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tomoe {
+  width: calc(var(--base-size) / 6.5);
+  height: calc(var(--base-size) / 6.5);
+  position: absolute;
+  background-color: #000;
+  border-radius: 50%;
+  left: 50%;
+  top: -16.6%;
+  transform: translate(-50%);
+}
+
+.tomoe::before {
+  content: '';
+  position: absolute;
+  top: -30.3%;
+  left: 3.1%;
+  width: calc(var(--tomoe-size) * 1.51);
+  height: calc(var(--tomoe-size) * 1.69);
+  border-radius: 50%;
+  border-top: calc(var(--tomoe-size) / 2.6) solid #000;
+  border-left: calc(var(--tomoe-size) / 9.7) solid transparent;
+  transform: rotate(-35deg);
+}
+
+.tomoe-area:first-child {
+  transform: translate(-50%, -50%);
+}
+
+.tomoe-area:nth-child(2) {
+  transform: translate(-50%, -50%) rotate(120deg);
+}
+
+.tomoe-area:nth-child(3) {
+  transform: translate(-50%, -50%) rotate(-120deg);
+}
+
+@keyframes rotateIris {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}

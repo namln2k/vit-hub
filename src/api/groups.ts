@@ -73,7 +73,7 @@ export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
     .from('user_groups')
     .select(
-      'user(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
+      'user:user!user_groups_user_id_fkey(id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role)',
     )
     .eq('group_id', groupId)
     .returns<UserGroupRow[]>();
@@ -102,6 +102,22 @@ export async function addUsersToGroup(groupId: string, userIds: string[]): Promi
   const { error } = await supabase
     .from('user_groups')
     .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function removeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('user_groups')
+    .delete()
+    .eq('group_id', groupId)
+    .in('user_id', userIds);
 
   if (error) {
     throw error;

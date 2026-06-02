@@ -42,7 +42,7 @@ export default function LoginPage() {
       setError('');
       setLoading(true);
       await signIn(data.email, data.password);
-      navigate('/dashboard');
+      navigate('/profile');
     } catch {
       setError('Email hoặc mật khẩu không chính xác. Nếu bạn đã đăng ký bằng Google, vui lòng đăng nhập bằng Google hoặc dùng Quên mật khẩu.');
     } finally {

@@ -2,12 +2,27 @@ import { supabase } from '@/api/supabase';
 import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
 
+const USER_SELECT =
+  'id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role';
+const DEFAULT_USERS_LIMIT = 20;
+const ALL_USERS_PAGE_SIZE = 1000;
+
+export interface QueryUsersParams {
+  ids?: string[];
+  search?: string;
+  roles?: UserRole[];
+  limit?: number;
+  offset?: number;
+  fetchAll?: boolean;
+}
+
 export interface UserRow {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
   middle_name: string | null;
+  nickname: string | null;
   username: string;
   avatar_url: string | null;
   avatar_key: string | null;
@@ -20,6 +35,7 @@ export interface UserWrite {
   first_name: string;
   last_name: string;
   middle_name: string;
+  nickname: string;
   username: string;
   avatar_url: string;
   avatar_key: string;
@@ -33,6 +49,7 @@ export function mapUserRow(row: UserRow): AppUser {
     firstName: row.first_name,
     lastName: row.last_name,
     middleName: row.middle_name ?? '',
+    nickname: row.nickname ?? '',
     username: row.username,
     avatarUrl: row.avatar_url ?? '',
     avatarKey: row.avatar_key ?? '',
@@ -47,6 +64,7 @@ export function mapUserToWrite(user: AppUser): UserWrite {
     first_name: user.firstName,
     last_name: user.lastName,
     middle_name: user.middleName,
+    nickname: user.nickname,
     username: user.username,
     avatar_url: user.avatarUrl ?? '',
     avatar_key: user.avatarKey ?? '',
@@ -55,17 +73,9 @@ export function mapUserToWrite(user: AppUser): UserWrite {
 }
 
 export async function getUser(userId: string): Promise<AppUser | null> {
-  const { data, error } = await supabase
-    .from('user')
-    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
-    .eq('id', userId)
-    .maybeSingle<UserRow>();
+  const users = await queryUsers({ ids: [userId], limit: 1 });
 
-  if (error) {
-    throw error;
-  }
-
-  return data ? mapUserRow(data) : null;
+  return users[0] ?? null;
 }
 
 export async function usernameExists(username: string): Promise<boolean> {
@@ -86,7 +96,7 @@ export async function upsertUser(user: AppUser): Promise<AppUser> {
   const { data, error } = await supabase
     .from('user')
     .upsert(mapUserToWrite(user), { onConflict: 'id' })
-    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
+    .select(USER_SELECT)
     .single<UserRow>();
 
   if (error) {
@@ -96,22 +106,66 @@ export async function upsertUser(user: AppUser): Promise<AppUser> {
   return mapUserRow(data);
 }
 
-export async function searchUsers(queryText: string): Promise<AppUser[]> {
-  const escapedQuery = queryText.replaceAll('%', '\\%').replaceAll('_', '\\_');
-  const pattern = `%${escapedQuery}%`;
-  const { data, error } = await supabase
-    .from('user')
-    .select('id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role')
-    .or(
-      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern}`,
-    )
-    .order('username', { ascending: true })
-    .limit(12)
-    .returns<UserRow[]>();
-
-  if (error) {
-    throw error;
+export async function queryUsers(params: QueryUsersParams = {}): Promise<AppUser[]> {
+  if (params.ids && params.ids.length === 0) {
+    return [];
   }
 
-  return data.map(mapUserRow);
+  const pageSize = params.limit ?? (params.fetchAll ? ALL_USERS_PAGE_SIZE : DEFAULT_USERS_LIMIT);
+  if (pageSize <= 0) {
+    return [];
+  }
+
+  const rows: UserRow[] = [];
+  let offset = params.offset ?? 0;
+
+  while (true) {
+    const { data, error } = await createUserQuery(params)
+      .range(offset, offset + pageSize - 1)
+      .returns<UserRow[]>();
+
+    if (error) {
+      throw error;
+    }
+
+    rows.push(...data);
+
+    if (!params.fetchAll || data.length < pageSize) {
+      break;
+    }
+
+    offset += pageSize;
+  }
+
+  return rows.map(mapUserRow);
+}
+
+function createUserQuery(params: QueryUsersParams) {
+  const search = params.search?.trim();
+  let query = supabase.from('user').select(USER_SELECT).order('username', { ascending: true });
+
+  if (params.ids?.length === 1) {
+    query = query.eq('id', params.ids[0]);
+  } else if (params.ids && params.ids.length > 1) {
+    query = query.in('id', params.ids);
+  }
+
+  if (search) {
+    const pattern = `%${escapeSearchPattern(search)}%`;
+    query = query.or(
+      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},middle_name.ilike.${pattern},nickname.ilike.${pattern}`,
+    );
+  }
+
+  if (params.roles?.length === 1) {
+    query = query.eq('role', params.roles[0]);
+  } else if (params.roles && params.roles.length > 1) {
+    query = query.in('role', params.roles);
+  }
+
+  return query;
+}
+
+function escapeSearchPattern(value: string) {
+  return value.replaceAll('%', '\\%').replaceAll('_', '\\_');
 }

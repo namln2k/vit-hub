@@ -15,7 +15,7 @@ export default function AuthCallbackPage() {
       }
 
       hasExchangedCode.current = true;
-      const next = searchParams.get('next') || '/dashboard';
+      const next = searchParams.get('next') || '/profile';
       const code = searchParams.get('code');
 
       if (!code) {

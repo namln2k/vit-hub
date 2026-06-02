@@ -3,6 +3,11 @@ import UserSearch from '@/components/layout/UserSearch';
 import volunteerHero from '@/assets/hero.png';
 import { useAuth } from '@/contexts/useAuth';
 import {
+  getAllowedAvatarMenuFeatures,
+  type AvatarMenuFeatureId,
+} from '@/constants/avatarMenuAcl';
+import type { ReactNode } from 'react';
+import {
   ArrowRight,
   CalendarDays,
   ExternalLink,
@@ -15,7 +20,7 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const highlights = [
   {
@@ -41,9 +46,15 @@ const activities = [
   'Kết nối những bạn trẻ muốn đóng góp cho cộng đồng SOICT',
 ];
 
+const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
+  admin: <ShieldCheck className="h-4 w-4" />,
+  profile: <UserRound className="h-4 w-4" />,
+};
+
 export default function LandingPage() {
   const { currentUser, appUser, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const fullName = appUser
     ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : '';
@@ -74,20 +85,13 @@ export default function LandingPage() {
                   avatarClassName="border-0"
                   buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
                   items={[
-                    ...(appUser?.role === 'super_admin'
-                      ? [
-                          {
-                            label: 'Quản trị',
-                            icon: <ShieldCheck className="h-4 w-4" />,
-                            to: '/super-admin',
-                          },
-                        ]
-                      : []),
-                    {
-                      label: 'Hồ sơ cá nhân',
-                      icon: <UserRound className="h-4 w-4" />,
-                      to: '/dashboard',
-                    },
+                    ...getAllowedAvatarMenuFeatures(appUser?.role, location.pathname).map(
+                      (feature) => ({
+                        label: feature.label,
+                        icon: avatarMenuIcons[feature.id],
+                        to: feature.to,
+                      }),
+                    ),
                     {
                       label: 'Đăng xuất',
                       icon: <LogOut className="h-4 w-4" />,

@@ -49,7 +49,7 @@ export async function listUsersByDivision(divisionId: string): Promise<AppUser[]
   const { data, error } = await supabase
     .from('user_divisions')
     .select(
-      'user(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
+      'user:user!user_divisions_user_id_fkey(id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role)',
     )
     .eq('division_id', divisionId)
     .returns<UserDivisionRow[]>();
@@ -78,6 +78,25 @@ export async function addUsersToDivision(divisionId: string, userIds: string[]):
   const { error } = await supabase
     .from('user_divisions')
     .upsert(rows, { onConflict: 'division_id,user_id', ignoreDuplicates: true });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function removeUsersFromDivision(
+  divisionId: string,
+  userIds: string[],
+): Promise<void> {
+  if (userIds.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('user_divisions')
+    .delete()
+    .eq('division_id', divisionId)
+    .in('user_id', userIds);
 
   if (error) {
     throw error;

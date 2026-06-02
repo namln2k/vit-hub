@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type AdminSectionId = 'divisions' | 'groups' | 'fund';
+export type AdminSectionId = 'divisions' | 'groups' | 'users' | 'fund';
 
 export interface AdminSection {
   id: AdminSectionId;
