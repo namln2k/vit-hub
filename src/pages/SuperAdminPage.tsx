@@ -122,6 +122,15 @@ export default function SuperAdminPage() {
     navigate(getAdminItemPath('groups', group));
   }
 
+  function handleGroupUpdated(group: Group) {
+    setGroups((currentGroups) =>
+      currentGroups
+        .map((currentGroup) => (currentGroup.id === group.id ? group : currentGroup))
+        .sort((first, second) => first.name.localeCompare(second.name)),
+    );
+    navigate(getAdminItemPath('groups', group), { replace: true });
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
@@ -158,7 +167,11 @@ export default function SuperAdminPage() {
               divisionError={divisionError}
             />
           ) : activeSectionId === 'groups' ? (
-            <GroupsManagement activeGroup={activeGroup} onGroupCreated={handleGroupCreated} />
+            <GroupsManagement
+              activeGroup={activeGroup}
+              onGroupCreated={handleGroupCreated}
+              onGroupUpdated={handleGroupUpdated}
+            />
           ) : activeSectionId === 'users' ? (
             <UsersManagement />
           ) : (

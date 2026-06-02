@@ -3,17 +3,30 @@ import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
 
 const USER_SELECT =
-  'id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role';
+  'id, email, first_name, last_name, middle_name, nickname, username, phone_number, school_name, enter_year, cohort, gender, avatar_url, avatar_key, role';
 const DEFAULT_USERS_LIMIT = 20;
 const ALL_USERS_PAGE_SIZE = 1000;
 
 export interface QueryUsersParams {
   ids?: string[];
+  emails?: string[];
   search?: string;
   roles?: UserRole[];
   limit?: number;
   offset?: number;
   fetchAll?: boolean;
+}
+
+export interface ImportUserInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  phoneNumber: string;
+  schoolName: string;
+  enterYear: string;
+  cohort: string;
+  gender: 0 | 1 | null;
 }
 
 export interface UserRow {
@@ -24,6 +37,11 @@ export interface UserRow {
   middle_name: string | null;
   nickname: string | null;
   username: string;
+  phone_number: string | null;
+  school_name: string | null;
+  enter_year: string | null;
+  cohort: string | null;
+  gender: 0 | 1 | null;
   avatar_url: string | null;
   avatar_key: string | null;
   role: UserRole;
@@ -37,6 +55,11 @@ export interface UserWrite {
   middle_name: string;
   nickname: string;
   username: string;
+  phone_number: string;
+  school_name: string;
+  enter_year: string;
+  cohort: string;
+  gender: 0 | 1 | null;
   avatar_url: string;
   avatar_key: string;
   role: UserRole;
@@ -51,6 +74,11 @@ export function mapUserRow(row: UserRow): AppUser {
     middleName: row.middle_name ?? '',
     nickname: row.nickname ?? '',
     username: row.username,
+    phoneNumber: row.phone_number ?? '-',
+    schoolName: row.school_name ?? '',
+    enterYear: row.enter_year ?? '',
+    cohort: row.cohort ?? '',
+    gender: row.gender ?? null,
     avatarUrl: row.avatar_url ?? '',
     avatarKey: row.avatar_key ?? '',
     role: row.role,
@@ -66,6 +94,11 @@ export function mapUserToWrite(user: AppUser): UserWrite {
     middle_name: user.middleName,
     nickname: user.nickname,
     username: user.username,
+    phone_number: user.phoneNumber || '-',
+    school_name: user.schoolName,
+    enter_year: user.enterYear,
+    cohort: user.cohort,
+    gender: user.gender,
     avatar_url: user.avatarUrl ?? '',
     avatar_key: user.avatarKey ?? '',
     role: user.role,
@@ -111,6 +144,10 @@ export async function queryUsers(params: QueryUsersParams = {}): Promise<AppUser
     return [];
   }
 
+  if (params.emails && params.emails.length === 0) {
+    return [];
+  }
+
   const pageSize = params.limit ?? (params.fetchAll ? ALL_USERS_PAGE_SIZE : DEFAULT_USERS_LIMIT);
   if (pageSize <= 0) {
     return [];
@@ -140,6 +177,32 @@ export async function queryUsers(params: QueryUsersParams = {}): Promise<AppUser
   return rows.map(mapUserRow);
 }
 
+export async function importUsers(users: ImportUserInput[]): Promise<number> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Bạn cần đăng nhập để import nhân sự.');
+  }
+
+  const response = await fetch('/api/users/import', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ users }),
+  });
+  const result = await response.json();
+
+  if (!response.ok) {
+    throw new Error(result.error ?? 'Không thể import nhân sự.');
+  }
+
+  return Number(result.importedCount) || 0;
+}
+
 function createUserQuery(params: QueryUsersParams) {
   const search = params.search?.trim();
   let query = supabase.from('user').select(USER_SELECT).order('username', { ascending: true });
@@ -150,10 +213,16 @@ function createUserQuery(params: QueryUsersParams) {
     query = query.in('id', params.ids);
   }
 
+  if (params.emails?.length) {
+    query = query.or(
+      params.emails.map((email) => `email.ilike.${escapeSearchPattern(email.trim())}`).join(','),
+    );
+  }
+
   if (search) {
     const pattern = `%${escapeSearchPattern(search)}%`;
     query = query.or(
-      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},middle_name.ilike.${pattern},nickname.ilike.${pattern}`,
+      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},middle_name.ilike.${pattern},nickname.ilike.${pattern},phone_number.ilike.${pattern},school_name.ilike.${pattern},enter_year.ilike.${pattern},cohort.ilike.${pattern}`,
     );
   }
 

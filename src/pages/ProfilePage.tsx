@@ -12,8 +12,21 @@ function getFullName(lastName: string, middleName: string, firstName: string) {
   return [lastName, middleName, firstName].map((part) => part.trim()).filter(Boolean).join(' ');
 }
 
+function getGenderLabel(gender: 0 | 1 | null) {
+  if (gender === 0) {
+    return 'Nữ';
+  }
+
+  if (gender === 1) {
+    return 'Nam';
+  }
+
+  return 'Khác';
+}
+
 export default function ProfilePage() {
-  const { appUser, updateUserAvatar, updateUserName, updateUserNickname } = useAuth();
+  const { appUser, updateUserAvatar, updateUserName, updateUserNickname, updateUserPersonnel } =
+    useAuth();
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const [avatarError, setAvatarError] = useState('');
@@ -34,6 +47,17 @@ export default function ProfilePage() {
   const [nicknameError, setNicknameError] = useState('');
   const [nicknameSuccess, setNicknameSuccess] = useState('');
   const [nicknameForm, setNicknameForm] = useState('');
+  const [isPersonnelEditing, setIsPersonnelEditing] = useState(false);
+  const [personnelSaving, setPersonnelSaving] = useState(false);
+  const [personnelError, setPersonnelError] = useState('');
+  const [personnelSuccess, setPersonnelSuccess] = useState('');
+  const [personnelForm, setPersonnelForm] = useState({
+    phoneNumber: '',
+    schoolName: '',
+    cohort: '',
+    enterYear: '',
+    gender: '',
+  });
 
   function openPasswordModal() {
     setPasswordSuccess('');
@@ -174,6 +198,62 @@ export default function ProfilePage() {
     }
   }
 
+  function startPersonnelEditing() {
+    if (!appUser) {
+      return;
+    }
+
+    setPersonnelError('');
+    setPersonnelSuccess('');
+    setPersonnelForm({
+      phoneNumber: appUser.phoneNumber === '-' ? '' : appUser.phoneNumber,
+      schoolName: appUser.schoolName,
+      cohort: appUser.cohort,
+      enterYear: appUser.enterYear,
+      gender: appUser.gender === null ? '' : String(appUser.gender),
+    });
+    setIsPersonnelEditing(true);
+  }
+
+  function cancelPersonnelEditing() {
+    if (personnelSaving) {
+      return;
+    }
+
+    setPersonnelError('');
+    setIsPersonnelEditing(false);
+  }
+
+  function handlePersonnelInputChange(field: keyof typeof personnelForm, value: string) {
+    setPersonnelForm((currentPersonnelForm) => ({
+      ...currentPersonnelForm,
+      [field]: value,
+    }));
+  }
+
+  async function saveUserPersonnel() {
+    try {
+      setPersonnelError('');
+      setPersonnelSuccess('');
+      setPersonnelSaving(true);
+      await updateUserPersonnel({
+        phoneNumber: personnelForm.phoneNumber.trim() || '-',
+        schoolName: personnelForm.schoolName.trim(),
+        cohort: personnelForm.cohort.trim(),
+        enterYear: personnelForm.enterYear.trim(),
+        gender: personnelForm.gender === '0' ? 0 : personnelForm.gender === '1' ? 1 : null,
+      });
+      setIsPersonnelEditing(false);
+      setPersonnelSuccess('Thông tin nhân sự đã được cập nhật.');
+    } catch (error) {
+      setPersonnelError(
+        error instanceof Error ? error.message : 'Không thể cập nhật thông tin nhân sự.',
+      );
+    } finally {
+      setPersonnelSaving(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -232,6 +312,18 @@ export default function ProfilePage() {
           {nicknameSuccess && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
               {nicknameSuccess}
+            </div>
+          )}
+
+          {personnelError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+              {personnelError}
+            </div>
+          )}
+
+          {personnelSuccess && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
+              {personnelSuccess}
             </div>
           )}
 
@@ -407,6 +499,168 @@ export default function ProfilePage() {
                 <p className="text-sm text-gray-500">Email</p>
                 <p className="font-medium text-gray-900">{appUser.email}</p>
               </div>
+              <div className="sm:col-span-2 mt-2 flex items-center justify-between border-t border-gray-100 pt-4">
+                <h3 className="text-base font-semibold text-gray-800">Thông tin nhân sự</h3>
+                {!isPersonnelEditing && (
+                  <button
+                    type="button"
+                    onClick={startPersonnelEditing}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-indigo-600"
+                    title="Thay đổi thông tin nhân sự"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              {isPersonnelEditing ? (
+                <div className="sm:col-span-2 grid grid-cols-1 gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="profile-phone-number"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      SĐT
+                    </label>
+                    <input
+                      id="profile-phone-number"
+                      name="phoneNumber"
+                      type="text"
+                      value={personnelForm.phoneNumber}
+                      onChange={(event) =>
+                        handlePersonnelInputChange('phoneNumber', event.target.value)
+                      }
+                      disabled={personnelSaving}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      placeholder="-"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="profile-school-name"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Trường
+                    </label>
+                    <input
+                      id="profile-school-name"
+                      name="schoolName"
+                      type="text"
+                      value={personnelForm.schoolName}
+                      onChange={(event) =>
+                        handlePersonnelInputChange('schoolName', event.target.value)
+                      }
+                      disabled={personnelSaving}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      placeholder="Tên trường"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="profile-cohort"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Khóa
+                    </label>
+                    <input
+                      id="profile-cohort"
+                      name="cohort"
+                      type="text"
+                      value={personnelForm.cohort}
+                      onChange={(event) =>
+                        handlePersonnelInputChange('cohort', event.target.value)
+                      }
+                      disabled={personnelSaving}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      placeholder="K64"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="profile-enter-year"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Năm vào Đội
+                    </label>
+                    <input
+                      id="profile-enter-year"
+                      name="enterYear"
+                      type="text"
+                      value={personnelForm.enterYear}
+                      onChange={(event) =>
+                        handlePersonnelInputChange('enterYear', event.target.value)
+                      }
+                      disabled={personnelSaving}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      placeholder="2026A"
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="profile-gender"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
+                      Giới tính
+                    </label>
+                    <select
+                      id="profile-gender"
+                      name="gender"
+                      value={personnelForm.gender}
+                      onChange={(event) =>
+                        handlePersonnelInputChange('gender', event.target.value)
+                      }
+                      disabled={personnelSaving}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <option value="">Khác</option>
+                      <option value="0">Nữ</option>
+                      <option value="1">Nam</option>
+                    </select>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <button
+                      type="button"
+                      onClick={saveUserPersonnel}
+                      disabled={personnelSaving}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Check className="h-4 w-4" />
+                      {personnelSaving ? 'Đang lưu...' : 'Lưu'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelPersonnelEditing}
+                      disabled={personnelSaving}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-gray-600 ring-1 ring-gray-200 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <X className="h-4 w-4" />
+                      Hủy
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-sm text-gray-500">SĐT</p>
+                    <p className="font-medium text-gray-900">{appUser.phoneNumber || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Trường</p>
+                    <p className="font-medium text-gray-900">{appUser.schoolName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Khóa</p>
+                    <p className="font-medium text-gray-900">{appUser.cohort || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Năm vào Đội</p>
+                    <p className="font-medium text-gray-900">{appUser.enterYear || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Giới tính</p>
+                    <p className="font-medium text-gray-900">{getGenderLabel(appUser.gender)}</p>
+                  </div>
+                </>
+              )}
               <div>
                 <p className="text-sm text-gray-500">Vai trò</p>
                 <p className="font-medium text-gray-900">{USER_ROLE_LABELS[appUser.role]}</p>

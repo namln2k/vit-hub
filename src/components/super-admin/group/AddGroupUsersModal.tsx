@@ -2,9 +2,10 @@ import { addUsersToGroup } from '@/api/groups';
 import { queryUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import type { AppUser } from '@/contexts/auth';
-import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
+import { Check, Loader2, MailPlus, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
+import { formatEmailList, parseEmailList } from '@/utils/emailListImport';
 
 interface AddGroupUsersModalProps {
   groupId: string;
@@ -26,7 +27,11 @@ export default function AddGroupUsersModal({
   const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isImportingEmails, setIsImportingEmails] = useState(false);
+  const [emailListValue, setEmailListValue] = useState('');
   const [searchError, setSearchError] = useState('');
+  const [emailImportError, setEmailImportError] = useState('');
+  const [emailImportMessage, setEmailImportMessage] = useState('');
   const [submitError, setSubmitError] = useState('');
 
   const queryText = normalizeSearchValue(searchValue);
@@ -102,6 +107,73 @@ export default function AddGroupUsersModal({
     setSubmitError('');
   }
 
+  async function handleImportEmails() {
+    const parsedEmails = parseEmailList(emailListValue);
+
+    setEmailImportError('');
+    setEmailImportMessage('');
+    setSubmitError('');
+
+    if (parsedEmails.invalidEmails.length > 0) {
+      setEmailImportError(`Email không hợp lệ: ${formatEmailList(parsedEmails.invalidEmails)}.`);
+      return;
+    }
+
+    if (parsedEmails.duplicateEmails.length > 0) {
+      setEmailImportError(
+        `Email bị trùng trong danh sách: ${formatEmailList(parsedEmails.duplicateEmails)}.`,
+      );
+      return;
+    }
+
+    if (parsedEmails.emails.length === 0) {
+      setEmailImportError('Nhập ít nhất 1 email để import.');
+      return;
+    }
+
+    setIsImportingEmails(true);
+
+    try {
+      const matchedUsers = await queryUsers({
+        emails: parsedEmails.emails,
+        limit: parsedEmails.emails.length,
+      });
+      const matchedEmailSet = new Set(matchedUsers.map((user) => user.email.toLowerCase()));
+      const missingEmails = parsedEmails.emails.filter((email) => !matchedEmailSet.has(email));
+      const importableUsers = matchedUsers.filter(
+        (user) => !existingUserIdSet.has(user.uid) && !selectedUserIdSet.has(user.uid),
+      );
+      const skippedUsers = matchedUsers.filter(
+        (user) => existingUserIdSet.has(user.uid) || selectedUserIdSet.has(user.uid),
+      );
+
+      if (missingEmails.length > 0) {
+        setEmailImportError(`Không tìm thấy user: ${formatEmailList(missingEmails)}.`);
+        return;
+      }
+
+      if (importableUsers.length === 0) {
+        setEmailImportError('Tất cả email trong danh sách đã thuộc nhóm hoặc đã được chọn.');
+        return;
+      }
+
+      setSelectedUsers((currentUsers) => [...currentUsers, ...importableUsers]);
+      setEmailImportMessage(
+        `Đã thêm ${importableUsers.length} user vào danh sách chọn${
+          skippedUsers.length > 0 ? `, bỏ qua ${skippedUsers.length} user đã có` : ''
+        }.`,
+      );
+      setEmailListValue('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      setEmailImportError(
+        message ? `Không thể import theo email: ${message}` : 'Không thể import theo email.',
+      );
+    } finally {
+      setIsImportingEmails(false);
+    }
+  }
+
   async function handleSubmit() {
     if (selectedUsers.length === 0) {
       return;
@@ -173,6 +245,47 @@ export default function AddGroupUsersModal({
               <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
             )}
           </label>
+
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <label className="block text-xs font-bold uppercase text-slate-600">
+              Import theo list email
+            </label>
+            <textarea
+              value={emailListValue}
+              onChange={(event) => {
+                setEmailListValue(event.target.value);
+                setEmailImportError('');
+                setEmailImportMessage('');
+              }}
+              placeholder="member1@example.com&#10;member2@example.com"
+              rows={4}
+              className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
+            />
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs font-medium text-slate-500">
+                Hỗ trợ xuống dòng, dấu phẩy, chấm phẩy hoặc khoảng trắng.
+              </p>
+              <button
+                type="button"
+                onClick={handleImportEmails}
+                disabled={isAdding || isImportingEmails || emailListValue.trim().length === 0}
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                {isImportingEmails ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MailPlus className="h-4 w-4" />
+                )}
+                Import email
+              </button>
+            </div>
+            {emailImportError && (
+              <p className="mt-2 text-sm font-medium text-red-600">{emailImportError}</p>
+            )}
+            {emailImportMessage && (
+              <p className="mt-2 text-sm font-medium text-emerald-700">{emailImportMessage}</p>
+            )}
+          </div>
 
           {selectedUsers.length > 0 && (
             <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 p-3">

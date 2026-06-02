@@ -9,6 +9,7 @@ import {
   type AppUser,
   type UpdateUserNameData,
   type UpdateUserNicknameData,
+  type UpdateUserPersonnelData,
 } from './auth';
 import type { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -142,6 +143,11 @@ async function createAppUserFromAuthUser(user: User): Promise<AppUser> {
     middleName: getStringMetadata(user, 'middle_name') || userNameParts.middleName,
     nickname: getStringMetadata(user, 'nickname'),
     username,
+    phoneNumber: '-',
+    schoolName: '',
+    enterYear: '',
+    cohort: '',
+    gender: null,
     avatarUrl: getStringMetadata(user, 'avatar_url'),
     avatarKey: getStringMetadata(user, 'avatar_key'),
     role: 'member',
@@ -415,6 +421,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAppUser(nextAppUser);
   }
 
+  async function updateUserPersonnel(data: UpdateUserPersonnelData) {
+    if (!currentUser || !appUser) {
+      throw new Error('Bạn cần đăng nhập trước khi cập nhật thông tin nhân sự.');
+    }
+
+    const nextAppUser = await upsertUser({
+      ...appUser,
+      phoneNumber: data.phoneNumber || '-',
+      schoolName: data.schoolName,
+      cohort: data.cohort,
+      enterYear: data.enterYear,
+      gender: data.gender,
+    });
+
+    setAppUser(nextAppUser);
+  }
+
   const value: AuthContextType = {
     currentUser,
     appUser,
@@ -428,6 +451,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateUserAvatar,
     updateUserName,
     updateUserNickname,
+    updateUserPersonnel,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
