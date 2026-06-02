@@ -3,7 +3,7 @@ import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
 
 const USER_SELECT =
-  'id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role';
+  'id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role';
 const DEFAULT_USERS_LIMIT = 20;
 const ALL_USERS_PAGE_SIZE = 1000;
 
@@ -22,6 +22,7 @@ export interface UserRow {
   first_name: string;
   last_name: string;
   middle_name: string | null;
+  nickname: string | null;
   username: string;
   avatar_url: string | null;
   avatar_key: string | null;
@@ -34,6 +35,7 @@ export interface UserWrite {
   first_name: string;
   last_name: string;
   middle_name: string;
+  nickname: string;
   username: string;
   avatar_url: string;
   avatar_key: string;
@@ -47,6 +49,7 @@ export function mapUserRow(row: UserRow): AppUser {
     firstName: row.first_name,
     lastName: row.last_name,
     middleName: row.middle_name ?? '',
+    nickname: row.nickname ?? '',
     username: row.username,
     avatarUrl: row.avatar_url ?? '',
     avatarKey: row.avatar_key ?? '',
@@ -61,6 +64,7 @@ export function mapUserToWrite(user: AppUser): UserWrite {
     first_name: user.firstName,
     last_name: user.lastName,
     middle_name: user.middleName,
+    nickname: user.nickname,
     username: user.username,
     avatar_url: user.avatarUrl ?? '',
     avatar_key: user.avatarKey ?? '',
@@ -149,7 +153,7 @@ function createUserQuery(params: QueryUsersParams) {
   if (search) {
     const pattern = `%${escapeSearchPattern(search)}%`;
     query = query.or(
-      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},middle_name.ilike.${pattern}`,
+      `username.ilike.${pattern},email.ilike.${pattern},first_name.ilike.${pattern},last_name.ilike.${pattern},middle_name.ilike.${pattern},nickname.ilike.${pattern}`,
     );
   }
 

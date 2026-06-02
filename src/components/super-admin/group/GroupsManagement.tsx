@@ -8,7 +8,11 @@ import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
 import ConfirmRemoveUsersModal from '@/components/super-admin/common/ConfirmRemoveUsersModal';
 import MembersLoadingOverlay from '@/components/super-admin/common/MembersLoadingOverlay';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
+import {
+  getFullName,
+  getSearchableUserValues,
+  normalizeSearchValue,
+} from '@/components/super-admin/common/UserUtils';
 
 interface GroupsManagementProps {
   activeGroup: Group | null;
@@ -35,9 +39,7 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
     }
 
     return users.filter((user) =>
-      [getFullName(user), user.username, user.email].some((value) =>
-        normalizeSearchValue(value).includes(queryText),
-      ),
+      getSearchableUserValues(user).some((value) => normalizeSearchValue(value).includes(queryText)),
     );
   }, [search, users]);
   const existingUserIds = useMemo(() => users.map((user) => user.uid), [users]);

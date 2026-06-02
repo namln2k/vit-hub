@@ -2,7 +2,11 @@ import { queryUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
+import {
+  getFullName,
+  getSearchableUserValues,
+  normalizeSearchValue,
+} from '@/components/super-admin/common/UserUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
 import { Search } from 'lucide-react';
@@ -24,7 +28,7 @@ export default function UsersManagement() {
     }
 
     return users.filter((user) =>
-      [getFullName(user), user.username, user.email, USER_ROLE_LABELS[user.role]].some((value) =>
+      [...getSearchableUserValues(user), USER_ROLE_LABELS[user.role]].some((value) =>
         normalizeSearchValue(value).includes(queryText),
       ),
     );

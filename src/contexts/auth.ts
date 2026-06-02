@@ -15,6 +15,7 @@ export interface AppUser {
   firstName: string;
   lastName: string;
   middleName: string;
+  nickname: string;
   username: string;
   avatarUrl?: string;
   avatarKey?: string;
@@ -27,12 +28,23 @@ export interface SignUpData {
   firstName: string;
   lastName: string;
   middleName: string;
+  nickname: string;
   username: string;
   avatarFile?: File;
 }
 
 export interface SignUpResult {
   needsEmailConfirmation: boolean;
+}
+
+export interface UpdateUserNameData {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+}
+
+export interface UpdateUserNicknameData {
+  nickname: string;
 }
 
 export interface AuthContextType {
@@ -46,6 +58,8 @@ export interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updateUserPassword: (currentPassword: string, newPassword: string) => Promise<void>;
   updateUserAvatar: (avatarFile: File) => Promise<void>;
+  updateUserName: (data: UpdateUserNameData) => Promise<void>;
+  updateUserNickname: (data: UpdateUserNicknameData) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);

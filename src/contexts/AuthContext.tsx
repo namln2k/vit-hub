@@ -7,6 +7,8 @@ import {
   type AuthUser,
   type SignUpData,
   type AppUser,
+  type UpdateUserNameData,
+  type UpdateUserNicknameData,
 } from './auth';
 import type { Session, User } from '@supabase/supabase-js';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -138,6 +140,7 @@ async function createAppUserFromAuthUser(user: User): Promise<AppUser> {
     firstName: getStringMetadata(user, 'first_name') || userNameParts.firstName,
     lastName: getStringMetadata(user, 'last_name') || userNameParts.lastName,
     middleName: getStringMetadata(user, 'middle_name') || userNameParts.middleName,
+    nickname: getStringMetadata(user, 'nickname'),
     username,
     avatarUrl: getStringMetadata(user, 'avatar_url'),
     avatarKey: getStringMetadata(user, 'avatar_key'),
@@ -234,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         firstName: data.firstName,
         lastName: data.lastName,
         middleName: data.middleName,
+        nickname: data.nickname,
         username: data.username,
         avatar,
       }),
@@ -361,6 +365,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function updateUserName(data: UpdateUserNameData) {
+    if (!currentUser || !appUser) {
+      throw new Error('Bạn cần đăng nhập trước khi cập nhật họ và tên.');
+    }
+
+    const nextAppUser = await upsertUser({
+      ...appUser,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      middleName: data.middleName,
+    });
+
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        first_name: data.firstName,
+        last_name: data.lastName,
+        middle_name: data.middleName,
+      },
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
+
+    setAppUser(nextAppUser);
+  }
+
+  async function updateUserNickname(data: UpdateUserNicknameData) {
+    if (!currentUser || !appUser) {
+      throw new Error('Bạn cần đăng nhập trước khi cập nhật Nickname.');
+    }
+
+    const nextAppUser = await upsertUser({
+      ...appUser,
+      nickname: data.nickname,
+    });
+
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        nickname: data.nickname,
+      },
+    });
+
+    if (error) {
+      throw new Error(getAuthErrorMessage(error));
+    }
+
+    setAppUser(nextAppUser);
+  }
+
   const value: AuthContextType = {
     currentUser,
     appUser,
@@ -372,6 +426,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetPassword,
     updateUserPassword,
     updateUserAvatar,
+    updateUserName,
+    updateUserNickname,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

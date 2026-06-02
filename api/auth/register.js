@@ -86,6 +86,7 @@ function validateRegisterBody(body) {
     firstName: readString(body, 'firstName'),
     lastName: readString(body, 'lastName'),
     middleName: readString(body, 'middleName'),
+    nickname: readString(body, 'nickname'),
     username: readString(body, 'username'),
   };
 
@@ -180,6 +181,7 @@ function getUserMetadata(userData, avatar) {
     full_name: fullName,
     last_name: userData.lastName,
     middle_name: userData.middleName,
+    nickname: userData.nickname,
     role: 'member',
     username: userData.username,
   };
@@ -285,6 +287,7 @@ async function upsertUser(uid, userData, avatar) {
     first_name: userData.firstName,
     last_name: userData.lastName,
     middle_name: userData.middleName,
+    nickname: userData.nickname,
     username: userData.username,
     avatar_url: avatar?.avatarUrl ?? '',
     avatar_key: avatar?.avatarKey ?? '',

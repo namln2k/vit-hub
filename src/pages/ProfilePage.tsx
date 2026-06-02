@@ -236,7 +236,7 @@ export default function ProfilePage() {
           )}
 
           {appUser && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2 flex items-center gap-4">
                 <label className="relative block w-20 h-20 rounded-full cursor-pointer group">
                   <Avatar
@@ -271,11 +271,11 @@ export default function ProfilePage() {
                   <p className="text-xs text-gray-500 mt-1">JPG, PNG hoặc WebP, tối đa 1 MB.</p>
                 </div>
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-gray-500">Họ và tên</p>
                 {isNameEditing ? (
-                  <div className="mt-1 flex flex-col gap-2 xl:flex-row xl:items-start">
-                    <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-[10rem_12rem_10rem]">
+                  <div className="mt-1 grid max-w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                    <div className="grid min-w-0 grid-cols-1 gap-2 lg:grid-cols-3">
                       <input
                         id="profile-last-name"
                         name="lastName"
@@ -311,7 +311,7 @@ export default function ProfilePage() {
                         placeholder="Tên"
                       />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <button
                         type="button"
                         onClick={saveUserName}
@@ -333,8 +333,8 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="font-medium text-gray-900">
+                  <div className="mt-1 flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 truncate font-medium text-gray-900">
                       {getFullName(appUser.lastName, appUser.middleName, appUser.firstName)}
                     </p>
                     <button
@@ -348,10 +348,10 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-gray-500">Nickname</p>
                 {isNicknameEditing ? (
-                  <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-start">
+                  <div className="mt-1 grid max-w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                     <input
                       id="profile-nickname"
                       name="nickname"
@@ -359,10 +359,10 @@ export default function ProfilePage() {
                       value={nicknameForm}
                       onChange={(event) => setNicknameForm(event.target.value)}
                       disabled={nicknameSaving}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:w-60"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                       placeholder="Nickname"
                     />
-                    <div className="flex gap-2">
+                    <div className="flex shrink-0 gap-2">
                       <button
                         type="button"
                         onClick={saveUserNickname}
@@ -384,8 +384,10 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="font-medium text-gray-900">{appUser.nickname || 'Chưa đặt'}</p>
+                  <div className="mt-1 flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 truncate font-medium text-gray-900">
+                      {appUser.nickname || 'Chưa đặt'}
+                    </p>
                     <button
                       type="button"
                       onClick={startNicknameEditing}

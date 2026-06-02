@@ -49,7 +49,7 @@ export async function listUsersByDivision(divisionId: string): Promise<AppUser[]
   const { data, error } = await supabase
     .from('user_divisions')
     .select(
-      'user:user!user_divisions_user_id_fkey(id, email, first_name, last_name, middle_name, username, avatar_url, avatar_key, role)',
+      'user:user!user_divisions_user_id_fkey(id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role)',
     )
     .eq('division_id', divisionId)
     .returns<UserDivisionRow[]>();
