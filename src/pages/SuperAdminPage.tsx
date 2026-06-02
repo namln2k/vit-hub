@@ -11,6 +11,7 @@ import {
 import type { AdminSectionId } from '@/components/pages/super-admin/common/types';
 import DivisionsManagement from '@/components/pages/super-admin/division/DivisionsManagement';
 import GroupsManagement from '@/components/pages/super-admin/group/GroupsManagement';
+import PostsManagement from '@/components/pages/super-admin/post/PostsManagement';
 import UsersManagement from '@/components/pages/super-admin/user/UsersManagement';
 import SuperAdminSidebar from '@/components/pages/super-admin/common/SuperAdminSidebar';
 import { ShieldCheck } from 'lucide-react';
@@ -189,6 +190,8 @@ export default function SuperAdminPage() {
             />
           ) : activeSectionId === 'users' ? (
             <UsersManagement />
+          ) : activeSectionId === 'posts' ? (
+            <PostsManagement />
           ) : (
             <PlaceholderManagement section={activeSection} />
           )}
