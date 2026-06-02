@@ -9,6 +9,7 @@ const ALL_USERS_PAGE_SIZE = 1000;
 
 export interface QueryUsersParams {
   ids?: string[];
+  emails?: string[];
   search?: string;
   roles?: UserRole[];
   limit?: number;
@@ -143,6 +144,10 @@ export async function queryUsers(params: QueryUsersParams = {}): Promise<AppUser
     return [];
   }
 
+  if (params.emails && params.emails.length === 0) {
+    return [];
+  }
+
   const pageSize = params.limit ?? (params.fetchAll ? ALL_USERS_PAGE_SIZE : DEFAULT_USERS_LIMIT);
   if (pageSize <= 0) {
     return [];
@@ -206,6 +211,12 @@ function createUserQuery(params: QueryUsersParams) {
     query = query.eq('id', params.ids[0]);
   } else if (params.ids && params.ids.length > 1) {
     query = query.in('id', params.ids);
+  }
+
+  if (params.emails?.length) {
+    query = query.or(
+      params.emails.map((email) => `email.ilike.${escapeSearchPattern(email.trim())}`).join(','),
+    );
   }
 
   if (search) {

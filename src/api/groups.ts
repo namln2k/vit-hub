@@ -69,6 +69,30 @@ export async function createGroup(name: string, description: string): Promise<Gr
   return mapGroupRow(data);
 }
 
+export async function updateGroup(
+  groupId: string,
+  name: string,
+  description: string,
+): Promise<Group> {
+  const row: GroupWrite = {
+    name: name.trim(),
+    description: description.trim() || null,
+  };
+
+  const { data, error } = await supabase
+    .from('groups')
+    .update(row)
+    .eq('id', groupId)
+    .select('id, name, description')
+    .single<GroupRow>();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapGroupRow(data);
+}
+
 export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
     .from('user_groups')
