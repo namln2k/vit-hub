@@ -55,7 +55,6 @@ export default function LoginPage() {
       setError('');
       setLoading(true);
       await signInWithGoogle();
-      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không thể đăng nhập bằng Google.');
     } finally {
