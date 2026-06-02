@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import MembersLoadingOverlay from '@/components/super-admin/common/MembersLoadingOverlay';
 import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
 interface GroupsManagementProps {
@@ -211,7 +212,7 @@ function CreateGroupModal({ onClose, onCreated }: CreateGroupModalProps) {
                 setError('');
               }}
               className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
-              placeholder="VD: Ban truyền thông"
+              placeholder="VD: Nhóm 7"
             />
           </label>
           <label className="block">
@@ -261,7 +262,8 @@ interface GroupMembersTableProps {
 
 function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative min-h-72 overflow-x-auto">
+      {isLoading && <MembersLoadingOverlay />}
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
@@ -280,9 +282,7 @@ function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) 
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
-          {isLoading ? (
-            <EmptyTableRow>Đang tải thành viên...</EmptyTableRow>
-          ) : error ? (
+          {isLoading ? null : error ? (
             <EmptyTableRow className="text-red-600">{error}</EmptyTableRow>
           ) : users.length > 0 ? (
             users.map((user) => (
@@ -290,7 +290,7 @@ function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) 
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <Avatar src={user.avatarUrl} size="sm" />
-                    <span className="font-semibold text-slate-950">{getFullName(user)}</span>
+                    <span className="font-semibold text-slate-950 whitespace-nowrap">{getFullName(user)}</span>
                   </div>
                 </td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>

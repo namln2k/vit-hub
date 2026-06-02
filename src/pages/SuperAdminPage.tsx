@@ -3,21 +3,29 @@ import { listGroups, type Group } from '@/api/groups';
 import Header from '@/components/layout/Header';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
 import PlaceholderManagement from '@/components/super-admin/common/PlaceholderManagement';
+import { findAdminItemBySlug, getAdminItemPath } from '@/components/super-admin/common/adminRoutes';
 import type { AdminSectionId } from '@/components/super-admin/common/types';
 import DivisionsManagement from '@/components/super-admin/division/DivisionsManagement';
 import GroupsManagement from '@/components/super-admin/group/GroupsManagement';
 import SuperAdminSidebar from '@/components/super-admin/common/SuperAdminSidebar';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export default function SuperAdminPage() {
-  const [activeSectionId, setActiveSectionId] = useState<AdminSectionId>('divisions');
+  const navigate = useNavigate();
+  const routeParams = useParams();
+  const routeSegments = (routeParams['*'] ?? '').split('/').filter(Boolean);
+  const sectionIdFromUrl = routeSegments[0] as AdminSectionId | undefined;
+  const activeSectionId: AdminSectionId =
+    sectionIdFromUrl && ADMIN_SECTIONS.some((section) => section.id === sectionIdFromUrl)
+      ? sectionIdFromUrl
+      : 'divisions';
+  const activeItemSlug = routeSegments[1];
   const [divisions, setDivisions] = useState<Division[]>([]);
-  const [activeDivisionId, setActiveDivisionId] = useState('');
   const [isLoadingDivisions, setIsLoadingDivisions] = useState(true);
   const [divisionError, setDivisionError] = useState('');
   const [groups, setGroups] = useState<Group[]>([]);
-  const [activeGroupId, setActiveGroupId] = useState('');
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [groupError, setGroupError] = useState('');
 
@@ -26,12 +34,12 @@ export default function SuperAdminPage() {
     [activeSectionId],
   );
   const activeDivision = useMemo(
-    () => divisions.find((division) => division.id === activeDivisionId) ?? null,
-    [activeDivisionId, divisions],
+    () => (activeSectionId === 'divisions' ? findAdminItemBySlug(divisions, activeItemSlug) : null),
+    [activeItemSlug, activeSectionId, divisions],
   );
   const activeGroup = useMemo(
-    () => groups.find((group) => group.id === activeGroupId) ?? null,
-    [activeGroupId, groups],
+    () => (activeSectionId === 'groups' ? findAdminItemBySlug(groups, activeItemSlug) : null),
+    [activeItemSlug, activeSectionId, groups],
   );
 
   useEffect(() => {
@@ -49,7 +57,6 @@ export default function SuperAdminPage() {
         }
 
         setDivisions(nextDivisions);
-        setActiveDivisionId((current) => current || nextDivisions[0]?.id || '');
       } catch (error) {
         if (isMounted) {
           const message = error instanceof Error ? error.message : '';
@@ -86,7 +93,6 @@ export default function SuperAdminPage() {
         }
 
         setGroups(nextGroups);
-        setActiveGroupId((current) => current || nextGroups[0]?.id || '');
       } catch (error) {
         if (isMounted) {
           const message = error instanceof Error ? error.message : '';
@@ -112,7 +118,7 @@ export default function SuperAdminPage() {
     setGroups((currentGroups) =>
       [...currentGroups, group].sort((first, second) => first.name.localeCompare(second.name)),
     );
-    setActiveGroupId(group.id);
+    navigate(getAdminItemPath('groups', group));
   }
 
   return (
@@ -133,21 +139,23 @@ export default function SuperAdminPage() {
           <SuperAdminSidebar
             sections={ADMIN_SECTIONS}
             activeSectionId={activeSectionId}
-            onSectionChange={setActiveSectionId}
             divisions={divisions}
-            activeDivisionId={activeDivisionId}
-            onDivisionChange={setActiveDivisionId}
+            activeDivisionId={activeDivision?.id ?? ''}
             isLoadingDivisions={isLoadingDivisions}
             divisionError={divisionError}
             groups={groups}
-            activeGroupId={activeGroupId}
-            onGroupChange={setActiveGroupId}
+            activeGroupId={activeGroup?.id ?? ''}
             isLoadingGroups={isLoadingGroups}
             groupError={groupError}
           />
 
           {activeSectionId === 'divisions' ? (
-            <DivisionsManagement activeDivision={activeDivision} />
+            <DivisionsManagement
+              activeDivision={activeDivision}
+              divisions={divisions}
+              isLoadingDivisions={isLoadingDivisions}
+              divisionError={divisionError}
+            />
           ) : activeSectionId === 'groups' ? (
             <GroupsManagement activeGroup={activeGroup} onGroupCreated={handleGroupCreated} />
           ) : (

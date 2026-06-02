@@ -27,7 +27,7 @@ function App() {
         }
       />
       <Route
-        path="/super-admin"
+        path="/super-admin/*"
         element={
           <ProtectedRoute requiredRole="super_admin">
             <SuperAdminPage />
