@@ -5,8 +5,8 @@ import {
   getAdminItemPath,
   getAdminSectionPath,
   getUsersSubsectionPath,
-} from '@/components/super-admin/common/adminRoutes';
-import type { AdminSection, AdminSectionId } from '@/components/super-admin/common/types';
+} from '@/components/pages/super-admin/common/adminRoutes';
+import type { AdminSection, AdminSectionId } from '@/components/pages/super-admin/common/types';
 import { Link, useLocation } from 'react-router-dom';
 
 interface SuperAdminSidebarProps {

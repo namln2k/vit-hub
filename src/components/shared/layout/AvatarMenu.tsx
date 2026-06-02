@@ -1,4 +1,4 @@
-import Avatar from '@/components/layout/Avatar';
+import Avatar from '@/components/shared/layout/Avatar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 

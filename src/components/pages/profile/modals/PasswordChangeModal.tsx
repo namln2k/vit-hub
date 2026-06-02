@@ -1,4 +1,4 @@
-import PasswordInput from '@/components/input/PasswordInput';
+import PasswordInput from '@/components/shared/form/PasswordInput';
 import { useAuth } from '@/contexts/useAuth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { KeyRound, X } from 'lucide-react';

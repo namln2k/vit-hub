@@ -1,4 +1,4 @@
-import type { AdminSectionId } from '@/components/super-admin/common/types';
+import type { AdminSectionId } from '@/components/pages/super-admin/common/types';
 
 interface AdminRouteItem {
   id: string;

@@ -1,18 +1,18 @@
 import { listDivisions, type Division } from '@/api/divisions';
 import { listGroups, type Group } from '@/api/groups';
-import Header from '@/components/layout/Header';
-import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
-import PlaceholderManagement from '@/components/super-admin/common/PlaceholderManagement';
+import Header from '@/components/shared/layout/Header';
+import { ADMIN_SECTIONS } from '@/components/pages/super-admin/common/AdminSections';
+import PlaceholderManagement from '@/components/pages/super-admin/common/PlaceholderManagement';
 import {
   findAdminItemBySlug,
   getAdminItemPath,
   getAdminSectionPath,
-} from '@/components/super-admin/common/adminRoutes';
-import type { AdminSectionId } from '@/components/super-admin/common/types';
-import DivisionsManagement from '@/components/super-admin/division/DivisionsManagement';
-import GroupsManagement from '@/components/super-admin/group/GroupsManagement';
-import UsersManagement from '@/components/super-admin/user/UsersManagement';
-import SuperAdminSidebar from '@/components/super-admin/common/SuperAdminSidebar';
+} from '@/components/pages/super-admin/common/adminRoutes';
+import type { AdminSectionId } from '@/components/pages/super-admin/common/types';
+import DivisionsManagement from '@/components/pages/super-admin/division/DivisionsManagement';
+import GroupsManagement from '@/components/pages/super-admin/group/GroupsManagement';
+import UsersManagement from '@/components/pages/super-admin/user/UsersManagement';
+import SuperAdminSidebar from '@/components/pages/super-admin/common/SuperAdminSidebar';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';

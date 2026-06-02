@@ -1,8 +1,8 @@
 import { LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AvatarMenu from '@/components/layout/AvatarMenu';
-import UserSearch from '@/components/layout/UserSearch';
+import AvatarMenu from '@/components/shared/layout/AvatarMenu';
+import UserSearch from '@/components/shared/layout/UserSearch';
 import {
   getAllowedAvatarMenuFeatures,
   type AvatarMenuFeatureId,

@@ -1,4 +1,4 @@
-import Sharingan from '@/components/common/loading/Sharingan';
+import Sharingan from '@/components/shared/loading/Sharingan';
 
 export default function MembersLoadingOverlay() {
   return (

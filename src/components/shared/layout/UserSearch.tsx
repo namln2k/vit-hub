@@ -1,5 +1,5 @@
 import { queryUsers } from '@/api/users';
-import Avatar from '@/components/layout/Avatar';
+import Avatar from '@/components/shared/layout/Avatar';
 import { useAuth } from '@/contexts/useAuth';
 import type { AppUser } from '@/contexts/auth';
 import { Loader2, Search, X } from 'lucide-react';

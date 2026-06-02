@@ -1,27 +1,27 @@
-import { addUsersToDivision } from '@/api/divisions';
+import { addUsersToGroup } from '@/api/groups';
 import { queryUsers } from '@/api/users';
-import Avatar from '@/components/layout/Avatar';
+import Avatar from '@/components/shared/layout/Avatar';
 import type { AppUser } from '@/contexts/auth';
 import { Check, Loader2, MailPlus, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
-import { formatEmailList, parseEmailList } from '@/utils/emailListImport';
+import { getFullName, normalizeSearchValue } from '@/components/pages/super-admin/common/UserUtils';
+import { formatEmailList, parseEmailList } from '@/utils/import/emailListImport';
 
-interface AddDivisionUsersModalProps {
-  divisionId: string;
-  divisionName: string;
+interface AddGroupUsersModalProps {
+  groupId: string;
+  groupName: string;
   existingUserIds: string[];
   onClose: () => void;
   onAdded: () => Promise<void>;
 }
 
-export default function AddDivisionUsersModal({
-  divisionId,
-  divisionName,
+export default function AddGroupUsersModal({
+  groupId,
+  groupName,
   existingUserIds,
   onClose,
   onAdded,
-}: AddDivisionUsersModalProps) {
+}: AddGroupUsersModalProps) {
   const [searchValue, setSearchValue] = useState('');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
@@ -153,7 +153,7 @@ export default function AddDivisionUsersModal({
       }
 
       if (importableUsers.length === 0) {
-        setEmailImportError('Tất cả email trong danh sách đã thuộc mảng hoặc đã được chọn.');
+        setEmailImportError('Tất cả email trong danh sách đã thuộc nhóm hoặc đã được chọn.');
         return;
       }
 
@@ -183,8 +183,8 @@ export default function AddDivisionUsersModal({
     setSubmitError('');
 
     try {
-      await addUsersToDivision(
-        divisionId,
+      await addUsersToGroup(
+        groupId,
         selectedUsers.map((user) => user.uid),
       );
       await onAdded();
@@ -204,7 +204,7 @@ export default function AddDivisionUsersModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="add-division-users-title"
+      aria-labelledby="add-group-users-title"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isAdding) {
           onClose();
@@ -214,10 +214,10 @@ export default function AddDivisionUsersModal({
       <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div className="min-w-0">
-            <h2 id="add-division-users-title" className="text-lg font-bold text-slate-950">
-              Thêm thành viên vào mảng
+            <h2 id="add-group-users-title" className="text-lg font-bold text-slate-950">
+              Thêm thành viên vào nhóm
             </h2>
-            <p className="mt-1 truncate text-sm font-medium text-slate-500">{divisionName}</p>
+            <p className="mt-1 truncate text-sm font-medium text-slate-500">{groupName}</p>
           </div>
           <button
             type="button"
@@ -259,7 +259,7 @@ export default function AddDivisionUsersModal({
               }}
               placeholder="member1@example.com&#10;member2@example.com"
               rows={4}
-              className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-500"
+              className="mt-2 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500"
             />
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-xs font-medium text-slate-500">
@@ -269,7 +269,7 @@ export default function AddDivisionUsersModal({
                 type="button"
                 onClick={handleImportEmails}
                 disabled={isAdding || isImportingEmails || emailListValue.trim().length === 0}
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
               >
                 {isImportingEmails ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -283,13 +283,13 @@ export default function AddDivisionUsersModal({
               <p className="mt-2 text-sm font-medium text-red-600">{emailImportError}</p>
             )}
             {emailImportMessage && (
-              <p className="mt-2 text-sm font-medium text-indigo-700">{emailImportMessage}</p>
+              <p className="mt-2 text-sm font-medium text-emerald-700">{emailImportMessage}</p>
             )}
           </div>
 
           {selectedUsers.length > 0 && (
-            <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-              <div className="mb-2 text-xs font-bold uppercase text-indigo-700">
+            <div className="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+              <div className="mb-2 text-xs font-bold uppercase text-emerald-700">
                 Đã chọn {selectedUsers.length}
               </div>
               <div className="flex flex-wrap gap-2">
@@ -298,7 +298,7 @@ export default function AddDivisionUsersModal({
                     key={user.uid}
                     type="button"
                     onClick={() => removeSelectedUser(user.uid)}
-                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-indigo-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold text-indigo-700 transition-colors hover:border-indigo-300 hover:bg-indigo-100"
+                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-200 bg-white py-1 pl-1 pr-2 text-sm font-semibold text-emerald-700 transition-colors hover:border-emerald-300 hover:bg-emerald-100"
                   >
                     <Avatar src={user.avatarUrl} size="sm" />
                     <span className="max-w-48 truncate">{getFullName(user)}</span>
@@ -350,7 +350,7 @@ export default function AddDivisionUsersModal({
               </div>
             ) : (
               <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
-                Không tìm thấy thành viên phù hợp hoặc tất cả đã thuộc mảng này.
+                Không tìm thấy thành viên phù hợp hoặc tất cả đã thuộc nhóm này.
               </p>
             )}
           </div>
@@ -371,7 +371,7 @@ export default function AddDivisionUsersModal({
             type="button"
             onClick={handleSubmit}
             disabled={selectedUsers.length === 0 || isAdding}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isAdding ? (
               <Loader2 className="h-4 w-4 animate-spin" />
