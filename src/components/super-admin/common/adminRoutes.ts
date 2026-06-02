@@ -11,6 +11,10 @@ export function getAdminSectionPath(sectionId: AdminSectionId) {
   return `${SUPER_ADMIN_BASE_PATH}/${sectionId}`;
 }
 
+export function getUsersSubsectionPath(view: 'list' | 'import') {
+  return `${getAdminSectionPath('users')}?view=${view}`;
+}
+
 export function getAdminItemPath(sectionId: 'divisions' | 'groups', item: AdminRouteItem) {
   return `${getAdminSectionPath(sectionId)}/${getAdminItemSlug(item)}`;
 }

@@ -9,5 +9,14 @@ export function normalizeSearchValue(value: string) {
 }
 
 export function getSearchableUserValues(user: AppUser) {
-  return [getFullName(user), user.nickname, user.username, user.email];
+  return [
+    getFullName(user),
+    user.nickname,
+    user.username,
+    user.email,
+    user.phoneNumber,
+    user.schoolName,
+    user.enterYear,
+    user.cohort,
+  ];
 }

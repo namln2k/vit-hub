@@ -73,7 +73,7 @@ export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
     .from('user_groups')
     .select(
-      'user:user!user_groups_user_id_fkey(id, email, first_name, last_name, middle_name, nickname, username, avatar_url, avatar_key, role)',
+      'user:user!user_groups_user_id_fkey(id, email, first_name, last_name, middle_name, nickname, username, phone_number, school_name, enter_year, cohort, gender, avatar_url, avatar_key, role)',
     )
     .eq('group_id', groupId)
     .returns<UserGroupRow[]>();

@@ -17,6 +17,11 @@ export interface AppUser {
   middleName: string;
   nickname: string;
   username: string;
+  phoneNumber: string;
+  schoolName: string;
+  enterYear: string;
+  cohort: string;
+  gender: 0 | 1 | null;
   avatarUrl?: string;
   avatarKey?: string;
   role: UserRole;
@@ -47,6 +52,14 @@ export interface UpdateUserNicknameData {
   nickname: string;
 }
 
+export interface UpdateUserPersonnelData {
+  phoneNumber: string;
+  schoolName: string;
+  cohort: string;
+  enterYear: string;
+  gender: 0 | 1 | null;
+}
+
 export interface AuthContextType {
   currentUser: AuthUser | null;
   appUser: AppUser | null;
@@ -60,6 +73,7 @@ export interface AuthContextType {
   updateUserAvatar: (avatarFile: File) => Promise<void>;
   updateUserName: (data: UpdateUserNameData) => Promise<void>;
   updateUserNickname: (data: UpdateUserNicknameData) => Promise<void>;
+  updateUserPersonnel: (data: UpdateUserPersonnelData) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | null>(null);
