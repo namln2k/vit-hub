@@ -1,10 +1,11 @@
-import { listUsersByDivision, type Division } from '@/api/divisions';
+import { listUsersByDivision, removeUsersFromDivision, type Division } from '@/api/divisions';
 import Avatar from '@/components/layout/Avatar';
 import type { AppUser } from '@/contexts/auth';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import ConfirmRemoveUsersModal from '@/components/super-admin/common/ConfirmRemoveUsersModal';
 import MembersLoadingOverlay from '@/components/super-admin/common/MembersLoadingOverlay';
 import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 import AddDivisionUsersModal from './AddDivisionUsersModal';
@@ -27,6 +28,10 @@ export default function DivisionsManagement({
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
+  const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [removeUsersError, setRemoveUsersError] = useState('');
 
   const filteredDivisions = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -55,6 +60,7 @@ export default function DivisionsManagement({
     );
   }, [search, users]);
   const existingUserIds = useMemo(() => users.map((user) => user.uid), [users]);
+  const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds]);
 
   const loadDivisionUsers = useCallback(
     async (divisionId: string, isMounted: () => boolean = () => true) => {
@@ -90,6 +96,8 @@ export default function DivisionsManagement({
     if (!activeDivision) {
       setUsers([]);
       setIsAddUsersModalOpen(false);
+      setSelectedUserIds([]);
+      setIsRemoveUsersModalOpen(false);
       return;
     }
 
@@ -102,6 +110,61 @@ export default function DivisionsManagement({
       isMounted = false;
     };
   }, [activeDivision, loadDivisionUsers]);
+
+  useEffect(() => {
+    const userIdSet = new Set(users.map((user) => user.uid));
+    setSelectedUserIds((currentIds) => currentIds.filter((userId) => userIdSet.has(userId)));
+  }, [users]);
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUserIds((currentIds) =>
+      currentIds.includes(userId)
+        ? currentIds.filter((currentId) => currentId !== userId)
+        : [...currentIds, userId],
+    );
+  }
+
+  function toggleVisibleUsersSelection() {
+    const visibleUserIds = filteredUsers.map((user) => user.uid);
+    const areAllVisibleUsersSelected =
+      visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
+
+    setSelectedUserIds((currentIds) => {
+      if (areAllVisibleUsersSelected) {
+        return currentIds.filter((userId) => !visibleUserIds.includes(userId));
+      }
+
+      return Array.from(new Set([...currentIds, ...visibleUserIds]));
+    });
+  }
+
+  async function handleRemoveSelectedUsers() {
+    if (!activeDivision || selectedUserIds.length === 0) {
+      return;
+    }
+
+    setIsRemovingUsers(true);
+    setRemoveUsersError('');
+
+    try {
+      await removeUsersFromDivision(activeDivision.id, selectedUserIds);
+      setUsers((currentUsers) =>
+        currentUsers.filter((user) => !selectedUserIds.includes(user.uid)),
+      );
+      setSelectedUserIds([]);
+      setIsRemoveUsersModalOpen(false);
+      void loadDivisionUsers(activeDivision.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      setRemoveUsersError(
+        message
+          ? `Không thể xóa thành viên khỏi mảng: ${message}`
+          : 'Không thể xóa thành viên khỏi mảng.',
+      );
+    } finally {
+      setIsRemovingUsers(false);
+    }
+  }
 
   const isViewingDivisionList = !activeDivision;
   const visibleCount = isViewingDivisionList
@@ -126,14 +189,28 @@ export default function DivisionsManagement({
             />
           </label>
           {activeDivision && (
-            <button
-              type="button"
-              onClick={() => setIsAddUsersModalOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
-            >
-              <Plus className="h-4 w-4" />
-              Thêm
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setRemoveUsersError('');
+                  setIsRemoveUsersModalOpen(true);
+                }}
+                disabled={selectedUserIds.length === 0 || isLoadingUsers}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
+              >
+                <Trash2 className="h-4 w-4" />
+                Xóa{selectedUserIds.length > 0 ? ` ${selectedUserIds.length}` : ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddUsersModalOpen(true)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+              >
+                <Plus className="h-4 w-4" />
+                Thêm
+              </button>
+            </>
           )}
         </>
       }
@@ -145,7 +222,14 @@ export default function DivisionsManagement({
           error={divisionError}
         />
       ) : (
-        <DivisionMembersTable users={filteredUsers} isLoading={isLoadingUsers} error={userError} />
+        <DivisionMembersTable
+          users={filteredUsers}
+          isLoading={isLoadingUsers}
+          error={userError}
+          selectedUserIdSet={selectedUserIdSet}
+          onToggleUser={toggleUserSelection}
+          onToggleVisibleUsers={toggleVisibleUsersSelection}
+        />
       )}
       {activeDivision && isAddUsersModalOpen && (
         <AddDivisionUsersModal
@@ -154,6 +238,21 @@ export default function DivisionsManagement({
           existingUserIds={existingUserIds}
           onClose={() => setIsAddUsersModalOpen(false)}
           onAdded={() => loadDivisionUsers(activeDivision.id)}
+        />
+      )}
+      {activeDivision && isRemoveUsersModalOpen && (
+        <ConfirmRemoveUsersModal
+          contextName={activeDivision.name}
+          contextType="division"
+          selectedCount={selectedUserIds.length}
+          isRemoving={isRemovingUsers}
+          error={removeUsersError}
+          onCancel={() => {
+            if (!isRemovingUsers) {
+              setIsRemoveUsersModalOpen(false);
+            }
+          }}
+          onConfirm={handleRemoveSelectedUsers}
         />
       )}
     </AdminContentPanel>
@@ -209,15 +308,38 @@ interface DivisionMembersTableProps {
   users: AppUser[];
   isLoading: boolean;
   error: string;
+  selectedUserIdSet: Set<string>;
+  onToggleUser: (userId: string) => void;
+  onToggleVisibleUsers: () => void;
 }
 
-function DivisionMembersTable({ users, isLoading, error }: DivisionMembersTableProps) {
+function DivisionMembersTable({
+  users,
+  isLoading,
+  error,
+  selectedUserIdSet,
+  onToggleUser,
+  onToggleVisibleUsers,
+}: DivisionMembersTableProps) {
+  const areAllVisibleUsersSelected =
+    users.length > 0 && users.every((user) => selectedUserIdSet.has(user.uid));
+
   return (
     <div className="relative min-h-72 overflow-x-auto">
       {isLoading && <MembersLoadingOverlay />}
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
+            <th className="w-12 px-5 py-3">
+              <input
+                type="checkbox"
+                checked={areAllVisibleUsersSelected}
+                onChange={onToggleVisibleUsers}
+                disabled={isLoading || users.length === 0}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Chọn tất cả thành viên đang hiển thị"
+              />
+            </th>
             <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
               Thành viên
             </th>
@@ -234,10 +356,21 @@ function DivisionMembersTable({ users, isLoading, error }: DivisionMembersTableP
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
           {isLoading ? null : error ? (
-            <EmptyTableRow className="text-red-600">{error}</EmptyTableRow>
+            <EmptyTableRow className="text-red-600" colSpan={5}>
+              {error}
+            </EmptyTableRow>
           ) : users.length > 0 ? (
             users.map((user) => (
               <tr key={user.uid} className="hover:bg-slate-50">
+                <td className="px-5 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIdSet.has(user.uid)}
+                    onChange={() => onToggleUser(user.uid)}
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                    aria-label={`Chọn ${getFullName(user)}`}
+                  />
+                </td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <Avatar src={user.avatarUrl} size="sm" />
@@ -252,7 +385,7 @@ function DivisionMembersTable({ users, isLoading, error }: DivisionMembersTableP
               </tr>
             ))
           ) : (
-            <EmptyTableRow>Chưa có thành viên trong mảng này.</EmptyTableRow>
+            <EmptyTableRow colSpan={5}>Chưa có thành viên trong mảng này.</EmptyTableRow>
           )}
         </tbody>
       </table>

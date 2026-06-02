@@ -1,5 +1,3 @@
-
-
 import styles from './Sharingan.module.scss';
 
 export default function Sharingan() {

@@ -1,11 +1,12 @@
-import { createGroup, listUsersByGroup, type Group } from '@/api/groups';
+import { createGroup, listUsersByGroup, removeUsersFromGroup, type Group } from '@/api/groups';
 import Avatar from '@/components/layout/Avatar';
 import type { AppUser } from '@/contexts/auth';
-import { Check, Loader2, Plus, Search, X } from 'lucide-react';
+import { Check, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
 import AdminContentPanel from '@/components/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
+import ConfirmRemoveUsersModal from '@/components/super-admin/common/ConfirmRemoveUsersModal';
 import MembersLoadingOverlay from '@/components/super-admin/common/MembersLoadingOverlay';
 import { getFullName, normalizeSearchValue } from '@/components/super-admin/common/UserUtils';
 
@@ -21,6 +22,10 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
   const [userError, setUserError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
+  const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [removeUsersError, setRemoveUsersError] = useState('');
 
   const filteredUsers = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -36,6 +41,7 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
     );
   }, [search, users]);
   const existingUserIds = useMemo(() => users.map((user) => user.uid), [users]);
+  const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds]);
 
   const loadGroupUsers = useCallback(
     async (groupId: string, isMounted: () => boolean = () => true) => {
@@ -71,6 +77,8 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
     if (!activeGroup) {
       setUsers([]);
       setIsAddUsersModalOpen(false);
+      setSelectedUserIds([]);
+      setIsRemoveUsersModalOpen(false);
       return;
     }
 
@@ -83,6 +91,61 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
       isMounted = false;
     };
   }, [activeGroup, loadGroupUsers]);
+
+  useEffect(() => {
+    const userIdSet = new Set(users.map((user) => user.uid));
+    setSelectedUserIds((currentIds) => currentIds.filter((userId) => userIdSet.has(userId)));
+  }, [users]);
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUserIds((currentIds) =>
+      currentIds.includes(userId)
+        ? currentIds.filter((currentId) => currentId !== userId)
+        : [...currentIds, userId],
+    );
+  }
+
+  function toggleVisibleUsersSelection() {
+    const visibleUserIds = filteredUsers.map((user) => user.uid);
+    const areAllVisibleUsersSelected =
+      visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
+
+    setSelectedUserIds((currentIds) => {
+      if (areAllVisibleUsersSelected) {
+        return currentIds.filter((userId) => !visibleUserIds.includes(userId));
+      }
+
+      return Array.from(new Set([...currentIds, ...visibleUserIds]));
+    });
+  }
+
+  async function handleRemoveSelectedUsers() {
+    if (!activeGroup || selectedUserIds.length === 0) {
+      return;
+    }
+
+    setIsRemovingUsers(true);
+    setRemoveUsersError('');
+
+    try {
+      await removeUsersFromGroup(activeGroup.id, selectedUserIds);
+      setUsers((currentUsers) =>
+        currentUsers.filter((user) => !selectedUserIds.includes(user.uid)),
+      );
+      setSelectedUserIds([]);
+      setIsRemoveUsersModalOpen(false);
+      void loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      setRemoveUsersError(
+        message
+          ? `Không thể xóa thành viên khỏi nhóm: ${message}`
+          : 'Không thể xóa thành viên khỏi nhóm.',
+      );
+    } finally {
+      setIsRemovingUsers(false);
+    }
+  }
 
   return (
     <AdminContentPanel
@@ -111,6 +174,18 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
           </button>
           <button
             type="button"
+            onClick={() => {
+              setRemoveUsersError('');
+              setIsRemoveUsersModalOpen(true);
+            }}
+            disabled={!activeGroup || selectedUserIds.length === 0 || isLoadingUsers}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
+          >
+            <Trash2 className="h-4 w-4" />
+            Xóa{selectedUserIds.length > 0 ? ` ${selectedUserIds.length}` : ''}
+          </button>
+          <button
+            type="button"
             onClick={() => setIsAddUsersModalOpen(true)}
             disabled={!activeGroup}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -121,7 +196,14 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
         </>
       }
     >
-      <GroupMembersTable users={filteredUsers} isLoading={isLoadingUsers} error={userError} />
+      <GroupMembersTable
+        users={filteredUsers}
+        isLoading={isLoadingUsers}
+        error={userError}
+        selectedUserIdSet={selectedUserIdSet}
+        onToggleUser={toggleUserSelection}
+        onToggleVisibleUsers={toggleVisibleUsersSelection}
+      />
       {isCreateModalOpen && (
         <CreateGroupModal
           onClose={() => setIsCreateModalOpen(false)}
@@ -138,6 +220,21 @@ export default function GroupsManagement({ activeGroup, onGroupCreated }: Groups
           existingUserIds={existingUserIds}
           onClose={() => setIsAddUsersModalOpen(false)}
           onAdded={() => loadGroupUsers(activeGroup.id)}
+        />
+      )}
+      {activeGroup && isRemoveUsersModalOpen && (
+        <ConfirmRemoveUsersModal
+          contextName={activeGroup.name}
+          contextType="group"
+          selectedCount={selectedUserIds.length}
+          isRemoving={isRemovingUsers}
+          error={removeUsersError}
+          onCancel={() => {
+            if (!isRemovingUsers) {
+              setIsRemoveUsersModalOpen(false);
+            }
+          }}
+          onConfirm={handleRemoveSelectedUsers}
         />
       )}
     </AdminContentPanel>
@@ -258,15 +355,38 @@ interface GroupMembersTableProps {
   users: AppUser[];
   isLoading: boolean;
   error: string;
+  selectedUserIdSet: Set<string>;
+  onToggleUser: (userId: string) => void;
+  onToggleVisibleUsers: () => void;
 }
 
-function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) {
+function GroupMembersTable({
+  users,
+  isLoading,
+  error,
+  selectedUserIdSet,
+  onToggleUser,
+  onToggleVisibleUsers,
+}: GroupMembersTableProps) {
+  const areAllVisibleUsersSelected =
+    users.length > 0 && users.every((user) => selectedUserIdSet.has(user.uid));
+
   return (
     <div className="relative min-h-72 overflow-x-auto">
       {isLoading && <MembersLoadingOverlay />}
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>
+            <th className="w-12 px-5 py-3">
+              <input
+                type="checkbox"
+                checked={areAllVisibleUsersSelected}
+                onChange={onToggleVisibleUsers}
+                disabled={isLoading || users.length === 0}
+                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Chọn tất cả thành viên đang hiển thị"
+              />
+            </th>
             <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
               Thành viên
             </th>
@@ -283,14 +403,27 @@ function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) 
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
           {isLoading ? null : error ? (
-            <EmptyTableRow className="text-red-600">{error}</EmptyTableRow>
+            <EmptyTableRow className="text-red-600" colSpan={5}>
+              {error}
+            </EmptyTableRow>
           ) : users.length > 0 ? (
             users.map((user) => (
               <tr key={user.uid} className="hover:bg-slate-50">
                 <td className="px-5 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedUserIdSet.has(user.uid)}
+                    onChange={() => onToggleUser(user.uid)}
+                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    aria-label={`Chọn ${getFullName(user)}`}
+                  />
+                </td>
+                <td className="px-5 py-4">
                   <div className="flex items-center gap-3">
                     <Avatar src={user.avatarUrl} size="sm" />
-                    <span className="font-semibold text-slate-950 whitespace-nowrap">{getFullName(user)}</span>
+                    <span className="font-semibold text-slate-950 whitespace-nowrap">
+                      {getFullName(user)}
+                    </span>
                   </div>
                 </td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>
@@ -299,7 +432,7 @@ function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) 
               </tr>
             ))
           ) : (
-            <EmptyTableRow>Chưa có thành viên trong nhóm này.</EmptyTableRow>
+            <EmptyTableRow colSpan={5}>Chưa có thành viên trong nhóm này.</EmptyTableRow>
           )}
         </tbody>
       </table>
@@ -310,12 +443,17 @@ function GroupMembersTable({ users, isLoading, error }: GroupMembersTableProps) 
 interface EmptyTableRowProps {
   children: string;
   className?: string;
+  colSpan?: number;
 }
 
-function EmptyTableRow({ children, className = 'text-slate-500' }: EmptyTableRowProps) {
+function EmptyTableRow({
+  children,
+  className = 'text-slate-500',
+  colSpan = 4,
+}: EmptyTableRowProps) {
   return (
     <tr>
-      <td className={`px-5 py-10 text-center text-sm font-medium ${className}`} colSpan={4}>
+      <td className={`px-5 py-10 text-center text-sm font-medium ${className}`} colSpan={colSpan}>
         {children}
       </td>
     </tr>

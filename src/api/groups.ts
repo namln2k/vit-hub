@@ -108,6 +108,22 @@ export async function addUsersToGroup(groupId: string, userIds: string[]): Promi
   }
 }
 
+export async function removeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
+  if (userIds.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('user_groups')
+    .delete()
+    .eq('group_id', groupId)
+    .in('user_id', userIds);
+
+  if (error) {
+    throw error;
+  }
+}
+
 function getUserSortName(user: AppUser) {
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }

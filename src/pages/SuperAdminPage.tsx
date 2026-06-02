@@ -7,6 +7,7 @@ import { findAdminItemBySlug, getAdminItemPath } from '@/components/super-admin/
 import type { AdminSectionId } from '@/components/super-admin/common/types';
 import DivisionsManagement from '@/components/super-admin/division/DivisionsManagement';
 import GroupsManagement from '@/components/super-admin/group/GroupsManagement';
+import UsersManagement from '@/components/super-admin/user/UsersManagement';
 import SuperAdminSidebar from '@/components/super-admin/common/SuperAdminSidebar';
 import { ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -158,6 +159,8 @@ export default function SuperAdminPage() {
             />
           ) : activeSectionId === 'groups' ? (
             <GroupsManagement activeGroup={activeGroup} onGroupCreated={handleGroupCreated} />
+          ) : activeSectionId === 'users' ? (
+            <UsersManagement />
           ) : (
             <PlaceholderManagement section={activeSection} />
           )}

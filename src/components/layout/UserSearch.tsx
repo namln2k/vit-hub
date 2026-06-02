@@ -1,4 +1,4 @@
-import { searchUsers } from '@/api/users';
+import { queryUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import { useAuth } from '@/contexts/useAuth';
 import type { AppUser } from '@/contexts/auth';
@@ -77,7 +77,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       setError('');
 
       try {
-        setUsers(await searchUsers(queryText));
+        setUsers(await queryUsers({ search: queryText, limit: 12 }));
       } catch {
         setError('Không thể tìm kiếm thành viên lúc này.');
       } finally {

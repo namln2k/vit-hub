@@ -84,6 +84,25 @@ export async function addUsersToDivision(divisionId: string, userIds: string[]):
   }
 }
 
+export async function removeUsersFromDivision(
+  divisionId: string,
+  userIds: string[],
+): Promise<void> {
+  if (userIds.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('user_divisions')
+    .delete()
+    .eq('division_id', divisionId)
+    .in('user_id', userIds);
+
+  if (error) {
+    throw error;
+  }
+}
+
 function getUserSortName(user: AppUser) {
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }

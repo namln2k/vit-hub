@@ -1,5 +1,5 @@
 import { addUsersToGroup } from '@/api/groups';
-import { searchUsers } from '@/api/users';
+import { queryUsers } from '@/api/users';
 import Avatar from '@/components/layout/Avatar';
 import type { AppUser } from '@/contexts/auth';
 import { Check, Loader2, Search, UserPlus, X } from 'lucide-react';
@@ -54,28 +54,42 @@ export default function AddGroupUsersModal({
   }, [isAdding, onClose]);
 
   useEffect(() => {
-    if (queryText.length < 2) {
+    if (queryText.length > 0 && queryText.length < 2) {
       setUsers([]);
       setSearchError('');
       setIsSearching(false);
       return;
     }
 
-    const timeoutId = window.setTimeout(async () => {
-      setIsSearching(true);
-      setSearchError('');
+    let isActive = true;
+    const timeoutId = window.setTimeout(
+      async () => {
+        setIsSearching(true);
+        setSearchError('');
 
-      try {
-        setUsers(await searchUsers(queryText));
-      } catch {
-        setSearchError('Không thể tìm kiếm thành viên lúc này.');
-        setUsers([]);
-      } finally {
-        setIsSearching(false);
-      }
-    }, 250);
+        try {
+          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+          if (isActive) {
+            setUsers(nextUsers);
+          }
+        } catch {
+          if (isActive) {
+            setSearchError('Không thể tải danh sách thành viên lúc này.');
+            setUsers([]);
+          }
+        } finally {
+          if (isActive) {
+            setIsSearching(false);
+          }
+        }
+      },
+      queryText ? 250 : 0,
+    );
 
-    return () => window.clearTimeout(timeoutId);
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
   }, [queryText]);
 
   function selectUser(user: AppUser) {
@@ -187,7 +201,7 @@ export default function AddGroupUsersModal({
               <p className="px-4 py-6 text-center text-sm font-medium text-red-600">
                 {searchError}
               </p>
-            ) : queryText.length < 2 ? (
+            ) : queryText.length > 0 && queryText.length < 2 ? (
               <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
                 Nhập ít nhất 2 ký tự để tìm thành viên.
               </p>
