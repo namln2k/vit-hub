@@ -5,10 +5,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Home, ImagePlus, UserPlus, X } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useAuth } from '@/contexts/useAuth';
-import PasswordInput from '@/components/input/PasswordInput';
+import PasswordInput from '@/components/shared/form/PasswordInput';
 import { validateAvatarFile } from '@/api/avatarUpload';
-import GoogleSignIn from '@/components/auth/GoogleSignIn';
-import AvatarEditor from '@/components/avatar/AvatarEditor';
+import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
+import AvatarEditor from '@/components/shared/avatar/AvatarEditor';
 
 const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),

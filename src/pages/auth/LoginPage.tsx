@@ -5,8 +5,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, LogIn } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
-import PasswordInput from '@/components/input/PasswordInput';
-import GoogleSignIn from '@/components/auth/GoogleSignIn';
+import PasswordInput from '@/components/shared/form/PasswordInput';
+import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
 
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ'),

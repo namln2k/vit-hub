@@ -7,7 +7,7 @@ import SuperAdminPage from '@/pages/SuperAdminPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
 import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import ProtectedRoute from '@/components/shared/routing/ProtectedRoute';
 
 function App() {
   return (

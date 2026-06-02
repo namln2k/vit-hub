@@ -1,5 +1,5 @@
-import AvatarMenu from '@/components/layout/AvatarMenu';
-import UserSearch from '@/components/layout/UserSearch';
+import AvatarMenu from '@/components/shared/layout/AvatarMenu';
+import UserSearch from '@/components/shared/layout/UserSearch';
 import volunteerHero from '@/assets/hero.png';
 import { useAuth } from '@/contexts/useAuth';
 import {
