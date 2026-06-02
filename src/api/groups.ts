@@ -93,6 +93,23 @@ export async function updateGroup(
   return mapGroupRow(data);
 }
 
+export async function deleteGroup(groupId: string): Promise<void> {
+  const { error: membershipError } = await supabase
+    .from('user_groups')
+    .delete()
+    .eq('group_id', groupId);
+
+  if (membershipError) {
+    throw membershipError;
+  }
+
+  const { error } = await supabase.from('groups').delete().eq('id', groupId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
   const { data, error } = await supabase
     .from('user_groups')

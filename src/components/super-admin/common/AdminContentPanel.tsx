@@ -7,6 +7,7 @@ interface AdminContentPanelProps {
   count: string;
   actions?: ReactNode;
   children: ReactNode;
+  className?: string;
 }
 
 export default function AdminContentPanel({
@@ -15,9 +16,12 @@ export default function AdminContentPanel({
   count,
   actions,
   children,
+  className = '',
 }: AdminContentPanelProps) {
   return (
-    <section className="min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm">
+    <section
+      className={`min-w-0 rounded-lg border border-slate-200 bg-white shadow-sm ${className}`}
+    >
       <div className="border-b border-slate-200 p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

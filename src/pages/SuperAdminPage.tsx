@@ -3,7 +3,11 @@ import { listGroups, type Group } from '@/api/groups';
 import Header from '@/components/layout/Header';
 import { ADMIN_SECTIONS } from '@/components/super-admin/common/AdminSections';
 import PlaceholderManagement from '@/components/super-admin/common/PlaceholderManagement';
-import { findAdminItemBySlug, getAdminItemPath } from '@/components/super-admin/common/adminRoutes';
+import {
+  findAdminItemBySlug,
+  getAdminItemPath,
+  getAdminSectionPath,
+} from '@/components/super-admin/common/adminRoutes';
 import type { AdminSectionId } from '@/components/super-admin/common/types';
 import DivisionsManagement from '@/components/super-admin/division/DivisionsManagement';
 import GroupsManagement from '@/components/super-admin/group/GroupsManagement';
@@ -131,6 +135,13 @@ export default function SuperAdminPage() {
     navigate(getAdminItemPath('groups', group), { replace: true });
   }
 
+  function handleGroupDeleted(groupId: string) {
+    setGroups((currentGroups) =>
+      currentGroups.filter((currentGroup) => currentGroup.id !== groupId),
+    );
+    navigate(getAdminSectionPath('groups'), { replace: true });
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
@@ -169,8 +180,12 @@ export default function SuperAdminPage() {
           ) : activeSectionId === 'groups' ? (
             <GroupsManagement
               activeGroup={activeGroup}
+              groups={groups}
+              isLoadingGroups={isLoadingGroups}
+              groupError={groupError}
               onGroupCreated={handleGroupCreated}
               onGroupUpdated={handleGroupUpdated}
+              onGroupDeleted={handleGroupDeleted}
             />
           ) : activeSectionId === 'users' ? (
             <UsersManagement />

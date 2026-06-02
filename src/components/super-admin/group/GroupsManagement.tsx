@@ -1,5 +1,6 @@
 import {
   createGroup,
+  deleteGroup,
   listUsersByGroup,
   removeUsersFromGroup,
   updateGroup,
@@ -20,17 +21,27 @@ import {
   getSearchableUserValues,
   normalizeSearchValue,
 } from '@/components/super-admin/common/UserUtils';
+import { getAdminItemPath } from '@/components/super-admin/common/adminRoutes';
+import { Link } from 'react-router-dom';
 
 interface GroupsManagementProps {
   activeGroup: Group | null;
+  groups: Group[];
+  isLoadingGroups: boolean;
+  groupError: string;
   onGroupCreated: (group: Group) => void;
   onGroupUpdated: (group: Group) => void;
+  onGroupDeleted: (groupId: string) => void;
 }
 
 export default function GroupsManagement({
   activeGroup,
+  groups,
+  isLoadingGroups,
+  groupError,
   onGroupCreated,
   onGroupUpdated,
+  onGroupDeleted,
 }: GroupsManagementProps) {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
@@ -38,6 +49,8 @@ export default function GroupsManagement({
   const [userError, setUserError] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [groupToEdit, setGroupToEdit] = useState<Group | null>(null);
+  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
@@ -165,26 +178,80 @@ export default function GroupsManagement({
     }
   }
 
+  if (!activeGroup) {
+    return (
+      <AdminContentPanel
+        section={ADMIN_SECTIONS[1]}
+        title="Quản lý nhóm"
+        count={`${groups.length} nhóm`}
+        actions={
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+          >
+            <Plus className="h-4 w-4" />
+            Tạo nhóm
+          </button>
+        }
+      >
+        <GroupsTable
+          groups={groups}
+          isLoading={isLoadingGroups}
+          error={groupError}
+          onEditGroup={setGroupToEdit}
+          onDeleteGroup={setGroupToDelete}
+        />
+        {isCreateModalOpen && (
+          <CreateGroupModal
+            onClose={() => setIsCreateModalOpen(false)}
+            onCreated={(group) => {
+              onGroupCreated(group);
+              setIsCreateModalOpen(false);
+            }}
+          />
+        )}
+        {groupToEdit && (
+          <EditGroupModal
+            activeGroup={groupToEdit}
+            onClose={() => setGroupToEdit(null)}
+            onUpdated={(group) => {
+              onGroupUpdated(group);
+              setGroupToEdit(null);
+            }}
+          />
+        )}
+        {groupToDelete && (
+          <DeleteGroupModal
+            group={groupToDelete}
+            onClose={() => setGroupToDelete(null)}
+            onDeleted={(groupId) => {
+              onGroupDeleted(groupId);
+              setGroupToDelete(null);
+            }}
+          />
+        )}
+      </AdminContentPanel>
+    );
+  }
+
   return (
     <AdminContentPanel
       section={ADMIN_SECTIONS[1]}
+      className="flex flex-col"
       title={
-        activeGroup ? (
-          <>
-            <span className="truncate">{activeGroup.name}</span>
-            <button
-              type="button"
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
-              aria-label="Chỉnh sửa nhóm"
-              title="Chỉnh sửa nhóm"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          </>
-        ) : (
-          'Quản lý nhóm'
-        )
+        <>
+          <span className="truncate">{activeGroup.name}</span>
+          <button
+            type="button"
+            onClick={() => setIsEditModalOpen(true)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
+            aria-label="Chỉnh sửa nhóm"
+            title="Chỉnh sửa nhóm"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </>
       }
       count={`${filteredUsers.length} thành viên`}
       actions={
@@ -199,14 +266,6 @@ export default function GroupsManagement({
               className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 sm:w-64"
             />
           </label>
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo nhóm
-          </button>
           <button
             type="button"
             onClick={() => {
@@ -239,16 +298,7 @@ export default function GroupsManagement({
         onToggleUser={toggleUserSelection}
         onToggleVisibleUsers={toggleVisibleUsersSelection}
       />
-      {isCreateModalOpen && (
-        <CreateGroupModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreated={(group) => {
-            onGroupCreated(group);
-            setIsCreateModalOpen(false);
-          }}
-        />
-      )}
-      {activeGroup && isEditModalOpen && (
+      {isEditModalOpen && (
         <EditGroupModal
           activeGroup={activeGroup}
           onClose={() => setIsEditModalOpen(false)}
@@ -258,7 +308,7 @@ export default function GroupsManagement({
           }}
         />
       )}
-      {activeGroup && isAddUsersModalOpen && (
+      {isAddUsersModalOpen && (
         <AddGroupUsersModal
           groupId={activeGroup.id}
           groupName={activeGroup.name}
@@ -267,7 +317,7 @@ export default function GroupsManagement({
           onAdded={() => loadGroupUsers(activeGroup.id)}
         />
       )}
-      {activeGroup && isRemoveUsersModalOpen && (
+      {isRemoveUsersModalOpen && (
         <ConfirmRemoveUsersModal
           contextName={activeGroup.name}
           contextType="group"
@@ -283,6 +333,86 @@ export default function GroupsManagement({
         />
       )}
     </AdminContentPanel>
+  );
+}
+
+interface GroupsTableProps {
+  groups: Group[];
+  isLoading: boolean;
+  error: string;
+  onEditGroup: (group: Group) => void;
+  onDeleteGroup: (group: Group) => void;
+}
+
+function GroupsTable({ groups, isLoading, error, onEditGroup, onDeleteGroup }: GroupsTableProps) {
+  return (
+    <div className="relative min-h-72">
+      {isLoading && <MembersLoadingOverlay />}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Tên nhóm
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Mô tả
+              </th>
+              <th className="w-32 px-5 py-3 text-right text-xs font-bold uppercase text-slate-500">
+                Thao tác
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 bg-white">
+            {isLoading ? null : error ? (
+              <EmptyTableRow className="text-red-600" colSpan={3}>
+                {error}
+              </EmptyTableRow>
+            ) : groups.length > 0 ? (
+              groups.map((group) => (
+                <tr key={group.id} className="hover:bg-slate-50">
+                  <td className="px-5 py-4">
+                    <Link
+                      to={getAdminItemPath('groups', group)}
+                      className="font-semibold text-slate-950 transition-colors hover:text-emerald-700"
+                    >
+                      {group.name}
+                    </Link>
+                  </td>
+                  <td className="max-w-xl px-5 py-4 text-sm font-medium text-slate-600">
+                    {group.description || <span className="text-slate-400">Chưa có mô tả</span>}
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onEditGroup(group)}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                        aria-label={`Chỉnh sửa ${group.name}`}
+                        title="Chỉnh sửa"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteGroup(group)}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                        aria-label={`Xóa ${group.name}`}
+                        title="Xóa"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <EmptyTableRow colSpan={3}>Chưa có nhóm.</EmptyTableRow>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -423,6 +553,96 @@ function EditGroupModal({ activeGroup, onClose, onUpdated }: EditGroupModalProps
   );
 }
 
+interface DeleteGroupModalProps {
+  group: Group;
+  onClose: () => void;
+  onDeleted: (groupId: string) => void;
+}
+
+function DeleteGroupModal({ group, onClose, onDeleted }: DeleteGroupModalProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    setError('');
+
+    try {
+      await deleteGroup(group.id);
+      onDeleted(group.id);
+    } catch (deleteError) {
+      const message = deleteError instanceof Error ? deleteError.message : '';
+      setError(message ? `Không thể xóa nhóm: ${message}` : 'Không thể xóa nhóm.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-group-title"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isDeleting) {
+          onClose();
+        }
+      }}
+    >
+      <div className="w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <h2 id="delete-group-title" className="text-lg font-bold text-slate-950">
+            Xóa nhóm
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Đóng"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="space-y-3 px-5 py-4">
+          <p className="text-sm font-medium text-slate-600">
+            Bạn có chắc muốn xóa nhóm{' '}
+            <span className="font-semibold text-slate-950">{group.name}</span>?
+          </p>
+          <p className="text-sm font-medium text-slate-500">
+            Thành viên sẽ được gỡ khỏi nhóm này trước khi nhóm bị xóa.
+          </p>
+          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isDeleting}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+            Xóa nhóm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface CreateGroupModalProps {
   onClose: () => void;
   onCreated: (group: Group) => void;
@@ -554,70 +774,74 @@ function GroupMembersTable({
     users.length > 0 && users.every((user) => selectedUserIdSet.has(user.uid));
 
   return (
-    <div className="relative min-h-72 overflow-x-auto">
+    <div className="relative min-h-72 flex-1">
       {isLoading && <MembersLoadingOverlay />}
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
-          <tr>
-            <th className="w-12 px-5 py-3">
-              <input
-                type="checkbox"
-                checked={areAllVisibleUsersSelected}
-                onChange={onToggleVisibleUsers}
-                disabled={isLoading || users.length === 0}
-                className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Chọn tất cả thành viên đang hiển thị"
-              />
-            </th>
-            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
-              Thành viên
-            </th>
-            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
-              Username
-            </th>
-            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
-              Email
-            </th>
-            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
-              Vai trò
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-200 bg-white">
-          {isLoading ? null : error ? (
-            <EmptyTableRow className="text-red-600" colSpan={5}>
-              {error}
-            </EmptyTableRow>
-          ) : users.length > 0 ? (
-            users.map((user) => (
-              <tr key={user.uid} className="hover:bg-slate-50">
-                <td className="px-5 py-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedUserIdSet.has(user.uid)}
-                    onChange={() => onToggleUser(user.uid)}
-                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    aria-label={`Chọn ${getFullName(user)}`}
-                  />
-                </td>
-                <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar src={user.avatarUrl} size="sm" />
-                    <span className="font-semibold text-slate-950 whitespace-nowrap">
-                      {getFullName(user)}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>
-                <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
-                <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.role}</td>
-              </tr>
-            ))
-          ) : (
-            <EmptyTableRow colSpan={5}>Chưa có thành viên trong nhóm này.</EmptyTableRow>
-          )}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
+              <th className="w-12 px-5 py-3">
+                <input
+                  type="checkbox"
+                  checked={areAllVisibleUsersSelected}
+                  onChange={onToggleVisibleUsers}
+                  disabled={isLoading || users.length === 0}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Chọn tất cả thành viên đang hiển thị"
+                />
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Thành viên
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Username
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Email
+              </th>
+              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+                Vai trò
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 bg-white">
+            {isLoading ? null : error ? (
+              <EmptyTableRow className="text-red-600" colSpan={5}>
+                {error}
+              </EmptyTableRow>
+            ) : users.length > 0 ? (
+              users.map((user) => (
+                <tr key={user.uid} className="hover:bg-slate-50">
+                  <td className="px-5 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedUserIdSet.has(user.uid)}
+                      onChange={() => onToggleUser(user.uid)}
+                      className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      aria-label={`Chọn ${getFullName(user)}`}
+                    />
+                  </td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar src={user.avatarUrl} size="sm" />
+                      <span className="font-semibold text-slate-950 whitespace-nowrap">
+                        {getFullName(user)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-4 text-sm font-medium text-slate-600">
+                    @{user.username}
+                  </td>
+                  <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
+                  <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.role}</td>
+                </tr>
+              ))
+            ) : (
+              <EmptyTableRow colSpan={5}>Chưa có thành viên trong nhóm này.</EmptyTableRow>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
