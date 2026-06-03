@@ -68,7 +68,7 @@ export default function PostRenderer({ blocks }: PostRendererProps) {
         }
 
         return (
-          <p key={block.id} className="whitespace-pre-line indent-8 text-base leading-7">
+          <p key={block.id} className="whitespace-pre-line text-base leading-7">
             {block.text}
           </p>
         );

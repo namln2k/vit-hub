@@ -377,12 +377,12 @@ export default function PostsManagement() {
                 setForm((currentForm) => ({ ...currentForm, excerpt: event.target.value }))
               }
               rows={3}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none transition-colors focus:border-violet-500"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition-colors focus:border-violet-500"
             />
           </label>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className='text-sm font-bold text-slate-700'>Thêm khối:</span>{' '}
+            <span className="text-sm font-bold text-slate-700">Thêm khối:</span>{' '}
             <div className="flex flex-wrap items-center gap-2">
               <EditorButton icon={<Type />} label="Tiêu đề" onClick={() => addBlock('heading')} />
               <EditorButton
@@ -409,11 +409,10 @@ export default function PostsManagement() {
             </div>
           ) : (
             <div className="mt-5 space-y-4">
-              {form.content.map((block, index) => (
+              {form.content.map((block) => (
                 <PostBlockEditor
                   key={block.id}
                   block={block}
-                  index={index}
                   onChange={(nextBlock) => updateBlock(block.id, nextBlock)}
                   onRemove={() => removeBlock(block.id)}
                 />
@@ -516,12 +515,11 @@ function EditorButton({ icon, label, onClick }: EditorButtonProps) {
 
 interface PostBlockEditorProps {
   block: DraftBlock;
-  index: number;
   onChange: (block: DraftBlock) => void;
   onRemove: () => void;
 }
 
-function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorProps) {
+function PostBlockEditor({ block, onChange, onRemove }: PostBlockEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -563,9 +561,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
   return (
     <div className="rounded-lg border border-slate-200 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-sm font-bold text-slate-500">
-          Khối {index + 1} - {blockTypeLabel}
-        </span>
+        <span className="text-sm font-bold text-slate-500">{blockTypeLabel}</span>
         <button
           type="button"
           onClick={onRemove}
@@ -603,7 +599,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
           value={block.text}
           onChange={(event) => onChange({ ...block, text: event.target.value })}
           rows={4}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-violet-500"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-violet-500"
         />
       ) : null}
 
@@ -621,7 +617,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               })
             }
             rows={5}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-violet-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-violet-500"
           />
         </label>
       ) : null}
@@ -630,11 +626,11 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
         <div className="space-y-3">
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
             <label className="block min-w-0">
-              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL ảnh</span>
+              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL</span>
               <input
                 value={block.url}
                 onChange={(event) => onChange({ ...block, url: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
             <div className="flex items-end">
@@ -678,7 +674,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               <input
                 value={block.alt}
                 onChange={(event) => onChange({ ...block, alt: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
             <label className="block">
@@ -686,7 +682,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               <input
                 value={block.caption}
                 onChange={(event) => onChange({ ...block, caption: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
           </div>
