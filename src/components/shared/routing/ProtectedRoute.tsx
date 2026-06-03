@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/useAuth';
 import type { UserRole } from '@/constants/userRoles';
+import Sharingan from '@/components/shared/loading/Sharingan';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,8 +13,8 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 text-sm font-medium text-gray-500">
-        Đang tải...
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 text-sm font-medium text-gray-500">
+        <Sharingan />
       </div>
     );
   }

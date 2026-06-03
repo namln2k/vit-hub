@@ -1,5 +1,6 @@
 import { deleteGroup, type Group } from '@/api/groups';
-import { Loader2, Trash2, X } from 'lucide-react';
+import Sharingan from '@/components/shared/loading/Sharingan';
+import { Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
 interface DeleteGroupModalProps {
@@ -80,7 +81,7 @@ export default function DeleteGroupModal({ group, onClose, onDeleted }: DeleteGr
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Sharingan size={16} label="Đang xóa nhóm" />
             ) : (
               <Trash2 className="h-4 w-4" />
             )}

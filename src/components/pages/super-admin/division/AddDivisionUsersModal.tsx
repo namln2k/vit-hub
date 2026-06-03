@@ -1,8 +1,9 @@
 import { addUsersToDivision } from '@/api/divisions';
 import { queryUsers } from '@/api/users';
 import Avatar from '@/components/shared/layout/Avatar';
+import Sharingan from '@/components/shared/loading/Sharingan';
 import type { AppUser } from '@/contexts/auth';
-import { Check, Loader2, MailPlus, Search, UserPlus, X } from 'lucide-react';
+import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getFullName, normalizeSearchValue } from '@/components/pages/super-admin/common/UserUtils';
 import { formatEmailList, parseEmailList } from '@/utils/import/emailListImport';
@@ -242,7 +243,11 @@ export default function AddDivisionUsersModal({
               className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-10 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-indigo-500"
             />
             {isSearching && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" />
+              <Sharingan
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+                size={16}
+                label="Đang tìm kiếm thành viên"
+              />
             )}
           </label>
 
@@ -272,7 +277,7 @@ export default function AddDivisionUsersModal({
                 className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-sm font-semibold text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
               >
                 {isImportingEmails ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Sharingan size={16} label="Đang import email" />
                 ) : (
                   <MailPlus className="h-4 w-4" />
                 )}
@@ -374,7 +379,7 @@ export default function AddDivisionUsersModal({
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isAdding ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Sharingan size={16} label="Đang thêm thành viên" />
             ) : (
               <Check className="h-4 w-4" />
             )}

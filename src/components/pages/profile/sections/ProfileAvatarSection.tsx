@@ -1,6 +1,7 @@
 import { validateAvatarFile } from '@/api/avatarUpload';
 import AvatarEditor from '@/components/shared/avatar/AvatarEditor';
 import Avatar from '@/components/shared/layout/Avatar';
+import Sharingan from '@/components/shared/loading/Sharingan';
 import type { AppUser } from '@/contexts/auth';
 import { Camera } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
@@ -68,8 +69,8 @@ export default function ProfileAvatarSection({
             <Camera className="h-5 w-5" />
           </span>
           {avatarUploading && (
-            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-white/80 text-xs font-medium text-gray-700">
-              Đang tải
+            <span className="absolute inset-0 flex items-center justify-center rounded-full bg-white/80">
+              <Sharingan size={28} label="Đang tải ảnh đại diện" />
             </span>
           )}
           <input

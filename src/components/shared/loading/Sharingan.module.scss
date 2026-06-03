@@ -8,8 +8,9 @@
   border: calc(var(--base-size) / 30) solid #000;
   border-radius: 50%;
   background: rgba(184, 0, 0, 0.75);
-  box-shadow: 0 0 (var(--base-size) / 4) (var(--base-size) / 40) #000 inset;
+  box-shadow: 0 0 calc(var(--base-size) / 4) calc(var(--base-size) / 40) #000 inset;
   position: relative;
+  flex: 0 0 auto;
 }
 
 .sharingan *,
@@ -27,7 +28,7 @@
   background: #000;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 (var(--base-size) / 4) (var(--base-size) / 40) #000;
+  box-shadow: 0 0 calc(var(--base-size) / 4) calc(var(--base-size) / 40) #000;
 }
 
 .iris {

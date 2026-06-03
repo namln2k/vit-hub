@@ -1,8 +1,9 @@
 import { queryUsers } from '@/api/users';
 import Avatar from '@/components/shared/layout/Avatar';
+import Sharingan from '@/components/shared/loading/Sharingan';
 import { useAuth } from '@/contexts/useAuth';
 import type { AppUser } from '@/contexts/auth';
-import { Loader2, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface UserSearchProps {
@@ -112,7 +113,11 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
           className={`h-10 w-full rounded-full border py-2 pl-9 pr-10 text-sm font-medium outline-none transition-colors focus:ring-4 ${inputClassName}`}
         />
         {isLoading ? (
-          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+          <Sharingan
+            className="absolute right-3 top-1/2 -translate-y-1/2"
+            size={16}
+            label="Đang tìm kiếm thành viên"
+          />
         ) : searchValue ? (
           <button
             type="button"

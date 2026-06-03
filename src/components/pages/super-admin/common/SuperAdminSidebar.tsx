@@ -1,4 +1,5 @@
-import { ChevronRight, Loader2 } from 'lucide-react';
+import Sharingan from '@/components/shared/loading/Sharingan';
+import { ChevronRight } from 'lucide-react';
 import type { Division } from '@/api/divisions';
 import type { Group } from '@/api/groups';
 import {
@@ -162,7 +163,7 @@ function NestedNavItems({
   if (isLoading) {
     return (
       <div className="mt-1 flex items-center gap-2 px-7 py-2 text-sm font-medium text-slate-500">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Sharingan size={16} label={loadingLabel} />
         {loadingLabel}
       </div>
     );
