@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { createPresignedPutUrl, getExtension, getPublicBaseUrl } from '../avatars/presign.js';
+import {
+  createPresignedPutUrl,
+  createSignedR2Request,
+  getExtension,
+  getPublicBaseUrl,
+} from '../avatars/presign.js';
 import { getSupabaseAdminServerConfig, getSupabasePublicServerConfig } from '../supabase-env.js';
 
 const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -58,6 +63,46 @@ function getRequiredR2Config() {
   };
 }
 
+function getPostImageKeyFromUrl(imageUrl) {
+  if (typeof imageUrl !== 'string' || !imageUrl) {
+    return '';
+  }
+
+  try {
+    const publicBaseUrl = new URL(getPublicBaseUrl());
+    const url = new URL(imageUrl);
+
+    if (url.origin !== publicBaseUrl.origin) {
+      return '';
+    }
+
+    const key = decodeURIComponent(url.pathname.replace(/^\/+/, ''));
+    return key.startsWith('posts/') ? key : '';
+  } catch {
+    return '';
+  }
+}
+
+function getPostImageKeys(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      value
+        .map((image) => {
+          if (typeof image?.postImageKey === 'string' && image.postImageKey.startsWith('posts/')) {
+            return image.postImageKey;
+          }
+
+          return getPostImageKeyFromUrl(image?.url);
+        })
+        .filter(Boolean),
+    ),
+  ];
+}
+
 async function supabaseFetch(path, { key, method = 'GET', body, headers = {} }) {
   const { supabaseUrl, serviceRoleKey } = getSupabaseAdminServerConfig();
   const response = await fetch(`${supabaseUrl}${path}`, {
@@ -109,7 +154,7 @@ async function getUserRole(uid) {
 }
 
 export default async function handler(request, response) {
-  if (request.method !== 'POST') {
+  if (request.method !== 'POST' && request.method !== 'DELETE') {
     json(response, 405, { error: 'Method not allowed.' });
     return;
   }
@@ -133,11 +178,53 @@ export default async function handler(request, response) {
     const role = await getUserRole(uid);
 
     if (role !== 'super_admin') {
-      json(response, 403, { error: 'Only super admins can upload post images.' });
+      json(response, 403, { error: 'Only super admins can manage post images.' });
       return;
     }
 
     const body = await parseBody(request);
+
+    if (request.method === 'DELETE') {
+      const keys = getPostImageKeys(body.images);
+
+      if (keys.length === 0) {
+        json(response, 200, { ok: true, deleted: 0 });
+        return;
+      }
+
+      const r2 = getRequiredR2Config();
+      const results = await Promise.all(
+        keys.map(async (key) => {
+          const signedRequest = createSignedR2Request({
+            method: 'DELETE',
+            bucketName: r2.bucketName,
+            accountId: r2.accountId,
+            accessKeyId: r2.accessKeyId,
+            secretAccessKey: r2.secretAccessKey,
+            key,
+          });
+          const deleteResponse = await fetch(signedRequest.url, {
+            method: 'DELETE',
+            headers: signedRequest.headers,
+          });
+
+          return { key, ok: deleteResponse.ok };
+        }),
+      );
+      const failedKeys = results.filter((result) => !result.ok).map((result) => result.key);
+
+      if (failedKeys.length > 0) {
+        json(response, 502, {
+          error: 'Could not delete every post image from R2.',
+          failedKeys,
+        });
+        return;
+      }
+
+      json(response, 200, { ok: true, deleted: results.length });
+      return;
+    }
+
     const { contentType, size } = body;
     const maxUploadBytes =
       Number(process.env.R2_POST_IMAGE_MAX_UPLOAD_BYTES) || DEFAULT_MAX_UPLOAD_BYTES;

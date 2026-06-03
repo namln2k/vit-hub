@@ -12,6 +12,11 @@ export interface UploadedPostImage {
   postImageKey: string;
 }
 
+export interface PostImageReference {
+  url?: string;
+  postImageKey?: string;
+}
+
 function isHttpUrl(value: unknown): value is string {
   if (typeof value !== 'string') {
     return false;
@@ -145,4 +150,25 @@ export async function uploadPostImage(file: File): Promise<UploadedPostImage> {
     postImageUrl: presignData.postImageUrl,
     postImageKey: presignData.postImageKey,
   };
+}
+
+export async function deletePostImages(images: PostImageReference[]): Promise<void> {
+  if (images.length === 0) {
+    return;
+  }
+
+  const accessToken = await getAccessToken();
+  const response = await fetch('/api/posts/presign', {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ images }),
+  });
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Không thể xoá ảnh bài viết khỏi Cloudflare R2.');
+  }
 }

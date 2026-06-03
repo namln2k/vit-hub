@@ -36,6 +36,7 @@ import {
   type FormEvent,
   type ReactElement,
 } from 'react';
+import { toast } from 'sonner';
 
 type DraftBlock = PostContentBlock;
 
@@ -138,6 +139,9 @@ export default function PostsManagement() {
     setSaveError('');
 
     const input = buildPostWrite(form);
+    const successMessage = isEditing
+      ? 'Đã lưu thay đổi bài viết.'
+      : 'Đã tạo bài viết thành công.';
 
     if (!input.title) {
       setSaveError('Vui lòng nhập tiêu đề bài viết.');
@@ -169,6 +173,7 @@ export default function PostsManagement() {
         ),
       );
       editPost(savedPost);
+      toast.success(successMessage, { id: 'post-save-success' });
     } catch (savePostError) {
       const message = savePostError instanceof Error ? savePostError.message : '';
       setSaveError(message ? `Không thể lưu bài viết: ${message}` : 'Không thể lưu bài viết.');
@@ -377,12 +382,12 @@ export default function PostsManagement() {
                 setForm((currentForm) => ({ ...currentForm, excerpt: event.target.value }))
               }
               rows={3}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none transition-colors focus:border-violet-500"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none transition-colors focus:border-violet-500"
             />
           </label>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <span className='text-sm font-bold text-slate-700'>Thêm khối:</span>{' '}
+            <span className="text-sm font-bold text-slate-700">Thêm khối:</span>{' '}
             <div className="flex flex-wrap items-center gap-2">
               <EditorButton icon={<Type />} label="Tiêu đề" onClick={() => addBlock('heading')} />
               <EditorButton
@@ -409,11 +414,10 @@ export default function PostsManagement() {
             </div>
           ) : (
             <div className="mt-5 space-y-4">
-              {form.content.map((block, index) => (
+              {form.content.map((block) => (
                 <PostBlockEditor
                   key={block.id}
                   block={block}
-                  index={index}
                   onChange={(nextBlock) => updateBlock(block.id, nextBlock)}
                   onRemove={() => removeBlock(block.id)}
                 />
@@ -516,12 +520,11 @@ function EditorButton({ icon, label, onClick }: EditorButtonProps) {
 
 interface PostBlockEditorProps {
   block: DraftBlock;
-  index: number;
   onChange: (block: DraftBlock) => void;
   onRemove: () => void;
 }
 
-function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorProps) {
+function PostBlockEditor({ block, onChange, onRemove }: PostBlockEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -550,6 +553,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
       onChange({
         ...block,
         url: uploadedImage.postImageUrl,
+        postImageKey: uploadedImage.postImageKey,
         alt: block.alt || file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
       });
     } catch (error) {
@@ -562,9 +566,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
   return (
     <div className="rounded-lg border border-slate-200 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-sm font-bold text-slate-500">
-          Khối {index + 1} - {blockTypeLabel}
-        </span>
+        <span className="text-sm font-bold text-slate-500">{blockTypeLabel}</span>
         <button
           type="button"
           onClick={onRemove}
@@ -602,7 +604,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
           value={block.text}
           onChange={(event) => onChange({ ...block, text: event.target.value })}
           rows={4}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-violet-500"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-violet-500"
         />
       ) : null}
 
@@ -620,7 +622,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               })
             }
             rows={5}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-violet-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-950 outline-none focus:border-violet-500"
           />
         </label>
       ) : null}
@@ -633,7 +635,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               <input
                 value={block.url}
                 onChange={(event) => onChange({ ...block, url: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
             <div className="flex items-end">
@@ -671,13 +673,24 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               {uploadError}
             </p>
           ) : null}
+          <label className="block">
+            <span className="mb-1 block text-xs font-bold uppercase text-slate-500">
+              URL khi bấm ảnh (optional)
+            </span>
+            <input
+              value={block.linkUrl ?? ''}
+              onChange={(event) => onChange({ ...block, linkUrl: event.target.value })}
+              placeholder="https://example.com"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
+            />
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Alt</span>
               <input
                 value={block.alt}
                 onChange={(event) => onChange({ ...block, alt: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
             <label className="block">
@@ -685,7 +698,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               <input
                 value={block.caption}
                 onChange={(event) => onChange({ ...block, caption: event.target.value })}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
               />
             </label>
           </div>
@@ -755,6 +768,7 @@ function createImageBlock(): DraftBlock {
     id: createBlockId(),
     type: 'image',
     url: '',
+    linkUrl: '',
     alt: '',
     caption: '',
   };
