@@ -1,7 +1,7 @@
 import { getPublishedPostBySlug, type Post } from '@/api/posts';
 import PostRenderer from '@/components/pages/posts/PostRenderer';
 import Header from '@/components/shared/layout/Header';
-import { Loader2 } from 'lucide-react';
+import Sharingan from '@/components/shared/loading/Sharingan';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -50,7 +50,7 @@ export default function PostPage() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         {isLoading ? (
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Sharingan />
             Đang tải bài viết
           </div>
         ) : error ? (

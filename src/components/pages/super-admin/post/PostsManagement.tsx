@@ -9,21 +9,34 @@ import {
   type PostStatus,
   type PostWrite,
 } from '@/api/posts';
+import { uploadPostImage, validatePostImageFile } from '@/api/postImageUpload';
 import AdminContentPanel from '@/components/pages/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/pages/super-admin/common/AdminSections';
 import PostRenderer from '@/components/pages/posts/PostRenderer';
+import Sharingan from '@/components/shared/loading/Sharingan';
 import {
   Eye,
   ImagePlus,
   List,
   Loader2,
   Newspaper,
+  Pencil,
   Plus,
   Save,
   Trash2,
   Type,
+  Upload,
+  X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState, type FormEvent, type ReactElement } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactElement,
+} from 'react';
 
 type DraftBlock = PostContentBlock;
 
@@ -53,6 +66,7 @@ export default function PostsManagement() {
   const [saveError, setSaveError] = useState('');
   const [form, setForm] = useState<PostFormState>(emptyForm);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isSlugEditing, setIsSlugEditing] = useState(false);
 
   const postSection = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.id === 'posts') ?? ADMIN_SECTIONS[0],
@@ -103,6 +117,7 @@ export default function PostsManagement() {
     });
     setSaveError('');
     setIsPreviewing(false);
+    setIsSlugEditing(false);
   }
 
   function editPost(post: Post) {
@@ -116,6 +131,7 @@ export default function PostsManagement() {
     });
     setSaveError('');
     setIsPreviewing(false);
+    setIsSlugEditing(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -184,6 +200,19 @@ export default function PostsManagement() {
     }
   }
 
+  function cancelSlugEditing() {
+    const currentPost = posts.find((post) => post.id === form.id);
+
+    if (currentPost) {
+      setForm((currentForm) => ({
+        ...currentForm,
+        slug: currentPost.slug,
+      }));
+    }
+
+    setIsSlugEditing(false);
+  }
+
   return (
     <AdminContentPanel
       section={postSection}
@@ -204,7 +233,7 @@ export default function PostsManagement() {
         <div className="border-b border-slate-200 xl:border-b-0 xl:border-r">
           {isLoading ? (
             <div className="flex items-center gap-2 p-5 text-sm font-semibold text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Sharingan size={24} />
               Đang tải bài viết
             </div>
           ) : error ? (
@@ -283,29 +312,63 @@ export default function PostsManagement() {
             </label>
           </div>
 
-          <label className="mt-4 block">
+          <div className="mt-4">
             <span className="text-sm font-bold text-slate-700">URL</span>
-            <div className="mt-1 flex rounded-lg border border-slate-300 focus-within:border-violet-500">
-              <span className="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500">
-                /posts/
-              </span>
-              <input
-                value={form.slug}
-                onChange={(event) =>
-                  setForm((currentForm) => ({
-                    ...currentForm,
-                    slug: createPostSlug(event.target.value),
-                  }))
-                }
-                className="h-11 min-w-0 flex-1 rounded-r-lg px-3 text-sm font-semibold text-slate-950 outline-none"
-              />
-            </div>
+            {!isEditing || isSlugEditing ? (
+              <div className="mt-1 flex rounded-lg border border-slate-300 focus-within:border-violet-500">
+                <span className="flex items-center border-r border-slate-200 px-3 text-sm font-semibold text-slate-500">
+                  /posts/
+                </span>
+                <input
+                  value={form.slug}
+                  onChange={(event) =>
+                    setForm((currentForm) => ({
+                      ...currentForm,
+                      slug: createPostSlug(event.target.value),
+                    }))
+                  }
+                  className={`h-11 min-w-0 flex-1 px-3 text-sm font-semibold text-slate-950 outline-none ${
+                    isEditing ? '' : 'rounded-r-lg'
+                  }`}
+                />
+                {isEditing ? (
+                  <button
+                    type="button"
+                    onClick={cancelSlugEditing}
+                    aria-label="Hủy sửa URL"
+                    title="Hủy"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-r-lg border-l border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <div className="mt-1 flex h-11 items-center rounded-lg border border-slate-200 bg-slate-50 pl-3">
+                <a
+                  href={`/posts/${form.slug}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="min-w-0 flex-1 truncate text-sm font-semibold text-violet-700 transition-colors hover:text-violet-900 hover:underline"
+                >
+                  posts/{form.slug}
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsSlugEditing(true)}
+                  aria-label="Sửa URL"
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-r-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-violet-600"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              </div>
+            )}
             {slugIsTaken ? (
               <span className="mt-1 block text-xs font-semibold text-red-600">
                 URL này đã tồn tại.
               </span>
             ) : null}
-          </label>
+          </div>
 
           <label className="mt-4 block">
             <span className="text-sm font-bold text-slate-700">Mô tả ngắn</span>
@@ -320,18 +383,21 @@ export default function PostsManagement() {
           </label>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
-            <EditorButton icon={<Type />} label="Tiêu đề" onClick={() => addBlock('heading')} />
-            <EditorButton
-              icon={<Newspaper />}
-              label="Đoạn text"
-              onClick={() => addBlock('paragraph')}
-            />
-            <EditorButton icon={<List />} label="Bullet list" onClick={() => addBlock('list')} />
-            <EditorButton icon={<ImagePlus />} label="Ảnh" onClick={() => addBlock('image')} />
+            <span className='text-sm font-bold text-slate-700'>Thêm khối:</span>{' '}
+            <div className="flex flex-wrap items-center gap-2">
+              <EditorButton icon={<Type />} label="Tiêu đề" onClick={() => addBlock('heading')} />
+              <EditorButton
+                icon={<Newspaper />}
+                label="Đoạn text"
+                onClick={() => addBlock('paragraph')}
+              />
+              <EditorButton icon={<List />} label="Bullet list" onClick={() => addBlock('list')} />
+              <EditorButton icon={<ImagePlus />} label="Ảnh" onClick={() => addBlock('image')} />
+            </div>
             <button
               type="button"
               onClick={() => setIsPreviewing((currentValue) => !currentValue)}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-bold text-amber-800 shadow-sm transition-colors hover:border-amber-400 hover:bg-amber-100 sm:ml-auto"
             >
               <Eye className="h-4 w-4" />
               {isPreviewing ? 'Soạn thảo' : 'Xem trước'}
@@ -387,7 +453,7 @@ export default function PostsManagement() {
               disabled={isSaving}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {isSaving ? <Sharingan size={16} /> : <Save className="h-4 w-4" />}
               {isSaving ? 'Đang lưu' : isEditing ? 'Lưu thay đổi' : 'Tạo bài viết'}
             </button>
           </div>
@@ -457,10 +523,49 @@ interface PostBlockEditorProps {
 }
 
 function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState('');
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const blockTypeLabel = getBlockTypeLabel(block);
+
+  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file || block.type !== 'image') {
+      return;
+    }
+
+    const validationError = validatePostImageFile(file);
+
+    if (validationError) {
+      setUploadError(validationError);
+      return;
+    }
+
+    setUploadError('');
+    setIsUploadingImage(true);
+
+    try {
+      const uploadedImage = await uploadPostImage(file);
+      onChange({
+        ...block,
+        url: uploadedImage.postImageUrl,
+        alt: block.alt || file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
+      });
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : 'Không thể upload ảnh bài viết.');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-slate-200 p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-sm font-bold text-slate-500">Khối {index + 1}</span>
+        <span className="text-sm font-bold text-slate-500">
+          Khối {index + 1} - {blockTypeLabel}
+        </span>
         <button
           type="button"
           onClick={onRemove}
@@ -481,9 +586,9 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
             }
             className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
           >
-            <option value={1}>Tiêu đề 1</option>
-            <option value={2}>Tiêu đề 2</option>
-            <option value={3}>Tiêu đề 3</option>
+            <option value={1}>H1</option>
+            <option value={2}>H2</option>
+            <option value={3}>H3</option>
           </select>
           <input
             value={block.text}
@@ -523,14 +628,50 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
 
       {block.type === 'image' ? (
         <div className="space-y-3">
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL ảnh</span>
-            <input
-              value={block.url}
-              onChange={(event) => onChange({ ...block, url: event.target.value })}
-              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
+            <label className="block min-w-0">
+              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL ảnh</span>
+              <input
+                value={block.url}
+                onChange={(event) => onChange({ ...block, url: event.target.value })}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-950 outline-none focus:border-violet-500"
+              />
+            </label>
+            <div className="flex items-end">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingImage}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 lg:w-auto"
+              >
+                {isUploadingImage ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {isUploadingImage ? 'Đang upload' : 'Upload ảnh'}
+              </button>
+            </div>
+          </div>
+          {block.url ? (
+            <img
+              src={block.url}
+              alt={block.alt || ''}
+              className="max-h-56 w-full rounded-lg border border-slate-200 object-cover"
             />
-          </label>
+          ) : null}
+          {uploadError ? (
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              {uploadError}
+            </p>
+          ) : null}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Alt</span>
@@ -541,9 +682,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">
-                Caption
-              </span>
+              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Caption</span>
               <input
                 value={block.caption}
                 onChange={(event) => onChange({ ...block, caption: event.target.value })}
@@ -555,6 +694,22 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
       ) : null}
     </div>
   );
+}
+
+function getBlockTypeLabel(block: DraftBlock) {
+  if (block.type === 'heading') {
+    return `H${block.level}`;
+  }
+
+  if (block.type === 'image') {
+    return 'Ảnh';
+  }
+
+  if (block.type === 'list') {
+    return 'Bullet list';
+  }
+
+  return 'Đoạn text';
 }
 
 function buildPostWrite(form: PostFormState): PostWrite {

@@ -1,6 +1,6 @@
 # Cloudflare Setup Guide
 
-VIT Hub can store optional user avatars in Cloudflare R2. During registration, `/api/auth/register` creates the Supabase user, uploads the avatar from the server, and stores `avatar_url` plus `avatar_key` in the user's Supabase row even while email confirmation is pending. Signed-in avatar changes still use `/api/avatars/presign` for short-lived direct uploads.
+VIT Hub can store optional user avatars and post images in Cloudflare R2. During registration, `/api/auth/register` creates the Supabase user, uploads the avatar from the server, and stores `avatar_url` plus `avatar_key` in the user's Supabase row even while email confirmation is pending. Signed-in avatar changes use `/api/avatars/presign` for short-lived direct uploads. Super admin post images use `/api/posts/presign`, upload directly to R2, then store the public image URL in the post content.
 
 ## Create The R2 Bucket
 
@@ -96,7 +96,7 @@ origin shown in the browser error.
 
 ## Local End-To-End Test
 
-The Vite dev server serves `api/auth/register.js` and `api/avatars/presign.js` through a local dev middleware, so avatar uploads can be tested with the normal app server:
+The Vite dev server serves `api/auth/register.js`, `api/avatars/presign.js`, and `api/posts/presign.js` through a local dev middleware, so uploads can be tested with the normal app server:
 
 ```bash
 npm run dev
@@ -109,6 +109,7 @@ Then:
 3. Confirm the user's `user` row in Supabase contains `avatar_url` and `avatar_key`.
 4. Open the R2 bucket and confirm the object exists under `avatars/{uid}/...`.
 5. Visit the saved `avatar_url` in a browser and confirm the image loads.
+6. As a super admin, create or edit a post, upload a JPG, PNG, or WebP image block, and confirm the object exists under `posts/{uid}/...`.
 
 If upload fails with CORS, check the R2 bucket CORS rule first. If upload fails with an auth or missing environment error, check the server-only environment variables.
 
@@ -143,6 +144,7 @@ R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
 R2_BUCKET_NAME=vit-hub
 R2_PUBLIC_BASE_URL=https://your-public-r2-domain.example.com
 R2_FREE_TIER_MAX_UPLOAD_BYTES=1048576
+R2_POST_IMAGE_MAX_UPLOAD_BYTES=5242880
 ```
 
 Do not prefix R2 secrets with `VITE_` or `NEXT_PUBLIC_`. Vite exposes `VITE_*` values to the browser, and public-prefixed variables in frontend frameworks are browser-readable. R2 access keys must stay server-side.
@@ -156,6 +158,7 @@ This project keeps avatar usage small by default:
 - Avatar uploads are optional.
 - Accepted file types are JPG, PNG, and WebP.
 - Each avatar is limited to 1 MB by `R2_FREE_TIER_MAX_UPLOAD_BYTES`.
+- Each post image is limited to 5 MB by default, or `R2_POST_IMAGE_MAX_UPLOAD_BYTES` when set.
 - Upload URLs expire after 60 seconds.
 - R2 credentials stay server-side.
 
@@ -163,7 +166,7 @@ With a 1 MB limit, the 10 GB free storage tier can hold roughly 10,000 avatars b
 
 ## Vercel Deployment
 
-Deploying to Vercel can use the included `api/avatars/presign.js` serverless function.
+Deploying to Vercel can use the included `api/avatars/presign.js` and `api/posts/presign.js` serverless functions.
 
 Set these environment variables in:
 
@@ -181,6 +184,7 @@ R2_SECRET_ACCESS_KEY
 R2_BUCKET_NAME
 R2_PUBLIC_BASE_URL
 R2_FREE_TIER_MAX_UPLOAD_BYTES
+R2_POST_IMAGE_MAX_UPLOAD_BYTES
 ```
 
 Also keep the existing `VITE_SUPABASE_*` values configured for the frontend.
@@ -192,6 +196,7 @@ For a VPS, serve the Vite `dist` directory with Nginx or another web server, and
 ```text
 POST /api/auth/register
 POST /api/avatars/presign
+POST /api/posts/presign
 ```
 
 The included handler is written with Node's request/response APIs, so it can be reused from a small Node server or adapted into Express/Fastify. Keep the R2 server-only environment variables on the VPS, not in `.env` files served to the browser.
