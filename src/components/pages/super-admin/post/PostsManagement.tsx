@@ -36,6 +36,7 @@ import {
   type FormEvent,
   type ReactElement,
 } from 'react';
+import { toast } from 'sonner';
 
 type DraftBlock = PostContentBlock;
 
@@ -138,6 +139,9 @@ export default function PostsManagement() {
     setSaveError('');
 
     const input = buildPostWrite(form);
+    const successMessage = isEditing
+      ? 'Đã lưu thay đổi bài viết.'
+      : 'Đã tạo bài viết thành công.';
 
     if (!input.title) {
       setSaveError('Vui lòng nhập tiêu đề bài viết.');
@@ -169,6 +173,7 @@ export default function PostsManagement() {
         ),
       );
       editPost(savedPost);
+      toast.success(successMessage);
     } catch (savePostError) {
       const message = savePostError instanceof Error ? savePostError.message : '';
       setSaveError(message ? `Không thể lưu bài viết: ${message}` : 'Không thể lưu bài viết.');
