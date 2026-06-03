@@ -55,7 +55,7 @@ export default function PostRenderer({ blocks }: PostRendererProps) {
               <img
                 src={block.url}
                 alt={block.alt}
-                className="max-h-[560px] w-full rounded-lg object-cover"
+                className="max-h-140 w-full rounded-lg object-cover"
                 loading="lazy"
               />
               {block.caption ? (
@@ -68,7 +68,7 @@ export default function PostRenderer({ blocks }: PostRendererProps) {
         }
 
         return (
-          <p key={block.id} className="text-base leading-7">
+          <p key={block.id} className="whitespace-pre-line indent-8 text-base leading-7">
             {block.text}
           </p>
         );
