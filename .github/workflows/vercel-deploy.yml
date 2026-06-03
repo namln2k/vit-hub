@@ -11,4 +11,4 @@ jobs:
     steps:
       - name: Send POST Request to Vercel Hook
         run: |
-          curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
+          curl --fail-with-body --silent --show-error --request POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
