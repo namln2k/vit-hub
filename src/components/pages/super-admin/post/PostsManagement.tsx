@@ -550,6 +550,7 @@ function PostBlockEditor({ block, index, onChange, onRemove }: PostBlockEditorPr
       onChange({
         ...block,
         url: uploadedImage.postImageUrl,
+        postImageKey: uploadedImage.postImageKey,
         alt: block.alt || file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
       });
     } catch (error) {

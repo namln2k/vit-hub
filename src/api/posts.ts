@@ -1,4 +1,5 @@
 import { supabase } from '@/api/supabase';
+import { deletePostImages, type PostImageReference } from '@/api/postImageUpload';
 
 export type PostStatus = 'draft' | 'published';
 export type PostBlockType = 'heading' | 'paragraph' | 'list' | 'image';
@@ -26,6 +27,7 @@ export interface PostImageBlock {
   id: string;
   type: 'image';
   url: string;
+  postImageKey?: string;
   alt: string;
   caption: string;
 }
@@ -145,6 +147,19 @@ export async function updatePost(postId: string, input: PostWrite): Promise<Post
 }
 
 export async function deletePost(postId: string): Promise<void> {
+  const { data, error: fetchError } = await supabase
+    .from('posts')
+    .select('content')
+    .eq('id', postId)
+    .single<Pick<PostRow, 'content'>>();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const content = parsePostContent(data.content);
+  await deletePostImages(getPostImageReferences(content));
+
   const { error } = await supabase.from('posts').delete().eq('id', postId);
 
   if (error) {
@@ -234,6 +249,7 @@ function sanitizePostContent(blocks: PostContentBlock[]): PostContentBlock[] {
         id: block.id,
         type: 'image' as const,
         url: block.url.trim(),
+        postImageKey: block.postImageKey?.trim(),
         alt: block.alt.trim(),
         caption: block.caption.trim(),
       };
@@ -249,4 +265,13 @@ function sanitizePostContent(blocks: PostContentBlock[]): PostContentBlock[] {
 
       return Boolean(block.text);
     });
+}
+
+function getPostImageReferences(blocks: PostContentBlock[]): PostImageReference[] {
+  return blocks
+    .filter((block): block is PostImageBlock => block.type === 'image')
+    .map((block) => ({
+      url: block.url,
+      postImageKey: block.postImageKey,
+    }));
 }

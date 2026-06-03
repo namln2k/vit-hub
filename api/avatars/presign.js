@@ -103,7 +103,14 @@ export function createPresignedPutUrl({ bucketName, accountId, accessKeyId, secr
   return `https://${host}${canonicalUri}?${canonicalQueryString}&X-Amz-Signature=${signature}`;
 }
 
-function createSignedR2Request({ method, bucketName, accountId, accessKeyId, secretAccessKey, key }) {
+export function createSignedR2Request({
+  method,
+  bucketName,
+  accountId,
+  accessKeyId,
+  secretAccessKey,
+  key,
+}) {
   const region = 'auto';
   const service = 's3';
   const now = new Date();
