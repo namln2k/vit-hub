@@ -173,7 +173,7 @@ export default function PostsManagement() {
         ),
       );
       editPost(savedPost);
-      toast.success(successMessage);
+      toast.success(successMessage, { id: 'post-save-success' });
     } catch (savePostError) {
       const message = savePostError instanceof Error ? savePostError.message : '';
       setSaveError(message ? `Không thể lưu bài viết: ${message}` : 'Không thể lưu bài viết.');
@@ -631,7 +631,7 @@ function PostBlockEditor({ block, onChange, onRemove }: PostBlockEditorProps) {
         <div className="space-y-3">
           <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto]">
             <label className="block min-w-0">
-              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL</span>
+              <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL ảnh</span>
               <input
                 value={block.url}
                 onChange={(event) => onChange({ ...block, url: event.target.value })}
@@ -673,6 +673,17 @@ function PostBlockEditor({ block, onChange, onRemove }: PostBlockEditorProps) {
               {uploadError}
             </p>
           ) : null}
+          <label className="block">
+            <span className="mb-1 block text-xs font-bold uppercase text-slate-500">
+              URL khi bấm ảnh (optional)
+            </span>
+            <input
+              value={block.linkUrl ?? ''}
+              onChange={(event) => onChange({ ...block, linkUrl: event.target.value })}
+              placeholder="https://example.com"
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
+            />
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Alt</span>
@@ -757,6 +768,7 @@ function createImageBlock(): DraftBlock {
     id: createBlockId(),
     type: 'image',
     url: '',
+    linkUrl: '',
     alt: '',
     caption: '',
   };

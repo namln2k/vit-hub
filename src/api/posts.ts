@@ -28,6 +28,7 @@ export interface PostImageBlock {
   type: 'image';
   url: string;
   postImageKey?: string;
+  linkUrl?: string;
   alt: string;
   caption: string;
 }
@@ -250,6 +251,7 @@ function sanitizePostContent(blocks: PostContentBlock[]): PostContentBlock[] {
         type: 'image' as const,
         url: block.url.trim(),
         postImageKey: block.postImageKey?.trim(),
+        linkUrl: block.linkUrl?.trim() || undefined,
         alt: block.alt.trim(),
         caption: block.caption.trim(),
       };
