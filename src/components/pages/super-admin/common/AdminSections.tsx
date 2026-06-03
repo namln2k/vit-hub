@@ -1,4 +1,4 @@
-import { Banknote, Building2, UserCog, UsersRound } from 'lucide-react';
+import { Banknote, Building2, Newspaper, UserCog, UsersRound } from 'lucide-react';
 import type { AdminSection } from './types';
 
 export const ADMIN_SECTIONS: AdminSection[] = [
@@ -22,6 +22,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     icon: <UserCog className="h-4 w-4" />,
     countLabel: 'nhân sự',
     accentClassName: 'bg-sky-50 text-sky-700 border-sky-200',
+  },
+  {
+    id: 'posts',
+    label: 'Quản lý bài đăng',
+    icon: <Newspaper className="h-4 w-4" />,
+    countLabel: 'bài viết',
+    accentClassName: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   {
     id: 'fund',

@@ -58,7 +58,7 @@ In `Authentication` -> `URL Configuration`, set the Site URL for each environmen
 
 ```text
 http://localhost:5173
-https://your-production-domain.example.com
+https://vithub-soict.vercel.app
 ```
 
 Add redirect URLs for the routes used by the app:
@@ -66,8 +66,8 @@ Add redirect URLs for the routes used by the app:
 ```text
 http://localhost:5173/auth/callback
 http://localhost:5173/login
-https://your-production-domain.example.com/auth/callback
-https://your-production-domain.example.com/login
+https://vithub-soict.vercel.app/auth/callback
+https://vithub-soict.vercel.app/login
 ```
 
 For Google login, create OAuth credentials in Google Cloud, then add Supabase's callback URL to Google as an authorized redirect URI:
@@ -127,7 +127,7 @@ https://your-project-ref.supabase.co/auth/v1/callback
 Also confirm the app redirect URL is allowed in Supabase:
 
 ```text
-https://your-production-domain.example.com/auth/callback
+https://vithub-soict.vercel.app/auth/callback
 ```
 
 ### Reset password email is not sent

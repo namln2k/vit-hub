@@ -6,6 +6,7 @@ import ProfilePage from '@/pages/ProfilePage';
 import SuperAdminPage from '@/pages/SuperAdminPage';
 import LandingPage from '@/pages/LandingPage';
 import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
+import PostPage from '@/pages/PostPage';
 import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
 import ProtectedRoute from '@/components/shared/routing/ProtectedRoute';
 
@@ -14,6 +15,7 @@ function App() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/divisions" element={<DivisionsIntroduction />} />
+      <Route path="/posts/:slug" element={<PostPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

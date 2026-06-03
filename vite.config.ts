@@ -18,6 +18,10 @@ function localApiRoutes(): Plugin {
       pathToFileURL(path.resolve(__dirname, 'api/avatars/presign.js')).href,
     ],
     [
+      '/api/posts/presign',
+      pathToFileURL(path.resolve(__dirname, 'api/posts/presign.js')).href,
+    ],
+    [
       '/api/users/import',
       pathToFileURL(path.resolve(__dirname, 'api/users/import.js')).href,
     ],
