@@ -16,7 +16,8 @@ export interface PostFormState {
   id: string;
   title: string;
   slug: string;
-  excerpt: string;
+  thumbnailUrl: string;
+  thumbnailImageKey?: string;
   status: PostStatus;
   content: DraftBlock[];
 }
@@ -26,7 +27,8 @@ export function createEmptyPostForm(): PostFormState {
     id: '',
     title: '',
     slug: '',
-    excerpt: '',
+    thumbnailUrl: '',
+    thumbnailImageKey: undefined,
     status: 'published',
     content: [createRichTextBlock()],
   };
@@ -39,17 +41,23 @@ export function createPostFormFromPost(post: Post): PostFormState {
     id: post.id,
     title: post.title,
     slug: post.slug,
-    excerpt: post.excerpt,
+    thumbnailUrl: post.thumbnailUrl,
+    thumbnailImageKey: post.thumbnailImageKey,
     status: post.status,
     content: editableContent.length > 0 ? editableContent : [createRichTextBlock()],
   };
 }
 
 export function buildPostWrite(form: PostFormState): PostWrite {
+  const fallbackThumbnail = getFirstImageThumbnail(form.content);
+
   return {
     title: form.title.trim(),
     slug: createPostSlug(form.slug),
-    excerpt: form.excerpt.trim(),
+    thumbnailUrl: form.thumbnailUrl.trim() || fallbackThumbnail.thumbnailUrl,
+    thumbnailImageKey: form.thumbnailUrl.trim()
+      ? form.thumbnailImageKey
+      : fallbackThumbnail.thumbnailImageKey,
     status: form.status,
     content: form.content,
   };
@@ -134,4 +142,15 @@ function createImageBlock(): DraftBlock {
 
 function isEditableBlock(block: PostContentBlock): block is DraftBlock {
   return block.type === 'richText' || block.type === 'image';
+}
+
+function getFirstImageThumbnail(blocks: DraftBlock[]) {
+  const imageBlock = blocks.find(
+    (block): block is PostImageBlock => block.type === 'image' && Boolean(block.url.trim()),
+  );
+
+  return {
+    thumbnailUrl: imageBlock?.url.trim() ?? '',
+    thumbnailImageKey: imageBlock?.postImageKey?.trim() || undefined,
+  };
 }

@@ -51,7 +51,8 @@ export interface Post {
   id: string;
   title: string;
   slug: string;
-  excerpt: string;
+  thumbnailUrl: string;
+  thumbnailImageKey?: string;
   status: PostStatus;
   content: PostContentBlock[];
   createdBy: string;
@@ -63,7 +64,8 @@ export interface Post {
 export interface PostWrite {
   title: string;
   slug: string;
-  excerpt: string;
+  thumbnailUrl: string;
+  thumbnailImageKey?: string;
   status: PostStatus;
   content: PostContentBlock[];
 }
@@ -72,7 +74,8 @@ interface PostRow {
   id: string;
   title: string;
   slug: string;
-  excerpt: string | null;
+  thumbnail_url: string | null;
+  thumbnail_image_key: string | null;
   status: PostStatus;
   content: unknown;
   created_by: string;
@@ -82,7 +85,7 @@ interface PostRow {
 }
 
 const POST_SELECT =
-  'id, title, slug, excerpt, status, content, created_by, created_at, updated_at, published_at';
+  'id, title, slug, thumbnail_url, thumbnail_image_key, status, content, created_by, created_at, updated_at, published_at';
 
 export async function listAdminPosts(): Promise<Post[]> {
   const { data, error } = await supabase
@@ -141,6 +144,16 @@ export async function createPost(input: PostWrite): Promise<Post> {
 }
 
 export async function updatePost(postId: string, input: PostWrite): Promise<Post> {
+  const { data: existingPost, error: fetchError } = await supabase
+    .from('posts')
+    .select('thumbnail_url, thumbnail_image_key')
+    .eq('id', postId)
+    .single<Pick<PostRow, 'thumbnail_url' | 'thumbnail_image_key'>>();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
   const { data, error } = await supabase
     .from('posts')
     .update(mapPostWrite(input))
@@ -152,22 +165,40 @@ export async function updatePost(postId: string, input: PostWrite): Promise<Post
     throw error;
   }
 
+  if (
+    existingPost.thumbnail_image_key &&
+    existingPost.thumbnail_image_key !== input.thumbnailImageKey
+  ) {
+    void deletePostImages([
+      {
+        url: existingPost.thumbnail_url ?? undefined,
+        postImageKey: existingPost.thumbnail_image_key,
+      },
+    ]).catch(() => undefined);
+  }
+
   return mapPostRow(data);
 }
 
 export async function deletePost(postId: string): Promise<void> {
   const { data, error: fetchError } = await supabase
     .from('posts')
-    .select('content')
+    .select('content, thumbnail_url, thumbnail_image_key')
     .eq('id', postId)
-    .single<Pick<PostRow, 'content'>>();
+    .single<Pick<PostRow, 'content' | 'thumbnail_url' | 'thumbnail_image_key'>>();
 
   if (fetchError) {
     throw fetchError;
   }
 
   const content = parsePostContent(data.content);
-  await deletePostImages(getPostImageReferences(content));
+  await deletePostImages([
+    ...getPostImageReferences(content),
+    {
+      url: data.thumbnail_url ?? undefined,
+      postImageKey: data.thumbnail_image_key ?? undefined,
+    },
+  ]);
 
   const { error } = await supabase.from('posts').delete().eq('id', postId);
 
@@ -193,7 +224,8 @@ function mapPostRow(row: PostRow): Post {
     id: row.id,
     title: row.title,
     slug: row.slug,
-    excerpt: row.excerpt ?? '',
+    thumbnailUrl: row.thumbnail_url ?? '',
+    thumbnailImageKey: row.thumbnail_image_key ?? undefined,
     status: row.status,
     content: parsePostContent(row.content),
     createdBy: row.created_by,
@@ -208,7 +240,8 @@ function mapPostWrite(input: PostWrite, createdBy?: string) {
   const row = {
     title: input.title.trim(),
     slug: createPostSlug(input.slug),
-    excerpt: input.excerpt.trim(),
+    thumbnail_url: input.thumbnailUrl.trim() || null,
+    thumbnail_image_key: input.thumbnailImageKey?.trim() || null,
     status: input.status,
     content: sanitizePostContent(input.content),
     updated_at: now,
