@@ -146,7 +146,7 @@ export default function SuperAdminPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700">
