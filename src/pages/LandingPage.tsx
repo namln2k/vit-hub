@@ -1,6 +1,6 @@
 import AvatarMenu from '@/components/shared/layout/AvatarMenu';
 import UserSearch from '@/components/shared/layout/UserSearch';
-import volunteerHero from '@/assets/hero.png';
+import volunteerHero from '@/assets/hero.webp';
 import { useAuth } from '@/contexts/useAuth';
 import {
   getAllowedAvatarMenuFeatures,
@@ -123,7 +123,7 @@ export default function LandingPage() {
       </header>
 
       <main>
-        <section className="relative min-h-[90vh] overflow-hidden">
+        <section className="relative min-h-1/3 overflow-hidden">
           <img
             src={volunteerHero}
             alt="Sinh viên tình nguyện SOICT tham gia hoạt động cộng đồng"
