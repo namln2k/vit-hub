@@ -1,5 +1,5 @@
 import { uploadPostImage, validatePostImageFile } from '@/api/postImageUpload';
-import { createPostSlug } from '@/api/posts';
+import { createDraftPostSlug, createPostSlug } from '@/api/posts';
 import type { PostFormState } from '@/components/pages/super-admin/post/utils/postFormUtils';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { ImagePlus, Pencil, Trash2, X } from 'lucide-react';
@@ -154,7 +154,7 @@ export default function PostMetadataFields({
                   onChange={(event) =>
                     onChange({
                       ...form,
-                      slug: createPostSlug(event.target.value),
+                      slug: createDraftPostSlug(event.target.value),
                     })
                   }
                   className={`h-11 min-w-0 flex-1 px-3 text-sm font-semibold text-slate-950 outline-none ${
