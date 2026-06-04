@@ -208,6 +208,14 @@ export async function deletePost(postId: string): Promise<void> {
 }
 
 export function createPostSlug(value: string) {
+  return createNormalizedPostSlug(value).replace(/^-+|-+$/g, '');
+}
+
+export function createDraftPostSlug(value: string) {
+  return createNormalizedPostSlug(value).replace(/^-+/g, '');
+}
+
+function createNormalizedPostSlug(value: string) {
   return value
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -215,7 +223,6 @@ export function createPostSlug(value: string) {
     .replace(/Đ/g, 'D')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
     .slice(0, 120);
 }
 
