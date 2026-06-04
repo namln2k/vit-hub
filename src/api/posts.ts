@@ -101,6 +101,23 @@ export async function listAdminPosts(): Promise<Post[]> {
   return data.map(mapPostRow);
 }
 
+export async function listLatestPublishedPosts(limit = 10): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+    .returns<PostRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map(mapPostRow);
+}
+
 export async function getPublishedPostBySlug(slug: string): Promise<Post | null> {
   const { data, error } = await supabase
     .from('posts')

@@ -1,17 +1,28 @@
 import AvatarMenu from '@/components/shared/layout/AvatarMenu';
 import UserSearch from '@/components/shared/layout/UserSearch';
+import { listLatestPublishedPosts, type Post } from '@/api/posts';
 import volunteerHero from '@/assets/hero.webp';
 import { useAuth } from '@/contexts/useAuth';
 import {
   getAllowedAvatarMenuFeatures,
   type AvatarMenuFeatureId,
 } from '@/constants/avatarMenuAcl';
-import type { ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import {
   ArrowRight,
+  ChevronLeft,
+  ChevronRight,
   CalendarDays,
   ExternalLink,
   HandHeart,
+  ImageIcon,
   Laptop,
   LogIn,
   LogOut,
@@ -51,18 +62,122 @@ const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
   profile: <UserRound className="h-4 w-4" />,
 };
 
+function formatPostUpdatedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
 export default function LandingPage() {
   const { currentUser, appUser, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const featuredPostsCarouselRef = useRef<HTMLDivElement>(null);
+  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
+  const [isLoadingFeaturedPosts, setIsLoadingFeaturedPosts] = useState(true);
+  const [featuredPostsError, setFeaturedPostsError] = useState('');
+  const [activeFeaturedPostIndex, setActiveFeaturedPostIndex] = useState(0);
   const fullName = appUser
     ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : '';
   const avatarLabel = fullName || appUser?.username || currentUser?.email || '';
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadFeaturedPosts() {
+      setIsLoadingFeaturedPosts(true);
+      setFeaturedPostsError('');
+
+      try {
+        const posts = await listLatestPublishedPosts(10);
+
+        if (isMounted) {
+          setFeaturedPosts(posts);
+          setActiveFeaturedPostIndex(0);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setFeaturedPosts([]);
+          setActiveFeaturedPostIndex(0);
+          setFeaturedPostsError(
+            error instanceof Error ? error.message : 'Không thể tải bài viết nổi bật.',
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingFeaturedPosts(false);
+        }
+      }
+    }
+
+    void loadFeaturedPosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   async function handleSignOut() {
     await signOut();
     navigate('/login');
+  }
+
+  const scrollFeaturedPostsToIndex = useCallback((index: number) => {
+    const carousel = featuredPostsCarouselRef.current;
+
+    if (!carousel) {
+      return;
+    }
+
+    const target = carousel.children.item(index);
+    const firstItem = carousel.firstElementChild;
+
+    if (!(target instanceof HTMLElement) || !(firstItem instanceof HTMLElement)) {
+      return;
+    }
+
+    carousel.scrollTo({
+      left: target.offsetLeft - firstItem.offsetLeft,
+      behavior: 'smooth',
+    });
+  }, []);
+
+  useEffect(() => {
+    scrollFeaturedPostsToIndex(activeFeaturedPostIndex);
+  }, [activeFeaturedPostIndex, scrollFeaturedPostsToIndex]);
+
+  const scrollFeaturedPosts = useCallback((direction: 'previous' | 'next') => {
+    setActiveFeaturedPostIndex((currentIndex) => {
+      if (featuredPosts.length <= 1) {
+        return 0;
+      }
+
+      if (direction === 'next') {
+        return (currentIndex + 1) % featuredPosts.length;
+      }
+
+      return (currentIndex - 1 + featuredPosts.length) % featuredPosts.length;
+    });
+  }, [featuredPosts.length]);
+
+  function handleFeaturedPostClick(event: MouseEvent<HTMLAnchorElement>, slug: string) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    navigate(`/posts/${slug}`);
   }
 
   return (
@@ -166,6 +281,93 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+
+        {isLoadingFeaturedPosts || featuredPosts.length > 0 || featuredPostsError ? (
+          <section className="bg-white py-14">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="mb-6 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold uppercase text-red-600">Tin mới</p>
+                  <h2 className="mt-2 text-3xl font-bold text-slate-950">Bài viết nổi bật</h2>
+                </div>
+
+                {featuredPosts.length > 1 ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => scrollFeaturedPosts('previous')}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                      aria-label="Xem bài viết trước"
+                      title="Xem bài viết trước"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => scrollFeaturedPosts('next')}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                      aria-label="Xem bài viết tiếp theo"
+                      title="Xem bài viết tiếp theo"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {isLoadingFeaturedPosts ? (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-64 animate-pulse rounded-lg border border-slate-200 bg-slate-100"
+                    />
+                  ))}
+                </div>
+              ) : featuredPostsError ? (
+                <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                  Không thể tải bài viết nổi bật.
+                </div>
+              ) : (
+                <div
+                  ref={featuredPostsCarouselRef}
+                  className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {featuredPosts.map((post) => (
+                    <Link
+                      key={post.id}
+                      to={`/posts/${post.slug}`}
+                      onClick={(event) => handleFeaturedPostClick(event, post.slug)}
+                      className="group flex w-[76vw] shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-300 hover:shadow-md sm:w-[25.2rem] lg:w-[21.6rem]"
+                    >
+                      <div className="aspect-16/10 bg-slate-100">
+                        {post.thumbnailUrl ? (
+                          <img
+                            src={post.thumbnailUrl}
+                            alt=""
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                            <ImageIcon className="h-10 w-10" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-1 flex-col p-4">
+                        <h3 className="line-clamp-2 min-h-12 text-base font-bold leading-6 text-slate-950 group-hover:text-cyan-700">
+                          {post.title}
+                        </h3>
+                        <p className="mt-auto pt-3 text-right text-xs font-semibold text-slate-500">
+                          {formatPostUpdatedAt(post.updatedAt)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
 
         <section className="bg-slate-50 py-14">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

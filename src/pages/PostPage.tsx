@@ -2,6 +2,7 @@ import { getPublishedPostBySlug, type Post } from '@/api/posts';
 import PostRenderer from '@/components/pages/posts/PostRenderer';
 import Header from '@/components/shared/layout/Header';
 import Sharingan from '@/components/shared/loading/Sharingan';
+import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
@@ -60,9 +61,18 @@ export default function PostPage() {
         ) : post ? (
           <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-8 border-b border-slate-200 pb-6">
-              <p className="mb-3 text-sm font-bold uppercase tracking-wide text-violet-700">
-                Bài viết
-              </p>
+              <div className="mb-6 flex items-center justify-between gap-3">
+                <p className="text-sm font-bold uppercase tracking-wide text-violet-700">
+                  Bài viết
+                </p>
+                <Link
+                  to="/"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Trang chủ
+                </Link>
+              </div>
               <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">{post.title}</h1>
             </div>
             {post.thumbnailUrl ? (
