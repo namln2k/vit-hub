@@ -64,10 +64,14 @@ export default function PostPage() {
                 Bài viết
               </p>
               <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">{post.title}</h1>
-              {post.excerpt ? (
-                <p className="mt-4 text-base leading-7 text-slate-600">{post.excerpt}</p>
-              ) : null}
             </div>
+            {post.thumbnailUrl ? (
+              <img
+                src={post.thumbnailUrl}
+                alt=""
+                className="mb-8 aspect-video w-full rounded-lg object-cover"
+              />
+            ) : null}
             <PostRenderer blocks={post.content} />
           </article>
         ) : (

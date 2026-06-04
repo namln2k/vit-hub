@@ -31,7 +31,6 @@ export default function PostsManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
-  const [saveError, setSaveError] = useState('');
   const [form, setForm] = useState<PostFormState>(() => createEmptyPostForm());
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSlugEditing, setIsSlugEditing] = useState(false);
@@ -80,21 +79,18 @@ export default function PostsManagement() {
 
   function startNewPost() {
     setForm(createEmptyPostForm());
-    setSaveError('');
     setIsPreviewing(false);
     setIsSlugEditing(false);
   }
 
   function editPost(post: Post) {
     setForm(createPostFormFromPost(post));
-    setSaveError('');
     setIsPreviewing(false);
     setIsSlugEditing(false);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaveError('');
 
     const input = buildPostWrite(form);
     const successMessage = isEditing
@@ -102,22 +98,22 @@ export default function PostsManagement() {
       : 'Đã tạo bài viết thành công.';
 
     if (!input.title) {
-      setSaveError('Vui lòng nhập tiêu đề bài viết.');
+      showSaveError('Vui lòng nhập tiêu đề bài viết.');
       return;
     }
 
     if (!input.slug) {
-      setSaveError('Vui lòng nhập URL duy nhất cho bài viết.');
+      showSaveError('Vui lòng nhập URL duy nhất cho bài viết.');
       return;
     }
 
     if (slugIsTaken) {
-      setSaveError('URL này đã được dùng cho một bài viết khác.');
+      showSaveError('URL này đã được dùng cho một bài viết khác.');
       return;
     }
 
     if (input.content.length === 0) {
-      setSaveError('Vui lòng thêm ít nhất một nội dung cho bài viết.');
+      showSaveError('Vui lòng thêm ít nhất một nội dung cho bài viết.');
       return;
     }
 
@@ -129,8 +125,8 @@ export default function PostsManagement() {
       editPost(savedPost);
       toast.success(successMessage, { id: 'post-save-success' });
     } catch (savePostError) {
-      const message = savePostError instanceof Error ? savePostError.message : '';
-      setSaveError(message ? `Không thể lưu bài viết: ${message}` : 'Không thể lưu bài viết.');
+      const message = getErrorMessage(savePostError);
+      showSaveError(message ? `Không thể lưu bài viết: ${message}` : 'Không thể lưu bài viết.');
     } finally {
       setIsSaving(false);
     }
@@ -143,8 +139,6 @@ export default function PostsManagement() {
       return;
     }
 
-    setSaveError('');
-
     try {
       await deletePost(post.id);
       setPosts((currentPosts) => currentPosts.filter((currentPost) => currentPost.id !== post.id));
@@ -153,9 +147,15 @@ export default function PostsManagement() {
         startNewPost();
       }
     } catch (deleteError) {
-      const message = deleteError instanceof Error ? deleteError.message : '';
-      setSaveError(message ? `Không thể xóa bài viết: ${message}` : 'Không thể xóa bài viết.');
+      const message = getErrorMessage(deleteError);
+      toast.error(message ? `Không thể xóa bài viết: ${message}` : 'Không thể xóa bài viết.', {
+        id: 'post-delete-error',
+      });
     }
+  }
+
+  function showSaveError(message: string) {
+    toast.error(message, { id: 'post-save-error' });
   }
 
   function cancelSlugEditing() {
@@ -248,12 +248,6 @@ export default function PostsManagement() {
             onTogglePreview={() => setIsPreviewing((currentValue) => !currentValue)}
           />
 
-          {saveError ? (
-            <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-              {saveError}
-            </p>
-          ) : null}
-
           <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-between">
             {isEditing ? (
               <button
@@ -287,4 +281,30 @@ export default function PostsManagement() {
       </div>
     </AdminContentPanel>
   );
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeError = error as {
+      details?: unknown;
+      hint?: unknown;
+      message?: unknown;
+    };
+    const message = typeof maybeError.message === 'string' ? maybeError.message : '';
+    const details = typeof maybeError.details === 'string' ? maybeError.details : '';
+    const hint = typeof maybeError.hint === 'string' ? maybeError.hint : '';
+    const fullMessage = [message, details, hint].filter(Boolean).join(' ');
+
+    if (fullMessage.includes('thumbnail_url') || fullMessage.includes('thumbnail_image_key')) {
+      return `${fullMessage} Hãy chạy SQL trong docs/post-thumbnail-columns.sql để thêm cột thumbnail cho bảng posts.`;
+    }
+
+    return fullMessage;
+  }
+
+  return '';
 }
