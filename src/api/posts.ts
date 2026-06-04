@@ -2,7 +2,14 @@ import { supabase } from '@/api/supabase';
 import { deletePostImages, type PostImageReference } from '@/api/postImageUpload';
 
 export type PostStatus = 'draft' | 'published';
-export type PostBlockType = 'heading' | 'paragraph' | 'list' | 'image';
+export type PostBlockType = 'richText' | 'heading' | 'paragraph' | 'list' | 'image';
+
+export interface PostRichTextBlock {
+  id: string;
+  type: 'richText';
+  editorState: string;
+  text: string;
+}
 
 export interface PostHeadingBlock {
   id: string;
@@ -34,6 +41,7 @@ export interface PostImageBlock {
 }
 
 export type PostContentBlock =
+  | PostRichTextBlock
   | PostHeadingBlock
   | PostParagraphBlock
   | PostListBlock
@@ -238,6 +246,15 @@ function sanitizePostContent(blocks: PostContentBlock[]): PostContentBlock[] {
         };
       }
 
+      if (block.type === 'richText') {
+        return {
+          id: block.id,
+          type: 'richText' as const,
+          editorState: block.editorState,
+          text: block.text.trim(),
+        };
+      }
+
       if (block.type === 'list') {
         return {
           id: block.id,
@@ -263,6 +280,10 @@ function sanitizePostContent(blocks: PostContentBlock[]): PostContentBlock[] {
 
       if (block.type === 'image') {
         return Boolean(block.url);
+      }
+
+      if (block.type === 'richText') {
+        return Boolean(block.text);
       }
 
       return Boolean(block.text);

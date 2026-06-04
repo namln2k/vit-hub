@@ -13,7 +13,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@lexical/react": "^0.45.0",
     "@supabase/supabase-js": "^2.106.2",
+    "emoji-picker-react": "^4.19.1",
+    "lexical": "^0.45.0",
     "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
