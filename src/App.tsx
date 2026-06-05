@@ -1,14 +1,17 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from '@/components/shared/routing/ProtectedRoute';
+import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
+import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
 import LoginPage from '@/pages/auth/LoginPage';
 import RegisterPage from '@/pages/auth/RegisterPage';
-import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage';
+import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
+import BadmintonFeaturePage from '@/pages/features/BadmintonFeaturePage';
+import FeaturesPage from '@/pages/features/FeaturesPage';
+import LandingPage from '@/pages/LandingPage';
+import PostPage from '@/pages/PostPage';
 import ProfilePage from '@/pages/ProfilePage';
 import SuperAdminPage from '@/pages/SuperAdminPage';
-import LandingPage from '@/pages/LandingPage';
-import DivisionsIntroduction from '@/pages/DivisionsIntroduction';
-import PostPage from '@/pages/PostPage';
-import AuthCallbackPage from '@/pages/auth/AuthCallbackPage';
-import ProtectedRoute from '@/components/shared/routing/ProtectedRoute';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import PickleballFeaturePage from '@/pages/features/PickleballFeaturePage';
 
 function App() {
   return (
@@ -25,6 +28,30 @@ function App() {
         element={
           <ProtectedRoute>
             <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/features"
+        element={
+          <ProtectedRoute>
+            <FeaturesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/features/badminton"
+        element={
+          <ProtectedRoute>
+            <BadmintonFeaturePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/features/pickleball"
+        element={
+          <ProtectedRoute>
+            <PickleballFeaturePage />
           </ProtectedRoute>
         }
       />
