@@ -1,4 +1,4 @@
-import { listUsersByDivision, removeUsersFromDivision, type Division } from '@/api/divisions';
+import { listUsersByDivision, removeUsersFromDivision, type Division } from '@/services/divisions';
 import type { AppUser } from '@/contexts/auth';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminContentPanel from '@/components/pages/super-admin/common/AdminContentPanel';

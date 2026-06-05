@@ -1,4 +1,4 @@
-import styles from './GoogleSignIn.module.scss';
+import styles from './GoogleSignIn.module.css';
 
 export default function GoogleSignIn({
   handleGoogleSignIn,

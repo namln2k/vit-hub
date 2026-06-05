@@ -1,4 +1,6 @@
-import { queryUsers } from '@/api/users';
+'use client';
+
+import { queryUsers } from '@/services/users';
 import Avatar from '@/components/shared/layout/Avatar';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { useAuth } from '@/contexts/useAuth';

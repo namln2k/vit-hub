@@ -1,4 +1,4 @@
-import type { PostContentBlock } from '@/api/posts';
+import type { PostContentBlock } from '@/services/posts';
 import type { CSSProperties, ReactNode } from 'react';
 
 interface PostRendererProps {

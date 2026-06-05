@@ -1,6 +1,8 @@
+'use client';
+
 import Avatar from '@/components/shared/layout/Avatar';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 interface AvatarMenuItem {
   label: string;
@@ -93,7 +95,7 @@ export default function AvatarMenu({
               return (
                 <Link
                   key={item.label}
-                  to={item.to}
+                  href={item.to}
                   className={itemClassName}
                   role="menuitem"
                   onClick={() => setIsOpen(false)}

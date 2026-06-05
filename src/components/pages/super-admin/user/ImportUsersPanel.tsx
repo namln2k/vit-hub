@@ -2,7 +2,7 @@ import {
   downloadUserImportSample,
   USER_IMPORT_MAX_FILE_BYTES,
   type ParsedImportUser,
-} from '@/utils/import/userImport';
+} from '@/services/users/import';
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
 import type { ChangeEvent, ReactNode, RefObject } from 'react';
 import { formatBytes, getGenderLabel } from './userDisplayUtils';

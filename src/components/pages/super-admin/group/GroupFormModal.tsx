@@ -1,4 +1,4 @@
-import { createGroup, updateGroup, type Group } from '@/api/groups';
+import { createGroup, updateGroup, type Group } from '@/services/groups';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { Check, Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';

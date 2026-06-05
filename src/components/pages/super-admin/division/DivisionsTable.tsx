@@ -1,4 +1,4 @@
-import type { Division } from '@/api/divisions';
+import type { Division } from '@/services/divisions';
 
 interface DivisionsTableProps {
   divisions: Division[];

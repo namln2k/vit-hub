@@ -1,8 +1,8 @@
-import type { Group } from '@/api/groups';
+import type { Group } from '@/services/groups';
 import MembersLoadingOverlay from '@/components/pages/super-admin/common/MembersLoadingOverlay';
 import { getAdminItemPath } from '@/components/pages/super-admin/common/adminRoutes';
 import { Pencil, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 interface GroupsTableProps {
   groups: Group[];
@@ -52,7 +52,7 @@ export default function GroupsTable({
                 <tr key={group.id} className="hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <Link
-                      to={getAdminItemPath('groups', group)}
+                      href={getAdminItemPath('groups', group)}
                       className="font-semibold text-slate-950 transition-colors hover:text-emerald-700"
                     >
                       {group.name}

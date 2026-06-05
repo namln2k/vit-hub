@@ -1,4 +1,4 @@
-import type { Post } from '@/api/posts';
+import type { Post } from '@/services/posts';
 import Sharingan from '@/components/shared/loading/Sharingan';
 
 interface PostListSidebarProps {

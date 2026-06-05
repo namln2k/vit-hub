@@ -1,4 +1,4 @@
-import { uploadPostImage, validatePostImageFile } from '@/api/postImageUpload';
+import { uploadPostImage, validatePostImageFile } from '@/services/postImageUpload';
 import LexicalRichTextBlockEditor from '@/components/pages/super-admin/post/components/rich-text/LexicalRichTextBlockEditor';
 import {
   type DraftBlock,

@@ -4,7 +4,7 @@ import {
   listAdminPosts,
   updatePost,
   type Post,
-} from '@/api/posts';
+} from '@/services/posts';
 import AdminContentPanel from '@/components/pages/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/pages/super-admin/common/AdminSections';
 import PostContentBlocksEditor from '@/components/pages/super-admin/post/components/PostContentBlocksEditor';
@@ -21,8 +21,7 @@ import {
   type PostFormState,
   upsertPostByUpdatedAt,
 } from '@/components/pages/super-admin/post/utils/postFormUtils';
-import Sharingan from '@/components/shared/loading/Sharingan';
-import { Plus, Save, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
@@ -240,43 +239,22 @@ export default function PostsManagement() {
 
           <PostContentBlocksEditor
             blocks={form.content}
+            isEditing={isEditing}
             isPreviewing={isPreviewing}
+            isSaving={isSaving}
             onAddBlock={addBlock}
             onChangeBlock={updateBlock}
             onChangeBlocks={updateBlocks}
+            onDeleteCurrentPost={() => {
+              const post = posts.find((currentPost) => currentPost.id === form.id);
+
+              if (post) {
+                void handleDelete(post);
+              }
+            }}
             onRemoveBlock={removeBlock}
             onTogglePreview={() => setIsPreviewing((currentValue) => !currentValue)}
           />
-
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-between">
-            {isEditing ? (
-              <button
-                type="button"
-                onClick={() => {
-                  const post = posts.find((currentPost) => currentPost.id === form.id);
-
-                  if (post) {
-                    void handleDelete(post);
-                  }
-                }}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-bold text-red-600 transition-colors hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Xóa bài
-              </button>
-            ) : (
-              <span />
-            )}
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 text-sm font-bold text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              {isSaving ? <Sharingan size={16} /> : <Save className="h-4 w-4" />}
-              {isSaving ? 'Đang lưu' : isEditing ? 'Lưu thay đổi' : 'Tạo bài viết'}
-            </button>
-          </div>
         </form>
       </div>
     </AdminContentPanel>

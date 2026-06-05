@@ -2,7 +2,7 @@ import {
   listUsersByGroup,
   removeUsersFromGroup,
   type Group,
-} from '@/api/groups';
+} from '@/services/groups';
 import type { AppUser } from '@/contexts/auth';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';

@@ -1,14 +1,15 @@
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { ChevronRight } from 'lucide-react';
-import type { Division } from '@/api/divisions';
-import type { Group } from '@/api/groups';
+import type { Division } from '@/services/divisions';
+import type { Group } from '@/services/groups';
 import {
   getAdminItemPath,
   getAdminSectionPath,
   getUsersSubsectionPath,
 } from '@/components/pages/super-admin/common/adminRoutes';
 import type { AdminSection, AdminSectionId } from '@/components/pages/super-admin/common/types';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 interface SuperAdminSidebarProps {
   sections: AdminSection[];
@@ -35,9 +36,8 @@ export default function SuperAdminSidebar({
   isLoadingGroups,
   groupError,
 }: SuperAdminSidebarProps) {
-  const location = useLocation();
-  const activeUsersView =
-    new URLSearchParams(location.search).get('view') === 'import' ? 'import' : 'list';
+  const searchParams = useSearchParams();
+  const activeUsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
 
   return (
     <aside className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
@@ -48,7 +48,7 @@ export default function SuperAdminSidebar({
           return (
             <div key={section.id}>
               <Link
-                to={getAdminSectionPath(section.id)}
+                href={getAdminSectionPath(section.id)}
                 className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors ${
                   isActive
                     ? 'bg-slate-950 text-white'
@@ -119,7 +119,7 @@ function UserNestedNavItems({ activeView }: { activeView: 'list' | 'import' }) {
         return (
           <Link
             key={item.id}
-            to={getUsersSubsectionPath(item.id)}
+            href={getUsersSubsectionPath(item.id)}
             className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors ${
               isItemActive
                 ? 'bg-sky-50 text-sky-700'
@@ -185,7 +185,7 @@ function NestedNavItems({
         return (
           <Link
             key={item.id}
-            to={getAdminItemPath(sectionId, item)}
+            href={getAdminItemPath(sectionId, item)}
             className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors ${
               isItemActive
                 ? activeClassName

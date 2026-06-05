@@ -1,4 +1,4 @@
-import { importUsers, queryUsers } from '@/api/users';
+import { importUsers, queryUsers } from '@/services/users';
 import AdminContentPanel from '@/components/pages/super-admin/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/components/pages/super-admin/common/AdminSections';
 import {
@@ -10,10 +10,10 @@ import type { AppUser } from '@/contexts/auth';
 import {
   parseUserImportFile,
   USER_IMPORT_MAX_FILE_BYTES,
-} from '@/utils/import/userImport';
+} from '@/services/users/import';
 import { Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'next/navigation';
 import ImportUsersPanel, { type ImportValidation } from './ImportUsersPanel';
 import UsersTable from './UsersTable';
 import { formatBytes } from './userDisplayUtils';
@@ -23,7 +23,7 @@ const USERS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'users') ?
 type UsersView = 'list' | 'import';
 
 export default function UsersManagement() {
-  const [searchParams] = useSearchParams();
+  const searchParams = useSearchParams();
   const activeView: UsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');

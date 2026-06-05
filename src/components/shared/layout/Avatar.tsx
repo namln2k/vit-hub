@@ -1,3 +1,5 @@
+'use client';
+
 import defaultAvatar from '@/assets/default-avatar.webp';
 import { useState, type ImgHTMLAttributes } from 'react';
 
@@ -40,7 +42,7 @@ export default function Avatar({
   ...props
 }: AvatarProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const imageSrc = isUsableImageSrc(src) && src !== failedSrc ? src : defaultAvatar;
+  const imageSrc = isUsableImageSrc(src) && src !== failedSrc ? src : defaultAvatar.src;
 
   return (
     <img
@@ -50,7 +52,7 @@ export default function Avatar({
       referrerPolicy="no-referrer"
       {...props}
       onError={(event) => {
-        if (imageSrc !== defaultAvatar) {
+        if (imageSrc !== defaultAvatar.src) {
           setFailedSrc(imageSrc);
         }
 

@@ -6,25 +6,32 @@ import {
   type DropPosition,
   reorderBlocks,
 } from '@/components/pages/super-admin/post/utils/postFormUtils';
-import { Eye, ImagePlus, Newspaper } from 'lucide-react';
+import Sharingan from '@/components/shared/loading/Sharingan';
+import { Eye, ImagePlus, Newspaper, Save, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type DragEvent, type ReactElement } from 'react';
 
 interface PostContentBlocksEditorProps {
   blocks: DraftBlock[];
+  isEditing: boolean;
   isPreviewing: boolean;
+  isSaving: boolean;
   onAddBlock: (type: DraftBlockType) => void;
   onChangeBlock: (blockId: string, block: DraftBlock) => void;
   onChangeBlocks: (blocks: DraftBlock[]) => void;
+  onDeleteCurrentPost: () => void;
   onRemoveBlock: (blockId: string) => void;
   onTogglePreview: () => void;
 }
 
 export default function PostContentBlocksEditor({
   blocks,
+  isEditing,
   isPreviewing,
+  isSaving,
   onAddBlock,
   onChangeBlock,
   onChangeBlocks,
+  onDeleteCurrentPost,
   onRemoveBlock,
   onTogglePreview,
 }: PostContentBlocksEditorProps) {
@@ -76,14 +83,34 @@ export default function PostContentBlocksEditor({
 
   return (
     <>
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        {isEditing ? (
+          <button
+            type="button"
+            onClick={onDeleteCurrentPost}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-red-300 bg-red-50 px-4 text-sm font-bold text-red-700 shadow-sm transition-colors hover:border-red-400 hover:bg-red-100"
+          >
+            <Trash2 className="h-4 w-4" />
+            Xóa bài viết
+          </button>
+        ) : null}
+
         <button
           type="button"
           onClick={onTogglePreview}
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-bold text-amber-800 shadow-sm transition-colors hover:border-amber-400 hover:bg-amber-100 sm:ml-auto"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-bold text-amber-800 shadow-sm transition-colors hover:border-amber-400 hover:bg-amber-100"
         >
           <Eye className="h-4 w-4" />
           {isPreviewing ? 'Soạn thảo' : 'Xem trước'}
+        </button>
+
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-full border border-sky-300 bg-sky-50 px-4 text-sm font-bold text-sky-800 shadow-sm transition-colors hover:border-sky-400 hover:bg-sky-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500"
+        >
+          {isSaving ? <Sharingan size={16} /> : <Save className="h-4 w-4" />}
+          {isSaving ? 'Đang lưu' : isEditing ? 'Lưu thay đổi' : 'Tạo bài viết'}
         </button>
       </div>
 

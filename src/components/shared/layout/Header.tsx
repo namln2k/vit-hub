@@ -1,6 +1,8 @@
+'use client';
+
 import { LayoutGrid, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { usePathname, useRouter } from 'next/navigation';
 import AvatarMenu from '@/components/shared/layout/AvatarMenu';
 import UserSearch from '@/components/shared/layout/UserSearch';
 import {
@@ -17,19 +19,19 @@ const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
 
 export default function Header() {
   const { appUser, signOut } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const pathname = usePathname();
 
   async function handleSignOut() {
     await signOut();
-    navigate('/login');
+    router.push('/login');
   }
 
   const fullName = appUser
     ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
     : 'Người dùng';
   const avatarItems = [
-    ...getAllowedAvatarMenuFeatures(appUser?.role, location.pathname).map((feature) => ({
+    ...getAllowedAvatarMenuFeatures(appUser?.role, pathname).map((feature) => ({
       label: feature.label,
       icon: avatarMenuIcons[feature.id],
       to: feature.to,
@@ -48,7 +50,7 @@ export default function Header() {
         <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => router.push('/')}
             className="flex items-center gap-2 text-xl font-bold text-indigo-600 cursor-pointer"
           >
             VIT Hub

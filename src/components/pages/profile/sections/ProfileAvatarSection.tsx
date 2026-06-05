@@ -1,4 +1,4 @@
-import { validateAvatarFile } from '@/api/avatarUpload';
+import { validateAvatarFile } from '@/services/avatarUpload';
 import AvatarEditor from '@/components/shared/avatar/AvatarEditor';
 import Avatar from '@/components/shared/layout/Avatar';
 import Sharingan from '@/components/shared/loading/Sharingan';

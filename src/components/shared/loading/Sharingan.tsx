@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import styles from './Sharingan.module.scss';
+import styles from './Sharingan.module.css';
 
 interface SharinganProps {
   className?: string;

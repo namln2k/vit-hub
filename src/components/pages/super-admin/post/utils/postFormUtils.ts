@@ -6,7 +6,7 @@ import {
   type PostRichTextBlock,
   type PostStatus,
   type PostWrite,
-} from '@/api/posts';
+} from '@/services/posts';
 
 export type DraftBlock = PostRichTextBlock | PostImageBlock;
 export type DraftBlockType = DraftBlock['type'];

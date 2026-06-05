@@ -1,4 +1,4 @@
-import { deleteGroup, type Group } from '@/api/groups';
+import { deleteGroup, type Group } from '@/services/groups';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { Trash2, X } from 'lucide-react';
 import { useState } from 'react';

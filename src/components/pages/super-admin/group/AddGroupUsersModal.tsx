@@ -1,12 +1,12 @@
-import { addUsersToGroup } from '@/api/groups';
-import { queryUsers } from '@/api/users';
+import { addUsersToGroup } from '@/services/groups';
+import { queryUsers } from '@/services/users';
 import Avatar from '@/components/shared/layout/Avatar';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import type { AppUser } from '@/contexts/auth';
 import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getFullName, normalizeSearchValue } from '@/components/pages/super-admin/common/UserUtils';
-import { formatEmailList, parseEmailList } from '@/utils/import/emailListImport';
+import { formatEmailList, parseEmailList } from '@/services/users/emailList';
 
 interface AddGroupUsersModalProps {
   groupId: string;
