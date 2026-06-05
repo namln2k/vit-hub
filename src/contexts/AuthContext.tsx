@@ -1,6 +1,8 @@
-import { deleteAvatar, uploadAvatar } from '@/api/avatarUpload';
-import { getUser, upsertUser, usernameExists } from '@/api/users';
-import { supabase } from '@/api/supabase';
+'use client';
+
+import { deleteAvatar, uploadAvatar } from '@/services/avatarUpload';
+import { getUser, upsertUser, usernameExists } from '@/services/users';
+import { supabase } from '@/services/supabase';
 import {
   AuthContext,
   type AuthContextType,
@@ -52,7 +54,7 @@ function getAuthErrorMessage(error: unknown) {
 }
 
 function getAppOrigin() {
-  return (import.meta.env.VITE_APP_ORIGIN || window.location.origin).replace(/\/$/, '');
+  return window.location.origin.replace(/\/$/, '');
 }
 
 function getAuthRedirectUrl(path: string) {
