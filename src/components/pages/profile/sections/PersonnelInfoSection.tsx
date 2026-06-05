@@ -4,18 +4,15 @@ import { useState } from 'react';
 import { EditButton } from '../common/ProfileEditActions';
 import ProfileField from '../common/ProfileField';
 import { getGenderLabel } from '../common/profileUtils';
+import { toast } from 'sonner';
 
 interface PersonnelInfoSectionProps {
   appUser: AppUser;
-  onError: (message: string) => void;
-  onSuccess: (message: string) => void;
   onUpdate: (data: UpdateUserPersonnelData) => Promise<void>;
 }
 
 export default function PersonnelInfoSection({
   appUser,
-  onError,
-  onSuccess,
   onUpdate,
 }: PersonnelInfoSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -29,8 +26,6 @@ export default function PersonnelInfoSection({
   });
 
   function startEditing() {
-    onError('');
-    onSuccess('');
     setForm({
       phoneNumber: appUser.phoneNumber === '-' ? '' : appUser.phoneNumber,
       schoolName: appUser.schoolName,
@@ -46,7 +41,6 @@ export default function PersonnelInfoSection({
       return;
     }
 
-    onError('');
     setIsEditing(false);
   }
 
@@ -59,8 +53,6 @@ export default function PersonnelInfoSection({
 
   async function saveUserPersonnel() {
     try {
-      onError('');
-      onSuccess('');
       setSaving(true);
       await onUpdate({
         phoneNumber: form.phoneNumber.trim() || '-',
@@ -70,9 +62,12 @@ export default function PersonnelInfoSection({
         gender: form.gender === '0' ? 0 : form.gender === '1' ? 1 : null,
       });
       setIsEditing(false);
-      onSuccess('Thông tin nhân sự đã được cập nhật.');
+      toast.success('Thông tin nhân sự đã được cập nhật.', { id: 'profile-personnel-success' });
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Không thể cập nhật thông tin nhân sự.');
+      toast.error(
+        error instanceof Error ? error.message : 'Không thể cập nhật thông tin nhân sự.',
+        { id: 'profile-personnel-error' },
+      );
     } finally {
       setSaving(false);
     }

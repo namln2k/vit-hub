@@ -7,6 +7,7 @@ import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getFullName, normalizeSearchValue } from '@/components/pages/super-admin/common/UserUtils';
 import { formatEmailList, parseEmailList } from '@/services/users/emailList';
+import { toast } from 'sonner';
 
 interface AddGroupUsersModalProps {
   groupId: string;
@@ -33,7 +34,6 @@ export default function AddGroupUsersModal({
   const [searchError, setSearchError] = useState('');
   const [emailImportError, setEmailImportError] = useState('');
   const [emailImportMessage, setEmailImportMessage] = useState('');
-  const [submitError, setSubmitError] = useState('');
 
   const queryText = normalizeSearchValue(searchValue);
   const existingUserIdSet = useMemo(() => new Set(existingUserIds), [existingUserIds]);
@@ -100,12 +100,10 @@ export default function AddGroupUsersModal({
 
   function selectUser(user: AppUser) {
     setSelectedUsers((currentUsers) => [...currentUsers, user]);
-    setSubmitError('');
   }
 
   function removeSelectedUser(userId: string) {
     setSelectedUsers((currentUsers) => currentUsers.filter((user) => user.uid !== userId));
-    setSubmitError('');
   }
 
   async function handleImportEmails() {
@@ -113,7 +111,6 @@ export default function AddGroupUsersModal({
 
     setEmailImportError('');
     setEmailImportMessage('');
-    setSubmitError('');
 
     if (parsedEmails.invalidEmails.length > 0) {
       setEmailImportError(`Email không hợp lệ: ${formatEmailList(parsedEmails.invalidEmails)}.`);
@@ -181,7 +178,7 @@ export default function AddGroupUsersModal({
     }
 
     setIsAdding(true);
-    setSubmitError('');
+    const selectedCount = selectedUsers.length;
 
     try {
       await addUsersToGroup(
@@ -190,10 +187,14 @@ export default function AddGroupUsersModal({
       );
       await onAdded();
       onClose();
+      toast.success(`Đã thêm ${selectedCount} thành viên vào nhóm.`, {
+        id: 'group-add-users-success',
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setSubmitError(
+      toast.error(
         message ? `Không thể thêm thành viên: ${message}` : 'Không thể thêm thành viên.',
+        { id: 'group-add-users-error' },
       );
     } finally {
       setIsAdding(false);
@@ -359,8 +360,6 @@ export default function AddGroupUsersModal({
               </p>
             )}
           </div>
-
-          {submitError && <p className="mt-3 text-sm font-medium text-red-600">{submitError}</p>}
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">

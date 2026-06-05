@@ -12,6 +12,7 @@ import PasswordInput from '@/components/shared/form/PasswordInput';
 import { validateAvatarFile } from '@/services/avatarUpload';
 import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
 import AvatarEditor from '@/components/shared/avatar/AvatarEditor';
+import { toast } from 'sonner';
 
 const registerSchema = z.object({
   lastName: z.string().min(1, 'Họ không được để trống'),
@@ -40,8 +41,6 @@ function RequiredMark() {
 export default function RegisterPage() {
   const { signInWithGoogle, signUp } = useAuth();
   const router = useRouter();
-  const [error, setError] = useState('');
-  const [avatarError, setAvatarError] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | undefined>();
   const [avatarFileToEdit, setAvatarFileToEdit] = useState<File | null>(null);
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
@@ -72,7 +71,7 @@ export default function RegisterPage() {
     };
     reader.onerror = () => {
       if (isActive) {
-        setAvatarError('Không thể đọc ảnh đã chọn.');
+        toast.error('Không thể đọc ảnh đã chọn.', { id: 'register-avatar-error' });
       }
     };
     reader.readAsDataURL(avatarFile);
@@ -86,7 +85,6 @@ export default function RegisterPage() {
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    setAvatarError('');
 
     if (!file) {
       return;
@@ -95,7 +93,7 @@ export default function RegisterPage() {
     const validationError = validateAvatarFile(file);
 
     if (validationError) {
-      setAvatarError(validationError);
+      toast.error(validationError, { id: 'register-avatar-error' });
       return;
     }
 
@@ -105,18 +103,15 @@ export default function RegisterPage() {
   function removeAvatar() {
     setAvatarFile(undefined);
     setAvatarFileToEdit(null);
-    setAvatarError('');
   }
 
   function saveEditedAvatar(editedAvatar: File) {
     setAvatarFile(editedAvatar);
     setAvatarFileToEdit(null);
-    setAvatarError('');
   }
 
   async function onSubmit(data: RegisterFormData) {
     try {
-      setError('');
       setLoading(true);
       const result = await signUp({
         email: data.email,
@@ -140,7 +135,9 @@ export default function RegisterPage() {
 
       router.replace('/profile');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đăng ký.');
+      toast.error(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đăng ký.', {
+        id: 'register-error',
+      });
     } finally {
       setLoading(false);
     }
@@ -148,11 +145,12 @@ export default function RegisterPage() {
 
   async function handleGoogleSignIn() {
     try {
-      setError('');
       setLoading(true);
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể đăng ký bằng Google.');
+      toast.error(err instanceof Error ? err.message : 'Không thể đăng ký bằng Google.', {
+        id: 'google-register-error',
+      });
     } finally {
       setLoading(false);
     }
@@ -175,12 +173,6 @@ export default function RegisterPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Tạo tài khoản</h1>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -224,7 +216,6 @@ export default function RegisterPage() {
                 <p className="text-xs text-gray-500 mt-1">JPG, PNG hoặc WebP, tối đa 1 MB.</p>
               </div>
             </div>
-            {avatarError && <p className="text-red-500 text-xs mt-1">{avatarError}</p>}
           </div>
 
           <div className="grid grid-cols-3 gap-3">

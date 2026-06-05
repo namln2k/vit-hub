@@ -17,6 +17,7 @@ import { useSearchParams } from 'next/navigation';
 import ImportUsersPanel, { type ImportValidation } from './ImportUsersPanel';
 import UsersTable from './UsersTable';
 import { formatBytes } from './userDisplayUtils';
+import { toast } from 'sonner';
 
 const USERS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'users') ?? ADMIN_SECTIONS[0];
 
@@ -30,8 +31,6 @@ export default function UsersManagement() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [userError, setUserError] = useState('');
-  const [importError, setImportError] = useState('');
-  const [importMessage, setImportMessage] = useState('');
   const [validatedImport, setValidatedImport] = useState<ImportValidation | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,16 +102,17 @@ export default function UsersManagement() {
     }
 
     try {
-      setImportError('');
-      setImportMessage('');
       setValidatedImport(null);
       const parsedUsers = await parseUserImportFile(file);
       setValidatedImport({ fileName: file.name, users: parsedUsers });
-      setImportMessage(`File hợp lệ. Sẵn sàng import ${parsedUsers.length} nhân sự.`);
+      toast.success(`File hợp lệ. Sẵn sàng import ${parsedUsers.length} nhân sự.`, {
+        id: 'users-import-validate-success',
+      });
     } catch (error) {
-      setImportMessage('');
       setValidatedImport(null);
-      setImportError(error instanceof Error ? error.message : 'Không thể đọc file import.');
+      toast.error(error instanceof Error ? error.message : 'Không thể đọc file import.', {
+        id: 'users-import-validate-error',
+      });
     }
   }
 
@@ -122,15 +122,17 @@ export default function UsersManagement() {
     }
 
     try {
-      setImportError('');
-      setImportMessage('');
       setIsImporting(true);
       const importedCount = await importUsers(validatedImport.users);
-      setImportMessage(`Đã import ${importedCount} nhân sự từ ${validatedImport.fileName}.`);
+      toast.success(`Đã import ${importedCount} nhân sự từ ${validatedImport.fileName}.`, {
+        id: 'users-import-success',
+      });
       setValidatedImport(null);
       await loadUsers({ showLoading: false });
     } catch (error) {
-      setImportError(error instanceof Error ? error.message : 'Không thể import nhân sự.');
+      toast.error(error instanceof Error ? error.message : 'Không thể import nhân sự.', {
+        id: 'users-import-error',
+      });
     } finally {
       setIsImporting(false);
     }
@@ -164,8 +166,6 @@ export default function UsersManagement() {
         <ImportUsersPanel
           fileInputRef={fileInputRef}
           isImporting={isImporting}
-          importError={importError}
-          importMessage={importMessage}
           validatedImport={validatedImport}
           onFileChange={handleImportFileChange}
           onImport={handleImportValidatedUsers}

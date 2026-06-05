@@ -3,6 +3,7 @@ import Sharingan from '@/components/shared/loading/Sharingan';
 import { Check, Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface GroupFormModalProps {
   group?: Group;
@@ -51,13 +52,17 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
         ? await updateGroup(group.id, trimmedName, trimmedDescription)
         : await createGroup(trimmedName, trimmedDescription);
       onSaved(savedGroup);
+      toast.success(isEditing ? 'Đã cập nhật nhóm.' : 'Đã tạo nhóm mới.', {
+        id: isEditing ? 'group-update-success' : 'group-create-success',
+      });
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : '';
       const actionText = isEditing ? 'cập nhật' : 'tạo';
-      setError(
+      toast.error(
         message
           ? `Không thể ${actionText} nhóm: ${message}`
           : `Không thể ${actionText} nhóm.`,
+        { id: isEditing ? 'group-update-error' : 'group-create-error' },
       );
     } finally {
       setIsSaving(false);

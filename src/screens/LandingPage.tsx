@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 const highlights = [
   {
@@ -134,8 +135,14 @@ export default function LandingPage() {
   }, []);
 
   async function handleSignOut() {
-    await signOut();
-    router.push('/login');
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể đăng xuất.', {
+        id: 'sign-out-error',
+      });
+    }
   }
 
   const scrollFeaturedPostsToIndex = useCallback((index: number) => {

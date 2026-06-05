@@ -10,6 +10,7 @@ import {
   type AvatarMenuFeatureId,
 } from '@/constants/avatarMenuAcl';
 import type { ReactNode } from 'react';
+import { toast } from 'sonner';
 
 const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
   admin: <ShieldCheck className="h-4 w-4" />,
@@ -23,8 +24,14 @@ export default function Header() {
   const pathname = usePathname();
 
   async function handleSignOut() {
-    await signOut();
-    router.push('/login');
+    try {
+      await signOut();
+      router.push('/login');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể đăng xuất.', {
+        id: 'sign-out-error',
+      });
+    }
   }
 
   const fullName = appUser

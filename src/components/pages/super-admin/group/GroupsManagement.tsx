@@ -18,6 +18,7 @@ import DeleteGroupModal from './DeleteGroupModal';
 import GroupFormModal from './GroupFormModal';
 import GroupMembersTable from './GroupMembersTable';
 import GroupsTable from './GroupsTable';
+import { toast } from 'sonner';
 
 interface GroupsManagementProps {
   activeGroup: Group | null;
@@ -50,7 +51,6 @@ export default function GroupsManagement({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
-  const [removeUsersError, setRemoveUsersError] = useState('');
 
   const filteredUsers = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -151,7 +151,6 @@ export default function GroupsManagement({
     }
 
     setIsRemovingUsers(true);
-    setRemoveUsersError('');
 
     try {
       await removeUsersFromGroup(activeGroup.id, selectedUserIds);
@@ -160,14 +159,16 @@ export default function GroupsManagement({
       );
       setSelectedUserIds([]);
       setIsRemoveUsersModalOpen(false);
+      toast.success(`Đã xóa ${selectedUserIds.length} thành viên khỏi nhóm.`, {
+        id: 'group-remove-users-success',
+      });
       void loadGroupUsers(activeGroup.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setRemoveUsersError(
-        message
-          ? `Không thể xóa thành viên khỏi nhóm: ${message}`
-          : 'Không thể xóa thành viên khỏi nhóm.',
-      );
+      const errorMessage = message
+        ? `Không thể xóa thành viên khỏi nhóm: ${message}`
+        : 'Không thể xóa thành viên khỏi nhóm.';
+      toast.error(errorMessage, { id: 'group-remove-users-error' });
     } finally {
       setIsRemovingUsers(false);
     }
@@ -263,10 +264,7 @@ export default function GroupsManagement({
           </label>
           <button
             type="button"
-            onClick={() => {
-              setRemoveUsersError('');
-              setIsRemoveUsersModalOpen(true);
-            }}
+            onClick={() => setIsRemoveUsersModalOpen(true)}
             disabled={!activeGroup || selectedUserIds.length === 0 || isLoadingUsers}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
           >
@@ -318,7 +316,6 @@ export default function GroupsManagement({
           contextType="group"
           selectedCount={selectedUserIds.length}
           isRemoving={isRemovingUsers}
-          error={removeUsersError}
           onCancel={() => {
             if (!isRemovingUsers) {
               setIsRemoveUsersModalOpen(false);

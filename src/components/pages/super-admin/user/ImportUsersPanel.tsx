@@ -3,8 +3,8 @@ import {
   USER_IMPORT_MAX_FILE_BYTES,
   type ParsedImportUser,
 } from '@/services/users/import';
-import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react';
-import type { ChangeEvent, ReactNode, RefObject } from 'react';
+import { Download, FileSpreadsheet, Upload } from 'lucide-react';
+import type { ChangeEvent, RefObject } from 'react';
 import { formatBytes, getGenderLabel } from './userDisplayUtils';
 
 export interface ImportValidation {
@@ -15,8 +15,6 @@ export interface ImportValidation {
 interface ImportUsersPanelProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
   isImporting: boolean;
-  importError: string;
-  importMessage: string;
   validatedImport: ImportValidation | null;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImport: () => void;
@@ -25,8 +23,6 @@ interface ImportUsersPanelProps {
 export default function ImportUsersPanel({
   fileInputRef,
   isImporting,
-  importError,
-  importMessage,
   validatedImport,
   onFileChange,
   onImport,
@@ -80,18 +76,6 @@ export default function ImportUsersPanel({
         </section>
       </div>
 
-      {importError && (
-        <StatusMessage tone="error" icon={<AlertCircle className="h-4 w-4" />}>
-          {importError}
-        </StatusMessage>
-      )}
-
-      {importMessage && (
-        <StatusMessage tone="success" icon={<CheckCircle2 className="h-4 w-4" />}>
-          {importMessage}
-        </StatusMessage>
-      )}
-
       {validatedImport && (
         <section className="rounded-lg border border-emerald-200 bg-white">
           <div className="flex flex-col gap-3 border-b border-emerald-100 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -114,28 +98,6 @@ export default function ImportUsersPanel({
           <ImportPreviewTable users={validatedImport.users} />
         </section>
       )}
-    </div>
-  );
-}
-
-interface StatusMessageProps {
-  tone: 'error' | 'success';
-  icon: ReactNode;
-  children: string;
-}
-
-function StatusMessage({ tone, icon, children }: StatusMessageProps) {
-  const className =
-    tone === 'error'
-      ? 'border-red-200 bg-red-50 text-red-700'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
-
-  return (
-    <div
-      className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold ${className}`}
-    >
-      {icon}
-      <span>{children}</span>
     </div>
   );
 }

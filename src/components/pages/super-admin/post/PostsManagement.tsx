@@ -145,6 +145,8 @@ export default function PostsManagement() {
       if (form.id === post.id) {
         startNewPost();
       }
+
+      toast.success('Đã xóa bài viết.', { id: 'post-delete-success' });
     } catch (deleteError) {
       const message = getErrorMessage(deleteError);
       toast.error(message ? `Không thể xóa bài viết: ${message}` : 'Không thể xóa bài viết.', {

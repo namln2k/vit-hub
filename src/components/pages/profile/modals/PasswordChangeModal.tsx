@@ -5,6 +5,7 @@ import { KeyRound, X } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { toast } from 'sonner';
 
 const updatePasswordSchema = z
   .object({
@@ -26,7 +27,6 @@ interface PasswordChangeModalProps {
 
 export default function PasswordChangeModal({ onClose, onSuccess }: PasswordChangeModalProps) {
   const { updateUserPassword } = useAuth();
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const {
@@ -40,16 +40,16 @@ export default function PasswordChangeModal({ onClose, onSuccess }: PasswordChan
 
   async function onSubmit(data: UpdatePasswordFormData) {
     try {
-      setError('');
       setLoading(true);
       await updateUserPassword(data.currentPassword, data.newPassword);
       reset();
       onSuccess();
     } catch (caughtError) {
-      setError(
+      toast.error(
         caughtError instanceof Error
           ? caughtError.message
           : 'Không thể cập nhật mật khẩu. Vui lòng thử lại.',
+        { id: 'profile-password-error' },
       );
     } finally {
       setLoading(false);
@@ -62,7 +62,6 @@ export default function PasswordChangeModal({ onClose, onSuccess }: PasswordChan
     }
 
     reset();
-    setError('');
     onClose();
   }
 
@@ -89,12 +88,6 @@ export default function PasswordChangeModal({ onClose, onSuccess }: PasswordChan
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>

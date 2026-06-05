@@ -8,6 +8,7 @@ import {
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { GripVertical, Trash2, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { toast } from 'sonner';
 
 interface PostBlockEditorProps {
   block: DraftBlock;
@@ -103,8 +104,9 @@ interface ImageBlockFieldsProps {
 
 function ImageBlockFields({ block, onChange }: ImageBlockFieldsProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadError, setUploadError] = useState('');
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isImagePreviewLoading, setIsImagePreviewLoading] = useState(false);
+  const shouldShowImageLoading = isUploadingImage || isImagePreviewLoading;
 
   async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -117,12 +119,13 @@ function ImageBlockFields({ block, onChange }: ImageBlockFieldsProps) {
     const validationError = validatePostImageFile(file);
 
     if (validationError) {
-      setUploadError(validationError);
+      toast.error(validationError, { id: 'post-image-upload-error' });
+      setIsImagePreviewLoading(false);
       return;
     }
 
-    setUploadError('');
     setIsUploadingImage(true);
+    setIsImagePreviewLoading(true);
 
     try {
       const uploadedImage = await uploadPostImage(file);
@@ -132,8 +135,12 @@ function ImageBlockFields({ block, onChange }: ImageBlockFieldsProps) {
         postImageKey: uploadedImage.postImageKey,
         alt: block.alt || file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
       });
+      toast.success('Đã upload ảnh bài viết.', { id: 'post-image-upload-success' });
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : 'Không thể upload ảnh bài viết.');
+      toast.error(error instanceof Error ? error.message : 'Không thể upload ảnh bài viết.', {
+        id: 'post-image-upload-error',
+      });
+      setIsImagePreviewLoading(false);
     } finally {
       setIsUploadingImage(false);
     }
@@ -146,7 +153,11 @@ function ImageBlockFields({ block, onChange }: ImageBlockFieldsProps) {
           <span className="mb-1 block text-xs font-bold uppercase text-slate-500">URL ảnh</span>
           <input
             value={block.url}
-            onChange={(event) => onChange({ ...block, url: event.target.value })}
+            onChange={(event) => {
+              const nextUrl = event.target.value;
+              setIsImagePreviewLoading(Boolean(nextUrl.trim()));
+              onChange({ ...block, url: nextUrl });
+            }}
             className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm text-slate-950 outline-none focus:border-violet-500"
           />
         </label>
@@ -173,17 +184,27 @@ function ImageBlockFields({ block, onChange }: ImageBlockFieldsProps) {
           </button>
         </div>
       </div>
-      {block.url ? (
-        <img
-          src={block.url}
-          alt={block.alt || ''}
-          className="max-h-56 w-full rounded-lg border border-slate-200 object-cover"
-        />
-      ) : null}
-      {uploadError ? (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-          {uploadError}
-        </p>
+      {block.url || shouldShowImageLoading ? (
+        <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+          {block.url ? (
+            <img
+              src={block.url}
+              alt={block.alt || ''}
+              onLoad={() => setIsImagePreviewLoading(false)}
+              onError={() => setIsImagePreviewLoading(false)}
+              className="max-h-56 w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-40 w-full items-center justify-center text-sm font-semibold text-slate-400">
+              Đang xử lý ảnh
+            </div>
+          )}
+          {shouldShowImageLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
+              <Sharingan size={28} label="Đang tải ảnh bài viết" />
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <label className="block">
         <span className="mb-1 block text-xs font-bold uppercase text-slate-500">

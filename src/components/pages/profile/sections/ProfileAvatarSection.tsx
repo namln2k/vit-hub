@@ -5,19 +5,16 @@ import Sharingan from '@/components/shared/loading/Sharingan';
 import type { AppUser } from '@/contexts/auth';
 import { Camera } from 'lucide-react';
 import { useState, type ChangeEvent } from 'react';
+import { toast } from 'sonner';
 
 interface ProfileAvatarSectionProps {
   appUser: AppUser;
   onAvatarUpdate: (avatarFile: File) => Promise<void>;
-  onError: (message: string) => void;
-  onSuccess: (message: string) => void;
 }
 
 export default function ProfileAvatarSection({
   appUser,
   onAvatarUpdate,
-  onError,
-  onSuccess,
 }: ProfileAvatarSectionProps) {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarFileToEdit, setAvatarFileToEdit] = useState<File | null>(null);
@@ -25,8 +22,6 @@ export default function ProfileAvatarSection({
   function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    onError('');
-    onSuccess('');
 
     if (!file) {
       return;
@@ -35,7 +30,7 @@ export default function ProfileAvatarSection({
     const validationError = validateAvatarFile(file);
 
     if (validationError) {
-      onError(validationError);
+      toast.error(validationError, { id: 'profile-avatar-error' });
       return;
     }
 
@@ -47,9 +42,11 @@ export default function ProfileAvatarSection({
       setAvatarUploading(true);
       await onAvatarUpdate(avatarFile);
       setAvatarFileToEdit(null);
-      onSuccess('Ảnh đại diện đã được cập nhật.');
+      toast.success('Ảnh đại diện đã được cập nhật.', { id: 'profile-avatar-success' });
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.');
+      toast.error(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.', {
+        id: 'profile-avatar-error',
+      });
     } finally {
       setAvatarUploading(false);
     }

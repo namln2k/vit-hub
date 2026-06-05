@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
+import { toast } from 'sonner';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -16,8 +17,6 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const { resetPassword } = useAuth();
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const {
@@ -30,13 +29,15 @@ export default function ForgotPasswordPage() {
 
   async function onSubmit(data: ForgotPasswordFormData) {
     try {
-      setError('');
-      setSuccess('');
       setLoading(true);
       await resetPassword(data.email);
-      setSuccess('Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.');
+      toast.success('Email đặt lại mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.', {
+        id: 'forgot-password-success',
+      });
     } catch {
-      setError('Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.');
+      toast.error('Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.', {
+        id: 'forgot-password-error',
+      });
     } finally {
       setLoading(false);
     }
@@ -52,18 +53,6 @@ export default function ForgotPasswordPage() {
           <h1 className="text-2xl font-bold text-gray-900">Quên mật khẩu</h1>
           <p className="text-gray-500 text-sm mt-1">Nhập email để đặt lại mật khẩu</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {success}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>

@@ -2,18 +2,15 @@ import type { AppUser, UpdateUserNameData } from '@/contexts/auth';
 import { useState } from 'react';
 import { ConfirmCancelActions, EditButton } from '../common/ProfileEditActions';
 import { getFullName } from '../common/profileUtils';
+import { toast } from 'sonner';
 
 interface EditableNameFieldProps {
   appUser: AppUser;
-  onError: (message: string) => void;
-  onSuccess: (message: string) => void;
   onUpdate: (data: UpdateUserNameData) => Promise<void>;
 }
 
 export default function EditableNameField({
   appUser,
-  onError,
-  onSuccess,
   onUpdate,
 }: EditableNameFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -25,8 +22,6 @@ export default function EditableNameField({
   });
 
   function startEditing() {
-    onError('');
-    onSuccess('');
     setForm({
       lastName: appUser.lastName,
       middleName: appUser.middleName,
@@ -40,7 +35,6 @@ export default function EditableNameField({
       return;
     }
 
-    onError('');
     setIsEditing(false);
   }
 
@@ -59,19 +53,19 @@ export default function EditableNameField({
     };
 
     if (!nextName.lastName || !nextName.firstName) {
-      onError('Họ và Tên không được để trống.');
+      toast.error('Họ và Tên không được để trống.', { id: 'profile-name-error' });
       return;
     }
 
     try {
-      onError('');
-      onSuccess('');
       setSaving(true);
       await onUpdate(nextName);
       setIsEditing(false);
-      onSuccess('Họ và tên đã được cập nhật.');
+      toast.success('Họ và tên đã được cập nhật.', { id: 'profile-name-success' });
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Không thể cập nhật họ và tên.');
+      toast.error(error instanceof Error ? error.message : 'Không thể cập nhật họ và tên.', {
+        id: 'profile-name-error',
+      });
     } finally {
       setSaving(false);
     }

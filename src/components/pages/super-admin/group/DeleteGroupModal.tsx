@@ -2,6 +2,7 @@ import { deleteGroup, type Group } from '@/services/groups';
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 interface DeleteGroupModalProps {
   group: Group;
@@ -11,18 +12,19 @@ interface DeleteGroupModalProps {
 
 export default function DeleteGroupModal({ group, onClose, onDeleted }: DeleteGroupModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
 
   async function handleDelete() {
     setIsDeleting(true);
-    setError('');
 
     try {
       await deleteGroup(group.id);
       onDeleted(group.id);
+      toast.success('Đã xóa nhóm.', { id: 'group-delete-success' });
     } catch (deleteError) {
       const message = deleteError instanceof Error ? deleteError.message : '';
-      setError(message ? `Không thể xóa nhóm: ${message}` : 'Không thể xóa nhóm.');
+      toast.error(message ? `Không thể xóa nhóm: ${message}` : 'Không thể xóa nhóm.', {
+        id: 'group-delete-error',
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -63,7 +65,6 @@ export default function DeleteGroupModal({ group, onClose, onDeleted }: DeleteGr
           <p className="text-sm font-medium text-slate-500">
             Thành viên sẽ được gỡ khỏi nhóm này trước khi nhóm bị xóa.
           </p>
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
           <button

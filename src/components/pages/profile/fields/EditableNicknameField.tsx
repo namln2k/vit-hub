@@ -1,18 +1,15 @@
 import type { AppUser, UpdateUserNicknameData } from '@/contexts/auth';
 import { useState } from 'react';
 import { ConfirmCancelActions, EditButton } from '../common/ProfileEditActions';
+import { toast } from 'sonner';
 
 interface EditableNicknameFieldProps {
   appUser: AppUser;
-  onError: (message: string) => void;
-  onSuccess: (message: string) => void;
   onUpdate: (data: UpdateUserNicknameData) => Promise<void>;
 }
 
 export default function EditableNicknameField({
   appUser,
-  onError,
-  onSuccess,
   onUpdate,
 }: EditableNicknameFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -20,8 +17,6 @@ export default function EditableNicknameField({
   const [nickname, setNickname] = useState('');
 
   function startEditing() {
-    onError('');
-    onSuccess('');
     setNickname(appUser.nickname);
     setIsEditing(true);
   }
@@ -31,20 +26,19 @@ export default function EditableNicknameField({
       return;
     }
 
-    onError('');
     setIsEditing(false);
   }
 
   async function saveUserNickname() {
     try {
-      onError('');
-      onSuccess('');
       setSaving(true);
       await onUpdate({ nickname: nickname.trim() });
       setIsEditing(false);
-      onSuccess('Nickname đã được cập nhật.');
+      toast.success('Nickname đã được cập nhật.', { id: 'profile-nickname-success' });
     } catch (error) {
-      onError(error instanceof Error ? error.message : 'Không thể cập nhật Nickname.');
+      toast.error(error instanceof Error ? error.message : 'Không thể cập nhật Nickname.', {
+        id: 'profile-nickname-error',
+      });
     } finally {
       setSaving(false);
     }

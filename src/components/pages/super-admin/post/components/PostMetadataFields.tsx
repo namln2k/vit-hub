@@ -4,6 +4,7 @@ import type { PostFormState } from '@/components/pages/super-admin/post/utils/po
 import Sharingan from '@/components/shared/loading/Sharingan';
 import { ImagePlus, Pencil, Trash2, X } from 'lucide-react';
 import { useRef, useState, type ChangeEvent } from 'react';
+import { toast } from 'sonner';
 
 interface PostMetadataFieldsProps {
   form: PostFormState;
@@ -25,8 +26,9 @@ export default function PostMetadataFields({
   onStartSlugEditing,
 }: PostMetadataFieldsProps) {
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
-  const [thumbnailUploadError, setThumbnailUploadError] = useState('');
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [isThumbnailPreviewLoading, setIsThumbnailPreviewLoading] = useState(false);
+  const shouldShowThumbnailLoading = isUploadingThumbnail || isThumbnailPreviewLoading;
 
   async function handleThumbnailUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -39,12 +41,13 @@ export default function PostMetadataFields({
     const validationError = validatePostImageFile(file);
 
     if (validationError) {
-      setThumbnailUploadError(validationError);
+      toast.error(validationError, { id: 'post-thumbnail-upload-error' });
+      setIsThumbnailPreviewLoading(false);
       return;
     }
 
-    setThumbnailUploadError('');
     setIsUploadingThumbnail(true);
+    setIsThumbnailPreviewLoading(true);
 
     try {
       const uploadedImage = await uploadPostImage(file);
@@ -53,10 +56,13 @@ export default function PostMetadataFields({
         thumbnailUrl: uploadedImage.postImageUrl,
         thumbnailImageKey: uploadedImage.postImageKey,
       });
+      toast.success('Đã upload thumbnail bài viết.', { id: 'post-thumbnail-upload-success' });
     } catch (error) {
-      setThumbnailUploadError(
+      toast.error(
         error instanceof Error ? error.message : 'Không thể upload thumbnail bài viết.',
+        { id: 'post-thumbnail-upload-error' },
       );
+      setIsThumbnailPreviewLoading(false);
     } finally {
       setIsUploadingThumbnail(false);
     }
@@ -83,13 +89,25 @@ export default function PostMetadataFields({
               aria-label={form.thumbnailUrl ? 'Thay thumbnail' : 'Upload thumbnail'}
             >
               {form.thumbnailUrl ? (
-                <img src={form.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={form.thumbnailUrl}
+                  alt=""
+                  onLoad={() => setIsThumbnailPreviewLoading(false)}
+                  onError={() => setIsThumbnailPreviewLoading(false)}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <span>Chưa có thumbnail</span>
               )}
-              <span className="absolute inset-0 flex items-center justify-center bg-slate-950/55 text-sm font-bold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                {isUploadingThumbnail ? (
-                  <Sharingan size={18} label="Đang upload thumbnail" />
+              <span
+                className={`absolute inset-0 flex items-center justify-center bg-slate-950/55 text-sm font-bold text-white transition-opacity ${
+                  shouldShowThumbnailLoading
+                    ? 'opacity-100'
+                    : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
+                }`}
+              >
+                {shouldShowThumbnailLoading ? (
+                  <Sharingan size={18} label="Đang tải thumbnail" />
                 ) : (
                   <ImagePlus className="h-5 w-5" />
                 )}
@@ -114,11 +132,6 @@ export default function PostMetadataFields({
               </button>
             ) : null}
           </div>
-          {thumbnailUploadError ? (
-            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-              {thumbnailUploadError}
-            </p>
-          ) : null}
         </div>
 
         <div className="grid gap-4">

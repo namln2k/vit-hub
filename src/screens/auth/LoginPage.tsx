@@ -6,10 +6,11 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Home, LogIn } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/components/shared/form/PasswordInput';
 import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
   email: z.string().email('Email không hợp lệ'),
@@ -22,7 +23,6 @@ export default function LoginPage() {
   const { signIn, signInWithGoogle } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const message = searchParams.get('message') ?? '';
   const next = searchParams.get('next') || '/profile';
@@ -35,14 +35,22 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
+  useEffect(() => {
+    if (message) {
+      toast.success(message, { id: 'login-route-message' });
+    }
+  }, [message]);
+
   async function onSubmit(data: LoginFormData) {
     try {
-      setError('');
       setLoading(true);
       await signIn(data.email, data.password);
       router.replace(next);
     } catch {
-      setError('Email hoặc mật khẩu không chính xác. Nếu bạn đã đăng ký bằng Google, vui lòng đăng nhập bằng Google hoặc dùng Quên mật khẩu.');
+      toast.error(
+        'Email hoặc mật khẩu không chính xác. Nếu bạn đã đăng ký bằng Google, vui lòng đăng nhập bằng Google hoặc dùng Quên mật khẩu.',
+        { id: 'login-error' },
+      );
     } finally {
       setLoading(false);
     }
@@ -50,11 +58,12 @@ export default function LoginPage() {
 
   async function handleGoogleSignIn() {
     try {
-      setError('');
       setLoading(true);
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể đăng nhập bằng Google.');
+      toast.error(err instanceof Error ? err.message : 'Không thể đăng nhập bằng Google.', {
+        id: 'google-login-error',
+      });
     } finally {
       setLoading(false);
     }
@@ -78,17 +87,6 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-900">Đăng nhập</h1>
           <p className="text-gray-500 text-sm mt-1">Chào mừng bạn quay trở lại</p>
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {message}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>

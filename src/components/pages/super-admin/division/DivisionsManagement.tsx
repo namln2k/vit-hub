@@ -12,6 +12,7 @@ import AddDivisionUsersModal from './AddDivisionUsersModal';
 import DivisionMembersTable from './DivisionMembersTable';
 import DivisionPanelActions from './DivisionPanelActions';
 import DivisionsTable from './DivisionsTable';
+import { toast } from 'sonner';
 
 interface DivisionsManagementProps {
   activeDivision: Division | null;
@@ -34,7 +35,6 @@ export default function DivisionsManagement({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
-  const [removeUsersError, setRemoveUsersError] = useState('');
 
   const filteredDivisions = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -147,7 +147,6 @@ export default function DivisionsManagement({
     }
 
     setIsRemovingUsers(true);
-    setRemoveUsersError('');
 
     try {
       await removeUsersFromDivision(activeDivision.id, selectedUserIds);
@@ -156,14 +155,16 @@ export default function DivisionsManagement({
       );
       setSelectedUserIds([]);
       setIsRemoveUsersModalOpen(false);
+      toast.success(`Đã xóa ${selectedUserIds.length} thành viên khỏi mảng.`, {
+        id: 'division-remove-users-success',
+      });
       void loadDivisionUsers(activeDivision.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      setRemoveUsersError(
-        message
-          ? `Không thể xóa thành viên khỏi mảng: ${message}`
-          : 'Không thể xóa thành viên khỏi mảng.',
-      );
+      const errorMessage = message
+        ? `Không thể xóa thành viên khỏi mảng: ${message}`
+        : 'Không thể xóa thành viên khỏi mảng.';
+      toast.error(errorMessage, { id: 'division-remove-users-error' });
     } finally {
       setIsRemovingUsers(false);
     }
@@ -188,10 +189,7 @@ export default function DivisionsManagement({
           selectedUserCount={selectedUserIds.length}
           onSearchChange={setSearch}
           onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
-          onOpenRemoveUsersModal={() => {
-            setRemoveUsersError('');
-            setIsRemoveUsersModalOpen(true);
-          }}
+          onOpenRemoveUsersModal={() => setIsRemoveUsersModalOpen(true)}
         />
       }
     >
@@ -226,7 +224,6 @@ export default function DivisionsManagement({
           contextType="division"
           selectedCount={selectedUserIds.length}
           isRemoving={isRemovingUsers}
-          error={removeUsersError}
           onCancel={() => {
             if (!isRemovingUsers) {
               setIsRemoveUsersModalOpen(false);

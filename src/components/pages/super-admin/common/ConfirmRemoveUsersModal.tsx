@@ -6,7 +6,6 @@ interface ConfirmRemoveUsersModalProps {
   contextType: 'division' | 'group';
   selectedCount: number;
   isRemoving: boolean;
-  error: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -21,7 +20,6 @@ export default function ConfirmRemoveUsersModal({
   contextType,
   selectedCount,
   isRemoving,
-  error,
   onCancel,
   onConfirm,
 }: ConfirmRemoveUsersModalProps) {
@@ -65,7 +63,6 @@ export default function ConfirmRemoveUsersModal({
           <p className="text-sm text-slate-500">
             Thao tác này chỉ gỡ thành viên khỏi {contextLabel}, không xóa tài khoản người dùng.
           </p>
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
