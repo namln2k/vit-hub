@@ -8,8 +8,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Home, LogIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
-import PasswordInput from '@/components/shared/form/PasswordInput';
-import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
+import PasswordInput from '@/shared/form/PasswordInput';
+import GoogleSignIn from '@/features/auth/components/GoogleSignIn';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({

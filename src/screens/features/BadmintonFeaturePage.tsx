@@ -1,6 +1,6 @@
 'use client';
 
-import Header from '@/components/shared/layout/Header';
+import Header from '@/shared/layout/Header';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 

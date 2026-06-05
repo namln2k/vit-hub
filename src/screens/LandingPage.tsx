@@ -1,7 +1,7 @@
 'use client';
 
-import AvatarMenu from '@/components/shared/layout/AvatarMenu';
-import UserSearch from '@/components/shared/layout/UserSearch';
+import AvatarMenu from '@/shared/layout/AvatarMenu';
+import UserSearch from '@/shared/layout/UserSearch';
 import { listLatestPublishedPosts, type Post } from '@/services/posts';
 import volunteerHero from '@/assets/hero.webp';
 import { useAuth } from '@/contexts/useAuth';

@@ -1,9 +1,9 @@
 'use client';
 
 import { getPublishedPostBySlug, type Post } from '@/services/posts';
-import PostRenderer from '@/components/pages/posts/PostRenderer';
-import Header from '@/components/shared/layout/Header';
-import Sharingan from '@/components/shared/loading/Sharingan';
+import PostRenderer from '@/features/posts/components/PostRenderer';
+import Header from '@/shared/layout/Header';
+import Sharingan from '@/shared/loading/Sharingan';
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';

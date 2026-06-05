@@ -2,7 +2,7 @@
 
 import badmintonIcon from '@/assets/icons/badminton.webp';
 import pickleballIcon from '@/assets/icons/pickleball.webp';
-import Header from '@/components/shared/layout/Header';
+import Header from '@/shared/layout/Header';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 

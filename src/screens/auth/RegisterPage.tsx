@@ -8,10 +8,10 @@ import { useRouter } from 'next/navigation';
 import { Home, ImagePlus, UserPlus, X } from 'lucide-react';
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useAuth } from '@/contexts/useAuth';
-import PasswordInput from '@/components/shared/form/PasswordInput';
+import PasswordInput from '@/shared/form/PasswordInput';
 import { validateAvatarFile } from '@/services/avatarUpload';
-import GoogleSignIn from '@/components/pages/auth/GoogleSignIn';
-import AvatarEditor from '@/components/shared/avatar/AvatarEditor';
+import GoogleSignIn from '@/features/auth/components/GoogleSignIn';
+import AvatarEditor from '@/shared/avatar/AvatarEditor';
 import { toast } from 'sonner';
 
 const registerSchema = z.object({

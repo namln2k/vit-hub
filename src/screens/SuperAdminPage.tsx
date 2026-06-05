@@ -1,27 +1,20 @@
 'use client';
 
-import { listDivisions, type Division } from '@/services/divisions';
-import { listGroups, type Group } from '@/services/groups';
-import Header from '@/components/shared/layout/Header';
-import { ADMIN_SECTIONS } from '@/components/pages/super-admin/common/AdminSections';
-import PlaceholderManagement from '@/components/pages/super-admin/common/PlaceholderManagement';
-import {
-  findAdminItemBySlug,
-  getAdminItemPath,
-  getAdminSectionPath,
-} from '@/components/pages/super-admin/common/adminRoutes';
-import type { AdminSectionId } from '@/components/pages/super-admin/common/types';
-import DivisionsManagement from '@/components/pages/super-admin/division/DivisionsManagement';
-import GroupsManagement from '@/components/pages/super-admin/group/GroupsManagement';
-import PostsManagement from '@/components/pages/super-admin/post/PostsManagement';
-import UsersManagement from '@/components/pages/super-admin/user/UsersManagement';
-import SuperAdminSidebar from '@/components/pages/super-admin/common/SuperAdminSidebar';
+import Header from '@/shared/layout/Header';
+import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
+import PlaceholderManagement from '@/features/super-admin/components/common/PlaceholderManagement';
+import type { AdminSectionId } from '@/features/super-admin/types';
+import DivisionsManagement from '@/features/super-admin/components/division/DivisionsManagement';
+import GroupsManagement from '@/features/super-admin/components/group/GroupsManagement';
+import PostsManagement from '@/features/super-admin/components/post/PostsManagement';
+import UsersManagement from '@/features/super-admin/components/user/UsersManagement';
+import SuperAdminSidebar from '@/features/super-admin/components/common/SuperAdminSidebar';
+import { useSuperAdminNavigationData } from '@/features/super-admin/hooks/useSuperAdminNavigationData';
 import { ShieldCheck } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useMemo } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function SuperAdminPage() {
-  const router = useRouter();
   const routeParams = useParams();
   const rawSegments = routeParams.segments;
   const routeSegments = Array.isArray(rawSegments)
@@ -35,120 +28,24 @@ export default function SuperAdminPage() {
       ? sectionIdFromUrl
       : 'divisions';
   const activeItemSlug = routeSegments[1];
-  const [divisions, setDivisions] = useState<Division[]>([]);
-  const [isLoadingDivisions, setIsLoadingDivisions] = useState(true);
-  const [divisionError, setDivisionError] = useState('');
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [isLoadingGroups, setIsLoadingGroups] = useState(true);
-  const [groupError, setGroupError] = useState('');
+  const {
+    divisions,
+    isLoadingDivisions,
+    divisionError,
+    groups,
+    isLoadingGroups,
+    groupError,
+    activeDivision,
+    activeGroup,
+    handleGroupCreated,
+    handleGroupUpdated,
+    handleGroupDeleted,
+  } = useSuperAdminNavigationData({ activeSectionId, activeItemSlug });
 
   const activeSection = useMemo(
     () => ADMIN_SECTIONS.find((section) => section.id === activeSectionId) ?? ADMIN_SECTIONS[0],
     [activeSectionId],
   );
-  const activeDivision = useMemo(
-    () => (activeSectionId === 'divisions' ? findAdminItemBySlug(divisions, activeItemSlug) : null),
-    [activeItemSlug, activeSectionId, divisions],
-  );
-  const activeGroup = useMemo(
-    () => (activeSectionId === 'groups' ? findAdminItemBySlug(groups, activeItemSlug) : null),
-    [activeItemSlug, activeSectionId, groups],
-  );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadDivisions() {
-      setIsLoadingDivisions(true);
-      setDivisionError('');
-
-      try {
-        const nextDivisions = await listDivisions();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setDivisions(nextDivisions);
-      } catch (error) {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : '';
-          setDivisionError(
-            message ? `Không thể tải danh sách mảng: ${message}` : 'Không thể tải danh sách mảng.',
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingDivisions(false);
-        }
-      }
-    }
-
-    void loadDivisions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadGroups() {
-      setIsLoadingGroups(true);
-      setGroupError('');
-
-      try {
-        const nextGroups = await listGroups();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setGroups(nextGroups);
-      } catch (error) {
-        if (isMounted) {
-          const message = error instanceof Error ? error.message : '';
-          setGroupError(
-            message ? `Không thể tải danh sách nhóm: ${message}` : 'Không thể tải danh sách nhóm.',
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoadingGroups(false);
-        }
-      }
-    }
-
-    void loadGroups();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  function handleGroupCreated(group: Group) {
-    setGroups((currentGroups) =>
-      [...currentGroups, group].sort((first, second) => first.name.localeCompare(second.name)),
-    );
-    router.push(getAdminItemPath('groups', group));
-  }
-
-  function handleGroupUpdated(group: Group) {
-    setGroups((currentGroups) =>
-      currentGroups
-        .map((currentGroup) => (currentGroup.id === group.id ? group : currentGroup))
-        .sort((first, second) => first.name.localeCompare(second.name)),
-    );
-    router.replace(getAdminItemPath('groups', group));
-  }
-
-  function handleGroupDeleted(groupId: string) {
-    setGroups((currentGroups) =>
-      currentGroups.filter((currentGroup) => currentGroup.id !== groupId),
-    );
-    router.replace(getAdminSectionPath('groups'));
-  }
 
   return (
     <div className="min-h-screen bg-slate-50">

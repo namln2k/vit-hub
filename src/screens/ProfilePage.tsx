@@ -1,7 +1,7 @@
 'use client';
 
-import Header from '@/components/shared/layout/Header';
-import ProfileAccountCard from '@/components/pages/profile/sections/ProfileAccountCard';
+import Header from '@/shared/layout/Header';
+import ProfileAccountCard from '@/features/profile/components/sections/ProfileAccountCard';
 
 export default function ProfilePage() {
   return (
