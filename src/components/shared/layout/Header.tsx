@@ -1,4 +1,4 @@
-import { LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { LayoutGrid, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AvatarMenu from '@/components/shared/layout/AvatarMenu';
@@ -11,6 +11,7 @@ import type { ReactNode } from 'react';
 
 const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
   admin: <ShieldCheck className="h-4 w-4" />,
+  features: <LayoutGrid className="h-4 w-4" />,
   profile: <UserRound className="h-4 w-4" />,
 };
 

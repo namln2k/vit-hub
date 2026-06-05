@@ -1,6 +1,6 @@
 import type { UserRole } from '@/constants/userRoles';
 
-export type AvatarMenuFeatureId = 'admin' | 'profile';
+export type AvatarMenuFeatureId = 'admin' | 'features' | 'profile';
 
 export interface AvatarMenuFeature {
   id: AvatarMenuFeatureId;
@@ -14,6 +14,11 @@ export const AVATAR_MENU_FEATURES = {
     label: 'Quản trị',
     to: '/super-admin',
   },
+  features: {
+    id: 'features',
+    label: 'Tính năng',
+    to: '/features',
+  },
   profile: {
     id: 'profile',
     label: 'Hồ sơ cá nhân',
@@ -22,8 +27,8 @@ export const AVATAR_MENU_FEATURES = {
 } as const satisfies Record<AvatarMenuFeatureId, AvatarMenuFeature>;
 
 const ROLE_AVATAR_MENU_FEATURES = {
-  member: ['profile'],
-  super_admin: ['admin', 'profile'],
+  member: ['features', 'profile'],
+  super_admin: ['admin', 'features', 'profile'],
 } as const satisfies Record<UserRole, readonly AvatarMenuFeatureId[]>;
 
 function normalizePathname(pathname: string) {
@@ -39,6 +44,10 @@ function getCurrentFeatureId(pathname: string): AvatarMenuFeatureId | null {
 
   if (normalizedPathname === '/profile') {
     return 'profile';
+  }
+
+  if (normalizedPathname === '/features') {
+    return 'features';
   }
 
   if (normalizedPathname === '/super-admin' || normalizedPathname.startsWith('/super-admin/')) {

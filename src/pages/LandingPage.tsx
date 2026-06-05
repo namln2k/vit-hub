@@ -23,6 +23,7 @@ import {
   ExternalLink,
   HandHeart,
   ImageIcon,
+  LayoutGrid,
   Laptop,
   LogIn,
   LogOut,
@@ -59,6 +60,7 @@ const activities = [
 
 const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
   admin: <ShieldCheck className="h-4 w-4" />,
+  features: <LayoutGrid className="h-4 w-4" />,
   profile: <UserRound className="h-4 w-4" />,
 };
 
