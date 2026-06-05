@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   ClipboardList,
   Megaphone,
   Music2,
@@ -7,7 +6,6 @@ import {
   ShieldCheck,
   UsersRound,
 } from 'lucide-react';
-import Link from 'next/link';
 
 const divisions = [
   {
@@ -47,21 +45,6 @@ const divisions = [
 export default function DivisionsIntroduction() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b border-slate-200 bg-white">
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/" className="text-lg font-bold text-slate-950">
-            VIT Hub
-          </Link>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-950"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Trang chủ
-          </Link>
-        </nav>
-      </header>
-
       <main>
         <section className="bg-white py-14">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

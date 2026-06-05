@@ -1,4 +1,5 @@
 import Providers from '@/app/providers';
+import Header from '@/shared/layout/Header';
 import '@/app/globals.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
@@ -12,7 +13,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <Providers>
+          <Header />
+          {children}
+        </Providers>
       </body>
     </html>
   );

@@ -1,21 +1,13 @@
 'use client';
 
-import AvatarMenu from '@/shared/layout/AvatarMenu';
-import UserSearch from '@/shared/layout/UserSearch';
 import { listLatestPublishedPosts, type Post } from '@/services/posts';
 import volunteerHero from '@/assets/hero.webp';
-import { useAuth } from '@/contexts/useAuth';
-import {
-  getAllowedAvatarMenuFeatures,
-  type AvatarMenuFeatureId,
-} from '@/constants/avatarMenuAcl';
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
   type MouseEvent,
-  type ReactNode,
 } from 'react';
 import {
   ArrowRight,
@@ -25,18 +17,12 @@ import {
   ExternalLink,
   HandHeart,
   ImageIcon,
-  LayoutGrid,
   Laptop,
-  LogIn,
-  LogOut,
   MapPin,
-  ShieldCheck,
-  UserRound,
   UsersRound,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 const highlights = [
   {
@@ -62,12 +48,6 @@ const activities = [
   'Kết nối những bạn trẻ muốn đóng góp cho cộng đồng SOICT',
 ];
 
-const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
-  admin: <ShieldCheck className="h-4 w-4" />,
-  features: <LayoutGrid className="h-4 w-4" />,
-  profile: <UserRound className="h-4 w-4" />,
-};
-
 function formatPostUpdatedAt(value: string) {
   const date = new Date(value);
 
@@ -85,18 +65,12 @@ function formatPostUpdatedAt(value: string) {
 }
 
 export default function LandingPage() {
-  const { currentUser, appUser, signOut } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
   const featuredPostsCarouselRef = useRef<HTMLDivElement>(null);
   const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
   const [isLoadingFeaturedPosts, setIsLoadingFeaturedPosts] = useState(true);
   const [featuredPostsError, setFeaturedPostsError] = useState('');
   const [activeFeaturedPostIndex, setActiveFeaturedPostIndex] = useState(0);
-  const fullName = appUser
-    ? `${appUser.lastName} ${appUser.middleName} ${appUser.firstName}`.trim()
-    : '';
-  const avatarLabel = fullName || appUser?.username || currentUser?.email || '';
 
   useEffect(() => {
     let isMounted = true;
@@ -133,17 +107,6 @@ export default function LandingPage() {
       isMounted = false;
     };
   }, []);
-
-  async function handleSignOut() {
-    try {
-      await signOut();
-      router.push('/login');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Không thể đăng xuất.', {
-        id: 'sign-out-error',
-      });
-    }
-  }
 
   const scrollFeaturedPostsToIndex = useCallback((index: number) => {
     const carousel = featuredPostsCarouselRef.current;
@@ -194,61 +157,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-950">
-      <header className="absolute inset-x-0 top-0 z-20">
-        <nav className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-          <div className="grid min-h-10 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
-            <Link href="/" className="text-lg font-bold text-white">
-              VIT Hub
-            </Link>
-            <div className="mx-auto w-full max-w-md">
-              <UserSearch variant="dark" />
-            </div>
-            <div className="flex items-center gap-2">
-              {currentUser ? (
-                <AvatarMenu
-                  avatarSrc={appUser?.avatarUrl}
-                  label={avatarLabel}
-                  avatarSize="md"
-                  avatarClassName="border-0"
-                  buttonClassName="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-slate-950 shadow-sm ring-1 ring-white/60 transition-colors hover:bg-cyan-50 cursor-pointer"
-                  items={[
-                    ...getAllowedAvatarMenuFeatures(appUser?.role, pathname).map(
-                      (feature) => ({
-                        label: feature.label,
-                        icon: avatarMenuIcons[feature.id],
-                        to: feature.to,
-                      }),
-                    ),
-                    {
-                      label: 'Đăng xuất',
-                      icon: <LogOut className="h-4 w-4" />,
-                      onClick: handleSignOut,
-                      danger: true,
-                    },
-                  ]}
-                />
-              ) : (
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950 transition-colors hover:bg-cyan-50"
-                >
-                  <LogIn className="h-4 w-4" />
-                  Đăng nhập
-                </Link>
-              )}
-            </div>
-          </div>
-          <div className="mt-3 flex items-center justify-center">
-            <Link
-              href="/divisions"
-              className="rounded-full bg-white/18 px-5 py-2.5 text-sm font-bold text-white shadow-sm ring-1 ring-white/30 backdrop-blur transition-colors hover:bg-cyan-400 hover:text-slate-950 hover:ring-cyan-300"
-            >
-              Các mảng hoạt động
-            </Link>
-          </div>
-        </nav>
-      </header>
-
       <main>
         <section className="relative min-h-1/3 overflow-hidden">
           <img

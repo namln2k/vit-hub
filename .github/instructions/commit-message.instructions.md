@@ -21,4 +21,3 @@ Where:
 The commit message should be concise and descriptive, providing enough information for others to understand the purpose of the change.
 It should also be written in the imperative mood, as if giving a command (e.g., "Add feature" instead of "Added feature").
 It should be short and to the point, ideally less than 50 characters for the description.
-
