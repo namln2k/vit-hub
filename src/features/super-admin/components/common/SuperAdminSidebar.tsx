@@ -5,6 +5,7 @@ import type { Group } from '@/services/groups';
 import {
   getAdminItemPath,
   getAdminSectionPath,
+  getPostsSubsectionPath,
   getUsersSubsectionPath,
 } from '@/features/super-admin/lib/adminRoutes';
 import type { AdminSection, AdminSectionId } from '@/features/super-admin/types';
@@ -38,6 +39,7 @@ export default function SuperAdminSidebar({
 }: SuperAdminSidebarProps) {
   const searchParams = useSearchParams();
   const activeUsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
+  const activePostsView = searchParams.get('view') === 'featured' ? 'featured' : 'editor';
 
   return (
     <aside className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
@@ -61,7 +63,8 @@ export default function SuperAdminSidebar({
                 </span>
                 {(section.id === 'divisions' ||
                   section.id === 'groups' ||
-                  section.id === 'users') && (
+                  section.id === 'users' ||
+                  section.id === 'posts') && (
                   <ChevronRight
                     className={`h-4 w-4 transition-transform ${isActive ? 'rotate-90' : ''}`}
                   />
@@ -97,11 +100,44 @@ export default function SuperAdminSidebar({
               {section.id === 'users' && isActive && (
                 <UserNestedNavItems activeView={activeUsersView} />
               )}
+
+              {section.id === 'posts' && isActive && (
+                <PostNestedNavItems activeView={activePostsView} />
+              )}
             </div>
           );
         })}
       </nav>
     </aside>
+  );
+}
+
+function PostNestedNavItems({ activeView }: { activeView: 'editor' | 'featured' }) {
+  const items = [
+    { id: 'editor' as const, name: 'Đăng bài' },
+    { id: 'featured' as const, name: 'Bài viết nổi bật trên trang chủ' },
+  ];
+
+  return (
+    <div className="mt-1 space-y-1 pl-4">
+      {items.map((item) => {
+        const isItemActive = item.id === activeView;
+
+        return (
+          <Link
+            key={item.id}
+            href={getPostsSubsectionPath(item.id)}
+            className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm font-semibold transition-colors ${
+              isItemActive
+                ? 'bg-violet-50 text-violet-700'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
+            }`}
+          >
+            <span className="truncate">{item.name}</span>
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 

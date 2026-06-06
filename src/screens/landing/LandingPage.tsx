@@ -1,14 +1,8 @@
 'use client';
 
-import { listLatestPublishedPosts, type Post } from '@/services/posts';
+import { listHomeFeaturedPosts, type Post } from '@/services/posts';
 import volunteerHero from '@/assets/hero.webp';
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MouseEvent,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
 import {
   ArrowRight,
   ChevronLeft,
@@ -80,7 +74,7 @@ export default function LandingPage() {
       setFeaturedPostsError('');
 
       try {
-        const posts = await listLatestPublishedPosts(10);
+        const posts = await listHomeFeaturedPosts(10);
 
         if (isMounted) {
           setFeaturedPosts(posts);
@@ -132,22 +126,31 @@ export default function LandingPage() {
     scrollFeaturedPostsToIndex(activeFeaturedPostIndex);
   }, [activeFeaturedPostIndex, scrollFeaturedPostsToIndex]);
 
-  const scrollFeaturedPosts = useCallback((direction: 'previous' | 'next') => {
-    setActiveFeaturedPostIndex((currentIndex) => {
-      if (featuredPosts.length <= 1) {
-        return 0;
-      }
+  const scrollFeaturedPosts = useCallback(
+    (direction: 'previous' | 'next') => {
+      setActiveFeaturedPostIndex((currentIndex) => {
+        if (featuredPosts.length <= 1) {
+          return 0;
+        }
 
-      if (direction === 'next') {
-        return (currentIndex + 1) % featuredPosts.length;
-      }
+        if (direction === 'next') {
+          return (currentIndex + 1) % featuredPosts.length;
+        }
 
-      return (currentIndex - 1 + featuredPosts.length) % featuredPosts.length;
-    });
-  }, [featuredPosts.length]);
+        return (currentIndex - 1 + featuredPosts.length) % featuredPosts.length;
+      });
+    },
+    [featuredPosts.length],
+  );
 
   function handleFeaturedPostClick(event: MouseEvent<HTMLAnchorElement>, slug: string) {
-    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
       return;
     }
 

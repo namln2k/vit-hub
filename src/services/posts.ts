@@ -84,8 +84,15 @@ interface PostRow {
   published_at: string | null;
 }
 
+interface HomeFeaturedPostRow {
+  post_id: string;
+  display_order: number;
+}
+
 const POST_SELECT =
   'id, title, slug, thumbnail_url, thumbnail_image_key, status, content, created_by, created_at, updated_at, published_at';
+
+const HOME_FEATURED_POSTS_SELECT = 'post_id, display_order';
 
 export async function listAdminPosts(): Promise<Post[]> {
   const { data, error } = await supabase
@@ -116,6 +123,142 @@ export async function listLatestPublishedPosts(limit = 10): Promise<Post[]> {
   }
 
   return data.map(mapPostRow);
+}
+
+export async function listPublishedPostsForFeaturedSelection(): Promise<Post[]> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .returns<PostRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map(mapPostRow);
+}
+
+export async function listHomeFeaturedPosts(limit = 10): Promise<Post[]> {
+  let configuredPostIds: string[];
+
+  try {
+    configuredPostIds = await getConfiguredHomeFeaturedPostIds();
+  } catch (error) {
+    if (isMissingHomeFeaturedPostsTableError(error)) {
+      return listLatestPublishedPosts(limit);
+    }
+
+    throw error;
+  }
+
+  if (configuredPostIds.length === 0) {
+    return listLatestPublishedPosts(limit);
+  }
+
+  const posts = await listPublishedPostsByIds(configuredPostIds);
+  const postById = new Map(posts.map((post) => [post.id, post]));
+
+  return configuredPostIds
+    .map((postId) => postById.get(postId))
+    .filter((post): post is Post => Boolean(post))
+    .slice(0, limit);
+}
+
+export async function getHomeFeaturedPostIds(): Promise<string[]> {
+  try {
+    return await getConfiguredHomeFeaturedPostIds();
+  } catch (error) {
+    if (isMissingHomeFeaturedPostsTableError(error)) {
+      throw new Error(
+        'Đã xảy ra lỗi hệ thống khi tải cấu hình bài viết nổi bật. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
+      );
+    }
+
+    throw error;
+  }
+}
+
+export async function saveHomeFeaturedPostIds(postIds: string[]): Promise<void> {
+  const uniquePostIds = Array.from(new Set(postIds));
+  const { error: deleteError } = await supabase
+    .from('home_featured_posts')
+    .delete()
+    .gte('display_order', 0);
+
+  if (deleteError) {
+    throw createHomeFeaturedPostsWriteError(deleteError);
+  }
+
+  if (uniquePostIds.length === 0) {
+    return;
+  }
+
+  const rows = uniquePostIds.map((postId, index) => ({
+    post_id: postId,
+    display_order: index,
+  }));
+  const { error } = await supabase.from('home_featured_posts').insert(rows);
+
+  if (error) {
+    throw createHomeFeaturedPostsWriteError(error);
+  }
+}
+
+async function getConfiguredHomeFeaturedPostIds(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('home_featured_posts')
+    .select(HOME_FEATURED_POSTS_SELECT)
+    .order('display_order', { ascending: true })
+    .returns<HomeFeaturedPostRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map((row) => row.post_id);
+}
+
+async function listPublishedPostsByIds(postIds: string[]): Promise<Post[]> {
+  if (postIds.length === 0) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('status', 'published')
+    .in('id', postIds)
+    .returns<PostRow[]>();
+
+  if (error) {
+    throw error;
+  }
+
+  return data.map(mapPostRow);
+}
+
+function createHomeFeaturedPostsWriteError(error: unknown) {
+  if (isMissingHomeFeaturedPostsTableError(error)) {
+    return new Error(
+      'Đã xảy ra lỗi hệ thống khi lưu cấu hình bài viết nổi bật. Vui lòng thử lại sau hoặc liên hệ quản trị viên.',
+    );
+  }
+
+  return error;
+}
+
+function isMissingHomeFeaturedPostsTableError(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+
+  const maybeError = error as { code?: unknown; message?: unknown };
+  const message = typeof maybeError.message === 'string' ? maybeError.message : '';
+
+  return maybeError.code === '42P01' || message.includes('home_featured_posts');
 }
 
 export async function getPublishedPostBySlug(slug: string): Promise<Post | null> {
