@@ -1,7 +1,8 @@
 'use client';
 
+import { loadOrCreateAppUser, mapSupabaseUser } from '@/features/auth/lib/authUserSession';
 import { deleteAvatar, uploadAvatar } from '@/services/avatarUpload';
-import { getUser, upsertUser, usernameExists } from '@/services/users';
+import { upsertUser } from '@/services/users';
 import { supabase } from '@/services/supabase';
 import {
   AuthContext,
@@ -13,23 +14,8 @@ import {
   type UpdateUserNicknameData,
   type UpdateUserPersonnelData,
 } from './auth';
-import type { Session, User } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-
-function getStringMetadata(user: User, key: string) {
-  const value = user.user_metadata[key];
-  return typeof value === 'string' ? value : '';
-}
-
-function mapSupabaseUser(user: User): AuthUser {
-  return {
-    id: user.id,
-    uid: user.id,
-    email: user.email ?? null,
-    displayName: getStringMetadata(user, 'full_name') || getStringMetadata(user, 'name') || null,
-    photoURL: getStringMetadata(user, 'avatar_url') || null,
-  };
-}
 
 function getAuthErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : '';
@@ -81,92 +67,11 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-function getUserNameParts(displayName: string | null, email: string) {
-  const nameParts = displayName?.trim().split(/\s+/).filter(Boolean) ?? [];
-
-  if (nameParts.length === 0) {
-    return {
-      firstName: email.split('@')[0] || 'User',
-      middleName: '',
-      lastName: '',
-    };
-  }
-
-  if (nameParts.length === 1) {
-    return {
-      firstName: nameParts[0],
-      middleName: '',
-      lastName: '',
-    };
-  }
-
-  return {
-    firstName: nameParts[nameParts.length - 1],
-    middleName: nameParts.slice(1, -1).join(' '),
-    lastName: nameParts[0],
-  };
-}
-
-async function createUniqueUsername(email: string): Promise<string> {
-  const fallback = `user${Date.now().toString(36)}`;
-  const baseUsername =
-    email
-      .split('@')[0]
-      ?.toLowerCase()
-      .replace(/[^a-z0-9_]/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 20) || fallback;
-
-  let username =
-    baseUsername.length >= 3 ? baseUsername : `${baseUsername}${fallback}`.slice(0, 20);
-  let suffix = 1;
-
-  while (await usernameExists(username)) {
-    const suffixText = suffix.toString();
-    username = `${baseUsername.slice(0, 20 - suffixText.length)}${suffixText}`;
-    suffix += 1;
-  }
-
-  return username;
-}
-
-async function createAppUserFromAuthUser(user: User): Promise<AppUser> {
-  const email = user.email ?? '';
-  const displayName =
-    getStringMetadata(user, 'full_name') || getStringMetadata(user, 'name') || null;
-  const userNameParts = getUserNameParts(displayName, email);
-  const username = getStringMetadata(user, 'username') || (await createUniqueUsername(email));
-  const appUser: AppUser = {
-    uid: user.id,
-    email,
-    firstName: getStringMetadata(user, 'first_name') || userNameParts.firstName,
-    lastName: getStringMetadata(user, 'last_name') || userNameParts.lastName,
-    middleName: getStringMetadata(user, 'middle_name') || userNameParts.middleName,
-    nickname: getStringMetadata(user, 'nickname'),
-    username,
-    phoneNumber: '-',
-    schoolName: '',
-    enterYear: '',
-    cohort: '',
-    gender: null,
-    avatarUrl: getStringMetadata(user, 'avatar_url'),
-    avatarKey: getStringMetadata(user, 'avatar_key'),
-    role: 'member',
-  };
-
-  return upsertUser(appUser);
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(false);
-
-  const loadAppUser = useCallback(async (user: User) => {
-    return (await getUser(user.id)) ?? (await createAppUserFromAuthUser(user));
-  }, []);
 
   const applySession = useCallback(async (session: Session | null) => {
     if (!isMountedRef.current) {
@@ -184,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUser(mapSupabaseUser(user));
 
     try {
-      const loadedUser = await loadAppUser(user);
+      const loadedUser = await loadOrCreateAppUser(user);
 
       if (isMountedRef.current) {
         setAppUser(loadedUser);
@@ -196,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAppUser(null);
       }
     }
-  }, [loadAppUser]);
+  }, []);
 
   useEffect(() => {
     isMountedRef.current = true;
