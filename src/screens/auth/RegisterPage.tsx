@@ -2,49 +2,31 @@
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Home, ImagePlus, UserPlus, X } from 'lucide-react';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { Home, UserPlus } from 'lucide-react';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
-import PasswordInput from '@/shared/form/PasswordInput';
-import { validateAvatarFile } from '@/services/avatarUpload';
 import GoogleSignIn from '@/features/auth/components/GoogleSignIn';
-import AvatarEditor from '@/shared/avatar/AvatarEditor';
+import RegisterAvatarField from '@/features/auth/components/RegisterAvatarField';
+import RegisterFields from '@/features/auth/components/RegisterFields';
+import { useRegisterAvatar } from '@/features/auth/hooks/useRegisterAvatar';
+import { registerSchema, type RegisterFormData } from '@/features/auth/lib/registerForm';
 import { toast } from 'sonner';
-
-const registerSchema = z.object({
-  lastName: z.string().min(1, 'Họ không được để trống'),
-  middleName: z.string().optional(),
-  firstName: z.string().min(1, 'Tên không được để trống'),
-  nickname: z.string().optional(),
-  username: z
-    .string()
-    .min(3, 'Username phải có ít nhất 3 ký tự')
-    .max(20, 'Username tối đa 20 ký tự')
-    .regex(/^[a-zA-Z0-9_]+$/, 'Username chỉ được chứa chữ cái, số và dấu gạch dưới'),
-  email: z.email('Email không hợp lệ'),
-  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
-});
-
-type RegisterFormData = z.input<typeof registerSchema>;
-
-function RequiredMark() {
-  return (
-    <span aria-hidden="true" className="ml-0.5 text-red-500">
-      *
-    </span>
-  );
-}
 
 export default function RegisterPage() {
   const { signInWithGoogle, signUp } = useAuth();
   const router = useRouter();
-  const [avatarFile, setAvatarFile] = useState<File | undefined>();
-  const [avatarFileToEdit, setAvatarFileToEdit] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const {
+    avatarFile,
+    avatarFileToEdit,
+    avatarPreviewUrl,
+    cancelAvatarEdit,
+    handleAvatarChange,
+    removeAvatar,
+    saveEditedAvatar,
+  } = useRegisterAvatar();
 
   const {
     register,
@@ -53,62 +35,6 @@ export default function RegisterPage() {
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
-
-  useEffect(() => {
-    if (!avatarFile) {
-      setAvatarPreviewUrl('');
-      return;
-    }
-
-    let isActive = true;
-    const reader = new FileReader();
-
-    setAvatarPreviewUrl('');
-    reader.onload = () => {
-      if (isActive && typeof reader.result === 'string') {
-        setAvatarPreviewUrl(reader.result);
-      }
-    };
-    reader.onerror = () => {
-      if (isActive) {
-        toast.error('Không thể đọc ảnh đã chọn.', { id: 'register-avatar-error' });
-      }
-    };
-    reader.readAsDataURL(avatarFile);
-
-    return () => {
-      isActive = false;
-      reader.abort();
-    };
-  }, [avatarFile]);
-
-  function handleAvatarChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-      return;
-    }
-
-    const validationError = validateAvatarFile(file);
-
-    if (validationError) {
-      toast.error(validationError, { id: 'register-avatar-error' });
-      return;
-    }
-
-    setAvatarFileToEdit(file);
-  }
-
-  function removeAvatar() {
-    setAvatarFile(undefined);
-    setAvatarFileToEdit(null);
-  }
-
-  function saveEditedAvatar(editedAvatar: File) {
-    setAvatarFile(editedAvatar);
-    setAvatarFileToEdit(null);
-  }
 
   async function onSubmit(data: RegisterFormData) {
     try {
@@ -175,140 +101,16 @@ export default function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ảnh đại diện <span className="text-gray-400 font-normal">(tuỳ chọn)</span>
-            </label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
-                {avatarPreviewUrl ? (
-                  <img
-                    src={avatarPreviewUrl}
-                    alt="Ảnh đại diện đã chọn"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <ImagePlus className="w-6 h-6 text-gray-400" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
-                    Chọn ảnh
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      onChange={handleAvatarChange}
-                      className="sr-only"
-                    />
-                  </label>
-                  {avatarFile && (
-                    <button
-                      type="button"
-                      onClick={removeAvatar}
-                      className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 text-gray-500 hover:text-red-600 hover:border-red-200 cursor-pointer"
-                      title="Xoá ảnh đã chọn"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 mt-1">JPG, PNG hoặc WebP, tối đa 1 MB.</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Họ
-                <RequiredMark />
-              </label>
-              <input
-                {...register('lastName')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-                placeholder="Nguyễn"
-              />
-              {errors.lastName && (
-                <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tên đệm</label>
-              <input
-                {...register('middleName')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-                placeholder="Văn"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tên
-                <RequiredMark />
-              </label>
-              <input
-                {...register('firstName')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-                placeholder="An"
-              />
-              {errors.firstName && (
-                <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
-            <input
-              {...register('nickname')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              placeholder="Nickname"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Username
-              <RequiredMark />
-            </label>
-            <input
-              {...register('username')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              placeholder="nguyenvanan"
-            />
-            {errors.username && (
-              <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-              <RequiredMark />
-            </label>
-            <input
-              type="email"
-              {...register('email')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              placeholder="email@example.com"
-            />
-            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Mật khẩu
-              <RequiredMark />
-            </label>
-            <PasswordInput
-              {...register('password')}
-              className="w-full py-2 pl-3 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
-              placeholder="Ít nhất 8 ký tự"
-            />
-            {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-            )}
-          </div>
+          <RegisterAvatarField
+            avatarFile={avatarFile}
+            avatarFileToEdit={avatarFileToEdit}
+            avatarPreviewUrl={avatarPreviewUrl}
+            onAvatarChange={handleAvatarChange}
+            onAvatarEditCancel={cancelAvatarEdit}
+            onAvatarRemove={removeAvatar}
+            onAvatarSave={saveEditedAvatar}
+          />
+          <RegisterFields errors={errors} register={register} />
 
           <button
             type="submit"
@@ -340,14 +142,6 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
-
-      {avatarFileToEdit && (
-        <AvatarEditor
-          file={avatarFileToEdit}
-          onCancel={() => setAvatarFileToEdit(null)}
-          onSave={saveEditedAvatar}
-        />
-      )}
     </div>
   );
 }
