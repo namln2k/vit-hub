@@ -15,6 +15,10 @@ export function getUsersSubsectionPath(view: 'list' | 'import') {
   return `${getAdminSectionPath('users')}?view=${view}`;
 }
 
+export function getPostsSubsectionPath(view: 'editor' | 'featured') {
+  return `${getAdminSectionPath('posts')}?view=${view}`;
+}
+
 export function getAdminItemPath(sectionId: 'divisions' | 'groups', item: AdminRouteItem) {
   return `${getAdminSectionPath(sectionId)}/${getAdminItemSlug(item)}`;
 }

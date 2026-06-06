@@ -1,4 +1,4 @@
-import DivisionsIntroduction from '@/screens/DivisionsIntroduction';
+import DivisionsIntroduction from '@/screens/landing/DivisionsIntroduction';
 
 export const dynamic = 'force-dynamic';
 

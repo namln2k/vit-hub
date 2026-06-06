@@ -1,12 +1,7 @@
-import {
-  createPost,
-  deletePost,
-  listAdminPosts,
-  updatePost,
-  type Post,
-} from '@/services/posts';
+import { createPost, deletePost, listAdminPosts, updatePost, type Post } from '@/services/posts';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
+import HomeFeaturedPostsManagement from '@/features/super-admin/components/post/HomeFeaturedPostsManagement';
 import PostContentBlocksEditor from '@/features/super-admin/components/post/components/PostContentBlocksEditor';
 import PostListSidebar from '@/features/super-admin/components/post/components/PostListSidebar';
 import PostMetadataFields from '@/features/super-admin/components/post/components/PostMetadataFields';
@@ -22,10 +17,22 @@ import {
   upsertPostByUpdatedAt,
 } from '@/features/super-admin/lib/postFormUtils';
 import { Plus } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 export default function PostsManagement() {
+  const searchParams = useSearchParams();
+  const activeView = searchParams.get('view') === 'featured' ? 'featured' : 'editor';
+
+  if (activeView === 'featured') {
+    return <HomeFeaturedPostsManagement />;
+  }
+
+  return <PostEditorManagement />;
+}
+
+function PostEditorManagement() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,9 +99,7 @@ export default function PostsManagement() {
     event.preventDefault();
 
     const input = buildPostWrite(form);
-    const successMessage = isEditing
-      ? 'Đã lưu thay đổi bài viết.'
-      : 'Đã tạo bài viết thành công.';
+    const successMessage = isEditing ? 'Đã lưu thay đổi bài viết.' : 'Đã tạo bài viết thành công.';
 
     if (!input.title) {
       showSaveError('Vui lòng nhập tiêu đề bài viết.');
@@ -280,7 +285,7 @@ function getErrorMessage(error: unknown) {
     const fullMessage = [message, details, hint].filter(Boolean).join(' ');
 
     if (fullMessage.includes('thumbnail_url') || fullMessage.includes('thumbnail_image_key')) {
-      return `${fullMessage} Hãy chạy SQL trong docs/post-thumbnail-columns.sql để thêm cột thumbnail cho bảng posts.`;
+      return 'Đã xảy ra lỗi hệ thống khi lưu thumbnail bài viết. Vui lòng thử lại sau hoặc liên hệ quản trị viên.';
     }
 
     return fullMessage;

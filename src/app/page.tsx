@@ -1,4 +1,4 @@
-import LandingPage from '@/screens/LandingPage';
+import LandingPage from '@/screens/landing/LandingPage';
 
 export const dynamic = 'force-dynamic';
 

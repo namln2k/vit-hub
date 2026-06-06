@@ -2,7 +2,6 @@
 
 import { getPublishedPostBySlug, type Post } from '@/services/posts';
 import PostRenderer from '@/features/posts/components/PostRenderer';
-import Header from '@/shared/layout/Header';
 import Sharingan from '@/shared/loading/Sharingan';
 import { ArrowLeft } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -51,7 +50,6 @@ export default function PostPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header />
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
         {isLoading ? (
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500">
