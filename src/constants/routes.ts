@@ -14,6 +14,7 @@ export const APP_ROUTES = {
 export const API_ROUTES = {
   authRegister: '/api/auth/register',
   avatarsPresign: '/api/avatars/presign',
+  badmintonGames: '/api/badminton/games',
   postsPresign: '/api/posts/presign',
   usersImport: '/api/users/import',
 } as const;
@@ -30,6 +31,14 @@ export function isPathInRoute(pathname: string, route: string) {
 
 export function getPostPath(slug: string) {
   return `/posts/${slug}`;
+}
+
+export function getPublicBadmintonGamePath(gameId: string) {
+  return `/badminton/games/${gameId}`;
+}
+
+export function getBadmintonGameManagementPath(gameId: string) {
+  return `/features/badminton/games/${gameId}`;
 }
 
 export function withRouteQuery(pathname: string, params: Record<string, string>) {
