@@ -1,3 +1,4 @@
+import { APP_ROUTES } from '@/constants/routes';
 import type { AdminSectionId } from '@/features/super-admin/types';
 
 interface AdminRouteItem {
@@ -5,10 +6,8 @@ interface AdminRouteItem {
   name: string;
 }
 
-const SUPER_ADMIN_BASE_PATH = '/super-admin';
-
 export function getAdminSectionPath(sectionId: AdminSectionId) {
-  return `${SUPER_ADMIN_BASE_PATH}/${sectionId}`;
+  return `${APP_ROUTES.superAdmin}/${sectionId}`;
 }
 
 export function getUsersSubsectionPath(view: 'list' | 'import') {

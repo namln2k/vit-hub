@@ -1,14 +1,12 @@
 'use client';
 
 import { LayoutGrid, LogIn, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { APP_ROUTES } from '@/constants/routes';
 import { useAuth } from '@/contexts/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
 import AvatarMenu from '@/shared/layout/AvatarMenu';
 import UserSearch from '@/shared/layout/UserSearch';
-import {
-  getAllowedAvatarMenuFeatures,
-  type AvatarMenuFeatureId,
-} from '@/constants/avatarMenuAcl';
+import { getAllowedAvatarMenuFeatures, type AvatarMenuFeatureId } from '@/constants/avatarMenuAcl';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
@@ -27,7 +25,7 @@ export default function Header() {
   async function handleSignOut() {
     try {
       await signOut();
-      router.push('/login');
+      router.push(APP_ROUTES.login);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Không thể đăng xuất.', {
         id: 'sign-out-error',
@@ -58,7 +56,7 @@ export default function Header() {
         <div className="grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <button
             type="button"
-            onClick={() => router.push('/')}
+            onClick={() => router.push(APP_ROUTES.home)}
             className="flex cursor-pointer items-center gap-2 text-xl font-bold text-indigo-600"
           >
             VIT Hub
@@ -81,7 +79,7 @@ export default function Header() {
             </div>
           ) : (
             <Link
-              href="/login"
+              href={APP_ROUTES.login}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
             >
               <LogIn className="h-4 w-4" />

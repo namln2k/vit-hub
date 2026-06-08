@@ -1,3 +1,4 @@
+import { APP_ROUTES } from '@/constants/routes';
 import Link from 'next/link';
 
 export default function NotFound() {
@@ -9,7 +10,7 @@ export default function NotFound() {
           Trang bạn đang tìm không tồn tại hoặc đã được di chuyển.
         </p>
         <Link
-          href="/"
+          href={APP_ROUTES.home}
           className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-bold text-white transition-colors hover:bg-slate-800"
         >
           Về trang chủ

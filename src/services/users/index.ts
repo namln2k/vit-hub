@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@/constants/routes';
 import { supabase } from '@/services/supabase';
 import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
@@ -186,7 +187,7 @@ export async function importUsers(users: ImportUserInput[]): Promise<number> {
     throw new Error('Bạn cần đăng nhập để import nhân sự.');
   }
 
-  const response = await fetch('/api/users/import', {
+  const response = await fetch(API_ROUTES.usersImport, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${session.access_token}`,

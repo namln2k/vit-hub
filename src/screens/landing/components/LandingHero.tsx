@@ -1,4 +1,5 @@
 import volunteerHero from '@/assets/hero.webp';
+import { APP_ROUTES } from '@/constants/routes';
 import { ArrowRight, ExternalLink, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
@@ -37,7 +38,7 @@ export default function LandingHero() {
               Theo dõi Facebook
             </a>
             <Link
-              href="/register"
+              href={APP_ROUTES.register}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/12 px-5 py-3 text-sm font-bold text-white ring-1 ring-white/25 transition-colors hover:bg-white/20"
             >
               Tham gia VIT Hub

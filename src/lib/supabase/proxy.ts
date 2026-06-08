@@ -1,14 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
+import { APP_ROUTES, PROTECTED_APP_ROUTES, isPathInRoute } from '@/constants/routes';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/profile', '/features', '/super-admin'];
-
 function isProtectedPath(pathname: string) {
-  return PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return PROTECTED_APP_ROUTES.some((route) => isPathInRoute(pathname, route));
 }
 
 function isSuperAdminPath(pathname: string) {
-  return pathname === '/super-admin' || pathname.startsWith('/super-admin/');
+  return isPathInRoute(pathname, APP_ROUTES.superAdmin);
 }
 
 function getSupabaseUrl() {
@@ -61,7 +60,7 @@ export async function updateSession(request: NextRequest) {
 
   if (!supabaseUrl || !publishableKey) {
     if (isProtectedPath(request.nextUrl.pathname)) {
-      return redirectTo(request, '/login');
+      return redirectTo(request, APP_ROUTES.login);
     }
 
     return supabaseResponse;
@@ -90,7 +89,7 @@ export async function updateSession(request: NextRequest) {
 
   if (isProtectedPath(pathname) && !uid) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = APP_ROUTES.login;
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
@@ -99,7 +98,7 @@ export async function updateSession(request: NextRequest) {
     const role = await getUserRole(uid);
 
     if (role !== 'super_admin') {
-      return redirectTo(request, '/profile');
+      return redirectTo(request, APP_ROUTES.profile);
     }
   }
 
