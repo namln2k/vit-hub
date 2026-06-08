@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { APP_ROUTES } from '@/constants/routes';
 import Link from 'next/link';
 import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
@@ -77,7 +78,7 @@ export default function ForgotPasswordPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Đã nhớ mật khẩu?{' '}
-          <Link href="/login" className="text-indigo-600 font-medium hover:underline">
+          <Link href={APP_ROUTES.login} className="text-indigo-600 font-medium hover:underline">
             Đăng nhập
           </Link>
         </p>

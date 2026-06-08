@@ -1,3 +1,4 @@
+import { APP_ROUTES, isPathInRoute } from '@/constants/routes';
 import type { UserRole } from '@/constants/userRoles';
 
 export type AvatarMenuFeatureId = 'admin' | 'features' | 'profile';
@@ -12,17 +13,17 @@ export const AVATAR_MENU_FEATURES = {
   admin: {
     id: 'admin',
     label: 'Quản trị',
-    to: '/super-admin',
+    to: APP_ROUTES.superAdmin,
   },
   features: {
     id: 'features',
     label: 'Tính năng',
-    to: '/features',
+    to: APP_ROUTES.features,
   },
   profile: {
     id: 'profile',
     label: 'Hồ sơ cá nhân',
-    to: '/profile',
+    to: APP_ROUTES.profile,
   },
 } as const satisfies Record<AvatarMenuFeatureId, AvatarMenuFeature>;
 
@@ -42,15 +43,15 @@ function normalizePathname(pathname: string) {
 function getCurrentFeatureId(pathname: string): AvatarMenuFeatureId | null {
   const normalizedPathname = normalizePathname(pathname);
 
-  if (normalizedPathname === '/profile') {
+  if (normalizedPathname === APP_ROUTES.profile) {
     return 'profile';
   }
 
-  if (normalizedPathname === '/features') {
+  if (normalizedPathname === APP_ROUTES.features) {
     return 'features';
   }
 
-  if (normalizedPathname === '/super-admin' || normalizedPathname.startsWith('/super-admin/')) {
+  if (isPathInRoute(normalizedPathname, APP_ROUTES.superAdmin)) {
     return 'admin';
   }
 

@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@/constants/routes';
 import { supabase } from '@/services/supabase';
 
 const MAX_SELECTED_POST_IMAGE_BYTES = 10 * 1024 * 1024;
@@ -109,7 +110,7 @@ export async function uploadPostImage(file: File): Promise<UploadedPostImage> {
   }
 
   const accessToken = await getAccessToken();
-  const presignResponse = await fetch('/api/posts/presign', {
+  const presignResponse = await fetch(API_ROUTES.postsPresign, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -158,7 +159,7 @@ export async function deletePostImages(images: PostImageReference[]): Promise<vo
   }
 
   const accessToken = await getAccessToken();
-  const response = await fetch('/api/posts/presign', {
+  const response = await fetch(API_ROUTES.postsPresign, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`,

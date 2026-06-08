@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Home, UserPlus } from 'lucide-react';
+import { APP_ROUTES, withRouteQuery } from '@/constants/routes';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import GoogleSignIn from '@/features/auth/components/GoogleSignIn';
@@ -52,14 +53,14 @@ export default function RegisterPage() {
 
       if (result.needsEmailConfirmation) {
         router.replace(
-          `/login?message=${encodeURIComponent(
-            'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
-          )}`,
+          withRouteQuery(APP_ROUTES.login, {
+            message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
+          }),
         );
         return;
       }
 
-      router.replace('/profile');
+      router.replace(APP_ROUTES.profile);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Đã xảy ra lỗi khi đăng ký.', {
         id: 'register-error',
@@ -86,7 +87,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <Link
-          href="/"
+          href={APP_ROUTES.home}
           className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors mb-6"
         >
           <Home className="w-4 h-4" />
@@ -137,7 +138,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Đã có tài khoản?{' '}
-          <Link href="/login" className="text-indigo-600 font-medium hover:underline">
+          <Link href={APP_ROUTES.login} className="text-indigo-600 font-medium hover:underline">
             Đăng nhập
           </Link>
         </p>

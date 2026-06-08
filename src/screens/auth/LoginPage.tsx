@@ -6,10 +6,15 @@ import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Home, LogIn } from 'lucide-react';
+import { APP_ROUTES } from '@/constants/routes';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/useAuth';
 import PasswordInput from '@/shared/form/PasswordInput';
 import GoogleSignIn from '@/features/auth/components/GoogleSignIn';
+import {
+  getDefaultAuthenticatedRoute,
+  getSafeAuthNextPath,
+} from '@/features/auth/lib/authRedirects';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
@@ -25,7 +30,7 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const message = searchParams.get('message') ?? '';
-  const next = searchParams.get('next') || '/profile';
+  const next = getSafeAuthNextPath(searchParams.get('next'));
 
   const {
     register,
@@ -44,8 +49,8 @@ export default function LoginPage() {
   async function onSubmit(data: LoginFormData) {
     try {
       setLoading(true);
-      await signIn(data.email, data.password);
-      router.replace(next);
+      const appUser = await signIn(data.email, data.password);
+      router.replace(next ?? getDefaultAuthenticatedRoute(appUser.role));
     } catch {
       toast.error(
         'Email hoặc mật khẩu không chính xác. Nếu bạn đã đăng ký bằng Google, vui lòng đăng nhập bằng Google hoặc dùng Quên mật khẩu.',
@@ -59,7 +64,7 @@ export default function LoginPage() {
   async function handleGoogleSignIn() {
     try {
       setLoading(true);
-      await signInWithGoogle();
+      await signInWithGoogle(next);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Không thể đăng nhập bằng Google.', {
         id: 'google-login-error',
@@ -73,7 +78,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <Link
-          href="/"
+          href={APP_ROUTES.home}
           className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 transition-colors mb-6"
         >
           <Home className="w-4 h-4" />
@@ -112,7 +117,7 @@ export default function LoginPage() {
             )}
             <div className="text-right mt-1">
               <Link
-                href="/forgot-password"
+                href={APP_ROUTES.forgotPassword}
                 className="text-indigo-600 text-sm font-medium hover:underline"
               >
                 Quên mật khẩu?
@@ -141,7 +146,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-500 mt-6">
           Chưa có tài khoản?{' '}
-          <Link href="/register" className="text-indigo-600 font-medium hover:underline">
+          <Link href={APP_ROUTES.register} className="text-indigo-600 font-medium hover:underline">
             Đăng ký ngay
           </Link>
         </p>

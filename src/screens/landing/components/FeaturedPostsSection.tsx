@@ -1,5 +1,6 @@
 'use client';
 
+import { getPostPath } from '@/constants/routes';
 import { listHomeFeaturedPosts, type Post } from '@/services/posts';
 import { ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
@@ -173,7 +174,7 @@ export default function FeaturedPostsSection() {
       }
 
       event.preventDefault();
-      router.push(`/posts/${slug}`);
+      router.push(getPostPath(slug));
     },
     [router],
   );

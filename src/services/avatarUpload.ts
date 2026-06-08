@@ -1,3 +1,4 @@
+import { API_ROUTES } from '@/constants/routes';
 import { supabase } from '@/services/supabase';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
@@ -83,7 +84,7 @@ export async function uploadAvatar(file: File): Promise<UploadedAvatar> {
   await validateStoredAvatar(file);
 
   const accessToken = await getAccessToken();
-  const presignResponse = await fetch('/api/avatars/presign', {
+  const presignResponse = await fetch(API_ROUTES.avatarsPresign, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -132,7 +133,7 @@ export async function deleteAvatar(avatarKey: string): Promise<void> {
   }
 
   const accessToken = await getAccessToken();
-  const response = await fetch('/api/avatars/presign', {
+  const response = await fetch(API_ROUTES.avatarsPresign, {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${accessToken}`,
