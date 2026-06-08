@@ -36,7 +36,7 @@ export default async function PublicBadmintonGameRoute({
                 <Share2 className="h-3.5 w-3.5" />
                 Link chia sẻ công khai
               </div>
-              <h1 className="break-words text-2xl font-black tracking-normal text-slate-950 sm:text-3xl">
+              <h1 className="wrap-break-word text-2xl font-black tracking-normal text-slate-950 sm:text-3xl">
                 {game.name}
               </h1>
               <p className="mt-2 text-sm font-medium text-slate-600">Host: {game.hostName}</p>

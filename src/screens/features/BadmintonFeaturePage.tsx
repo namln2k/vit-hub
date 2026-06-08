@@ -5,15 +5,7 @@ import {
   getBadmintonGameManagementPath,
   getPublicBadmintonGamePath,
 } from '@/constants/routes';
-import {
-  CalendarDays,
-  Clock,
-  ExternalLink,
-  MapPin,
-  Plus,
-  Users,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, ExternalLink, MapPin, Plus, Users, X } from 'lucide-react';
 import {
   createBadmintonGame,
   listMyBadmintonGames,
@@ -21,6 +13,7 @@ import {
 } from '@/services/badminton';
 import type { BadmintonGameBucket, BadmintonGameSummary } from '@/features/badminton/types';
 import Link from 'next/link';
+import Sharingan from '@/shared/loading/Sharingan';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -37,7 +30,7 @@ const emptyForm: CreateBadmintonGameData = {
 const bucketLabels: Record<BadmintonGameBucket, string> = {
   upcoming: 'Sắp diễn ra',
   finished: 'Đã kết thúc',
-  deleted: 'Đã xóa mềm',
+  deleted: 'Đã hủy',
 };
 
 function formatDate(value: string) {
@@ -74,13 +67,13 @@ function GameCard({ game }: GameCardProps) {
         <div className="min-w-0">
           <Link
             href={getBadmintonGameManagementPath(game.id)}
-            className="break-words text-base font-bold text-slate-950 transition-colors hover:text-emerald-700"
+            className="wrap-break-word text-base font-bold text-slate-950 transition-colors hover:text-emerald-700"
           >
             {game.name}
           </Link>
           <p className="mt-1 text-sm font-medium text-slate-600">Host: {game.hostName}</p>
         </div>
-        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600">
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-600 whitespace-nowrap">
           {bucketLabels[game.bucket]}
         </span>
       </div>
@@ -113,6 +106,7 @@ function GameCard({ game }: GameCardProps) {
         </Link>
         <Link
           href={publicPath}
+          target="_blank"
           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
         >
           <ExternalLink className="h-4 w-4" />
@@ -120,6 +114,21 @@ function GameCard({ game }: GameCardProps) {
         </Link>
       </div>
     </article>
+  );
+}
+
+function GamesLoadingOverlay() {
+  return (
+    <div
+      className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/20 backdrop-blur-[1px]"
+      role="status"
+      aria-live="polite"
+      aria-label="Đang tải kèo cầu lông"
+    >
+      <div className="rounded-full shadow-lg ring-1 ring-slate-200">
+        <Sharingan size={64} label="Đang tải kèo cầu lông" />
+      </div>
+    </div>
   );
 }
 
@@ -183,9 +192,7 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
 
       <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
         <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">
-            Tên kèo tuỳ chọn
-          </span>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">Tên kèo tuỳ chọn</span>
           <input
             value={form.name}
             onChange={(event) => updateForm('name', event.target.value)}
@@ -309,8 +316,9 @@ export default function BadmintonFeaturePage() {
           <div>
             <Link
               href={APP_ROUTES.features}
-              className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950"
+              className="h-9 mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
             >
+              <ArrowLeft className="h-4 w-4" />
               Tính năng
             </Link>
             <h1 className="text-2xl font-black tracking-normal text-slate-950">Cầu lông</h1>
@@ -339,37 +347,39 @@ export default function BadmintonFeaturePage() {
         />
       ) : null}
 
-      <section className="grid gap-5 lg:grid-cols-3">
-        {(Object.keys(bucketLabels) as BadmintonGameBucket[]).map((bucket) => (
-          <div key={bucket} className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold text-slate-950">{bucketLabels[bucket]}</h2>
-              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600">
-                {groupedGames[bucket].length}
-              </span>
-            </div>
-
-            {isLoading ? (
-              <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-500">
-                Đang tải...
-              </p>
-            ) : error ? (
-              <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-                {error}
-              </p>
-            ) : groupedGames[bucket].length > 0 ? (
-              <div className="space-y-3">
-                {groupedGames[bucket].map((game) => (
-                  <GameCard key={game.id} game={game} />
-                ))}
+      <section className="relative min-h-52">
+        {isLoading ? <GamesLoadingOverlay /> : null}
+        <div className="grid gap-5 lg:grid-cols-3">
+          {(Object.keys(bucketLabels) as BadmintonGameBucket[]).map((bucket) => (
+            <div
+              key={bucket}
+              className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-base font-bold text-slate-950">{bucketLabels[bucket]}</h2>
+                <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-600">
+                  {groupedGames[bucket].length}
+                </span>
               </div>
-            ) : (
-              <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-500">
-                Chưa có kèo.
-              </p>
-            )}
-          </div>
-        ))}
+
+              {error ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+                  {error}
+                </p>
+              ) : groupedGames[bucket].length > 0 ? (
+                <div className="space-y-3">
+                  {groupedGames[bucket].map((game) => (
+                    <GameCard key={game.id} game={game} />
+                  ))}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-slate-500">
+                  Chưa có kèo.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
