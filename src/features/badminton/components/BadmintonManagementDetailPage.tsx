@@ -1,10 +1,8 @@
 'use client';
 
+import { APP_ROUTES, getPublicBadmintonGamePath } from '@/constants/routes';
 import BadmintonCostManagementPanel from '@/features/badminton/components/BadmintonCostManagementPanel';
-import {
-  getPublicBadmintonGamePath,
-  APP_ROUTES,
-} from '@/constants/routes';
+import type { BadmintonManagementGame, BadmintonParticipant } from '@/features/badminton/types';
 import {
   getBadmintonManagementGame,
   leaveBadmintonGame,
@@ -14,11 +12,9 @@ import {
   updateBadmintonGame,
   type CreateBadmintonGameData,
 } from '@/services/badminton';
-import type {
-  BadmintonManagementGame,
-  BadmintonParticipant,
-} from '@/features/badminton/types';
+import Sharingan from '@/shared/loading/Sharingan';
 import {
+  ArrowLeft,
   CalendarDays,
   Crown,
   ExternalLink,
@@ -31,8 +27,8 @@ import {
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 
 interface BadmintonManagementDetailPageProps {
@@ -126,7 +122,11 @@ export default function BadmintonManagementDetailPage({
     void loadGame();
   }, [loadGame]);
 
-  async function runAction(actionId: string, action: () => Promise<unknown>, successMessage: string) {
+  async function runAction(
+    actionId: string,
+    action: () => Promise<unknown>,
+    successMessage: string,
+  ) {
     try {
       setPendingAction(actionId);
       await action();
@@ -134,9 +134,12 @@ export default function BadmintonManagementDetailPage({
       await loadGame();
       router.refresh();
     } catch (actionError) {
-      toast.error(actionError instanceof Error ? actionError.message : 'Không thể thực hiện thao tác.', {
-        id: `badminton-${actionId}-error`,
-      });
+      toast.error(
+        actionError instanceof Error ? actionError.message : 'Không thể thực hiện thao tác.',
+        {
+          id: `badminton-${actionId}-error`,
+        },
+      );
     } finally {
       setPendingAction('');
     }
@@ -172,8 +175,17 @@ export default function BadmintonManagementDetailPage({
 
   if (isLoading) {
     return (
-      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-medium text-slate-500">Đang tải kèo cầu lông...</p>
+      <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm min-h-36 relative">
+        <div
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-950/20 backdrop-blur-[1px]"
+          role="status"
+          aria-live="polite"
+          aria-label="Đang tải kèo cầu lông"
+        >
+          <div className="rounded-full shadow-lg ring-1 ring-slate-200">
+            <Sharingan size={48} label="Đang tải kèo cầu lông" />
+          </div>
+        </div>
       </section>
     );
   }
@@ -205,11 +217,12 @@ export default function BadmintonManagementDetailPage({
           <div className="min-w-0">
             <Link
               href={APP_ROUTES.badmintonFeature}
-              className="mb-3 inline-flex text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950"
+              className="h-9 mb-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700"
             >
+              <ArrowLeft className="h-4 w-4" />
               Cầu lông
             </Link>
-            <h1 className="break-words text-2xl font-black tracking-normal text-slate-950">
+            <h1 className="wrap-break-word text-2xl font-black tracking-normal text-slate-950">
               {game.name}
             </h1>
             <div className="mt-3 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">
@@ -237,6 +250,7 @@ export default function BadmintonManagementDetailPage({
           <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
             <Link
               href={publicPath}
+              target="_blank"
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
             >
               <ExternalLink className="h-4 w-4" />
@@ -246,7 +260,11 @@ export default function BadmintonManagementDetailPage({
               <button
                 type="button"
                 onClick={() =>
-                  void runAction('restore', () => restoreBadmintonGame(game.id), 'Đã khôi phục kèo.')
+                  void runAction(
+                    'restore',
+                    () => restoreBadmintonGame(game.id),
+                    'Đã khôi phục kèo.',
+                  )
                 }
                 disabled={Boolean(pendingAction)}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -259,11 +277,7 @@ export default function BadmintonManagementDetailPage({
               <button
                 type="button"
                 onClick={() =>
-                  void runAction(
-                    'delete',
-                    () => softDeleteBadmintonGame(game.id),
-                    'Đã xóa mềm kèo.',
-                  )
+                  void runAction('delete', () => softDeleteBadmintonGame(game.id), 'Đã hủy kèo.')
                 }
                 disabled={Boolean(pendingAction)}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
@@ -286,7 +300,10 @@ export default function BadmintonManagementDetailPage({
         ) : null}
       </section>
 
-      <form onSubmit={handleUpdateGame} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <form
+        onSubmit={handleUpdateGame}
+        className="rounded-lg border border-slate-200 bg-white shadow-sm"
+      >
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-lg font-bold text-slate-950">Thông tin kèo</h2>
         </div>
@@ -374,7 +391,10 @@ export default function BadmintonManagementDetailPage({
       <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-bold text-slate-950">Người tham gia</h2>
-          {game.currentUserStatus === 'active' && game.currentUserRole !== 'host' && !game.isExpired && !game.deletedAt ? (
+          {game.currentUserStatus === 'active' &&
+          game.currentUserRole !== 'host' &&
+          !game.isExpired &&
+          !game.deletedAt ? (
             <button
               type="button"
               onClick={() =>
@@ -408,7 +428,7 @@ export default function BadmintonManagementDetailPage({
                 className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
               >
                 <div className="min-w-0">
-                  <p className="break-words text-sm font-bold text-slate-950">
+                  <p className="wrap-break-word text-sm font-bold text-slate-950">
                     {participant.name}
                     {participant.isGuest ? (
                       <span className="ml-2 text-xs font-bold text-slate-500">Khách</span>

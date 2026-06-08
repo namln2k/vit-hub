@@ -342,7 +342,7 @@ export default function BadmintonCostManagementPanel({
                 <div key={payment.memberId} className="space-y-3 p-3">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="break-words text-sm font-bold text-slate-950">
+                      <p className="wrap-break-word text-sm font-bold text-slate-950">
                         {payment.participantName}
                         {payment.isGuest ? (
                           <span className="ml-2 text-xs font-bold text-slate-500">Khách</span>
