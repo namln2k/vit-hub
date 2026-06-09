@@ -12,7 +12,6 @@ interface CreateGameBody {
   gameTime?: unknown;
   locationName?: unknown;
   locationUrl?: unknown;
-  costSharingEnabled?: unknown;
 }
 
 function readString(value: unknown) {
@@ -87,7 +86,7 @@ export async function POST(request: Request) {
       return jsonResponse({ error: 'Loại kèo không hợp lệ.' }, 400);
     }
 
-    if (!isValidDate(gameDate)) {
+    if (gameDate && !isValidDate(gameDate)) {
       return jsonResponse({ error: 'Ngày chơi không hợp lệ.' }, 400);
     }
 
@@ -103,7 +102,6 @@ export async function POST(request: Request) {
       gameTime,
       locationName: readString(body.locationName),
       locationUrl: readString(body.locationUrl),
-      costSharingEnabled: Boolean(body.costSharingEnabled),
     });
 
     return jsonResponse(result, 201);

@@ -2,7 +2,7 @@
 
 import { APP_ROUTES, getPublicSportGamePath } from '@/constants/routes';
 import SportCostManagementPanel from '@/features/sports/components/SportCostManagementPanel';
-import type { SportManagementGame, SportParticipant } from '@/features/sports/types';
+import type { SportManagementGame, SportParticipant, SportType } from '@/features/sports/types';
 import { SPORT_TYPE_OPTIONS, getSportTypeLabel } from '@/features/sports/sportTypes';
 import { SPORT_TYPE_ICONS, SPORT_TYPE_THEMES } from '@/features/sports/sportTypeUi';
 import {
@@ -49,6 +49,26 @@ const statusLabels = {
   kicked: 'Đã bị kick',
 } as const;
 
+const statusBadgeClasses = {
+  active: 'bg-emerald-100 text-emerald-700',
+  left: 'bg-slate-100 text-slate-700',
+  kicked: 'bg-red-100 text-red-700',
+} as const;
+
+function RequiredMark() {
+  return (
+    <span className="ml-1 text-red-600" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+const typeAccentEffects: Record<SportType, string> = {
+  badminton: 'border-emerald-300 shadow-emerald-200 ring-emerald-300/60',
+  pickleball: 'border-violet-300 shadow-violet-200 ring-violet-300/60',
+  swimming: 'border-cyan-300 shadow-cyan-200 ring-cyan-300/60',
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('vi-VN', {
     dateStyle: 'medium',
@@ -64,7 +84,6 @@ function getEditForm(game: SportManagementGame): CreateSportGameData {
     gameTime: game.gameTime ? game.gameTime.slice(0, 5) : '',
     locationName: game.locationName,
     locationUrl: game.locationUrl,
-    costSharingEnabled: game.costSharingEnabled,
   };
 }
 
@@ -153,8 +172,8 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
       return;
     }
 
-    if (!editForm.name.trim() || !editForm.gameDate) {
-      toast.error('Tên kèo và ngày chơi không được để trống.', {
+    if (!editForm.name.trim()) {
+      toast.error('Tên kèo không được để trống.', {
         id: 'sports-update-validation',
       });
       return;
@@ -258,14 +277,16 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
-            <Link
-              href={publicPath}
-              target="_blank"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Link công khai
-            </Link>
+            {!game.deletedAt ? (
+              <Link
+                href={publicPath}
+                target="_blank"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Link công khai
+              </Link>
+            ) : null}
             {game.permissions.canRestore ? (
               <button
                 type="button"
@@ -283,13 +304,13 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               <button
                 type="button"
                 onClick={() =>
-                  void runAction('delete', () => softDeleteSportGame(game.id), 'Đã hủy kèo.')
+                  void runAction('delete', () => softDeleteSportGame(game.id), 'Đã xóa kèo.')
                 }
                 disabled={Boolean(pendingAction)}
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
                 <Trash2 className="h-4 w-4" />
-                Xóa mềm
+                Xóa
               </button>
             ) : null}
           </div>
@@ -297,7 +318,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
 
         {game.deletedAt ? (
           <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-            Kèo đang bị xóa mềm. Chỉ có thể khôi phục trước khi kèo hết hạn.
+            Kèo đang bị xóa. Chỉ có thể khôi phục trước khi kèo hết hạn.
           </p>
         ) : game.isExpired ? (
           <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">
@@ -306,242 +327,251 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
         ) : null}
       </section>
 
-      <form
-        onSubmit={handleUpdateGame}
-        className="rounded-lg border border-slate-200 bg-white shadow-sm"
-      >
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-lg font-bold text-slate-950">Thông tin kèo</h2>
-        </div>
-        <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Loại kèo</span>
-            <select
-              value={editForm.type}
-              onChange={(event) =>
-                setEditForm({
-                  ...editForm,
-                  type: event.target.value as CreateSportGameData['type'],
-                })
-              }
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            >
-              {SPORT_TYPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="block md:col-span-2">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Tên kèo</span>
-            <input
-              value={editForm.name}
-              onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Ngày chơi</span>
-            <input
-              type="date"
-              value={editForm.gameDate}
-              onChange={(event) => setEditForm({ ...editForm, gameDate: event.target.value })}
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Giờ chơi</span>
-            <input
-              type="time"
-              value={editForm.gameTime}
-              onChange={(event) => setEditForm({ ...editForm, gameTime: event.target.value })}
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
-            <input
-              value={editForm.locationName}
-              onChange={(event) => setEditForm({ ...editForm, locationName: event.target.value })}
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
-            <input
-              value={editForm.locationUrl}
-              onChange={(event) => setEditForm({ ...editForm, locationUrl: event.target.value })}
-              disabled={!canEdit || isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            />
-          </label>
-          <label className="flex items-center gap-3 md:col-span-2">
-            <input
-              type="checkbox"
-              checked={editForm.costSharingEnabled}
-              onChange={(event) =>
-                setEditForm({ ...editForm, costSharingEnabled: event.target.checked })
-              }
-              disabled={!canEdit || isSaving}
-              className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 disabled:cursor-not-allowed"
-            />
-            <span className="text-sm font-semibold text-slate-700">Bật chia chi phí</span>
-          </label>
-        </div>
-        {canEdit ? (
-          <div className="flex justify-end border-t border-slate-200 px-5 py-4">
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
-            </button>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <form
+          onSubmit={handleUpdateGame}
+          className="rounded-lg border border-slate-200 bg-white shadow-sm"
+        >
+          <div className="border-b border-slate-200 px-5 py-4">
+            <h2 className="text-lg font-bold text-slate-950">Thông tin kèo</h2>
           </div>
-        ) : null}
-      </form>
+          <div className="grid gap-3 px-5 py-4 md:grid-cols-2">
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">
+                Loại kèo
+                <RequiredMark />
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {SPORT_TYPE_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() =>
+                      setEditForm({
+                        ...editForm,
+                        type: option.value,
+                    })
+                  }
+                    disabled={!canEdit || isSaving}
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                      SPORT_TYPE_THEMES[option.value].badge
+                    } ${
+                      editForm.type === option.value
+                        ? `scale-[1.08] text-base font-extrabold shadow-md ring-2 ${typeAccentEffects[option.value]}`
+                        : 'text-[15px] font-semibold opacity-80 hover:scale-[1.01] hover:shadow-sm'
+                    }`}
+                    aria-pressed={editForm.type === option.value}
+                  >
+                    <img src={SPORT_TYPE_ICONS[option.value].src} alt="" className="h-6 w-6" />
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </label>
 
-      <SportCostManagementPanel
-        gameId={game.id}
-        canManageCosts={game.permissions.canManageCosts}
-        costSharingEnabled={game.costSharingEnabled}
-      />
-
-      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-bold text-slate-950">Người tham gia</h2>
-          {game.currentUserStatus === 'active' &&
-          game.currentUserRole !== 'host' &&
-          !game.isExpired &&
-          !game.deletedAt ? (
-            <button
-              type="button"
-              onClick={() => void runAction('leave', () => leaveSportGame(game.id), 'Đã rời kèo.')}
-              disabled={Boolean(pendingAction)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <UserMinus className="h-4 w-4" />
-              Rời kèo
-            </button>
-          ) : null}
-        </div>
-        <div className="divide-y divide-slate-200">
-          {participants.map((participant) => {
-            const isSelf = participant.id === game.currentUserMemberId;
-            const canKickParticipant = canManageMembers && !isSelf;
-            const canPromoteParticipant =
-              canPromote &&
-              participant.status === 'active' &&
-              !participant.isGuest &&
-              participant.role === 'participant';
-            const canDemoteParticipant =
-              canPromote && participant.status === 'active' && participant.role === 'co_host';
-            const canTransferParticipant =
-              canTransfer && participant.status === 'active' && !participant.isGuest && !isSelf;
-
-            return (
-              <div
-                key={participant.id}
-                className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between"
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">
+                Tên kèo
+                <RequiredMark />
+              </span>
+              <input
+                value={editForm.name}
+                onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
+                disabled={!canEdit || isSaving}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">
+                Ngày chơi
+              </span>
+              <input
+                type="date"
+                value={editForm.gameDate}
+                onChange={(event) => setEditForm({ ...editForm, gameDate: event.target.value })}
+                disabled={!canEdit || isSaving}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Giờ chơi</span>
+              <input
+                type="time"
+                value={editForm.gameTime}
+                onChange={(event) => setEditForm({ ...editForm, gameTime: event.target.value })}
+                disabled={!canEdit || isSaving}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
+              <input
+                value={editForm.locationName}
+                onChange={(event) =>
+                  setEditForm({ ...editForm, locationName: event.target.value })
+                }
+                disabled={!canEdit || isSaving}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
+              <input
+                value={editForm.locationUrl}
+                onChange={(event) =>
+                  setEditForm({ ...editForm, locationUrl: event.target.value })
+                }
+                disabled={!canEdit || isSaving}
+                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
+            </label>
+          </div>
+          {canEdit ? (
+            <div className="flex justify-end border-t border-slate-200 px-5 py-4">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               >
-                <div className="min-w-0">
-                  <p className="wrap-break-word text-sm font-bold text-slate-950">
-                    {participant.name}
-                    {participant.isGuest ? (
-                      <span className="ml-2 text-xs font-bold text-slate-500">Khách</span>
+                <Save className="h-4 w-4" />
+                {isSaving ? 'Đang lưu...' : 'Lưu thông tin'}
+              </button>
+            </div>
+          ) : null}
+        </form>
+
+        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-bold text-slate-950">Người tham gia</h2>
+            {game.currentUserStatus === 'active' &&
+            game.currentUserRole !== 'host' &&
+            !game.isExpired &&
+            !game.deletedAt ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void runAction('leave', () => leaveSportGame(game.id), 'Đã rời kèo.')
+                }
+                disabled={Boolean(pendingAction)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <UserMinus className="h-4 w-4" />
+                Rời kèo
+              </button>
+            ) : null}
+          </div>
+          <div className="divide-y divide-slate-200">
+            {participants.map((participant) => {
+              const isSelf = participant.id === game.currentUserMemberId;
+              const canKickParticipant = canManageMembers && !isSelf;
+              const canPromoteParticipant =
+                canPromote &&
+                participant.status === 'active' &&
+                !participant.isGuest &&
+                participant.role === 'participant';
+              const canDemoteParticipant =
+                canPromote && participant.status === 'active' && participant.role === 'co_host';
+              const canTransferParticipant =
+                canTransfer && participant.status === 'active' && !participant.isGuest && !isSelf;
+
+              return (
+                <div key={participant.id} className="flex flex-col gap-3 px-5 py-4">
+                  <div className="min-w-0">
+                    <p className="wrap-break-word text-sm font-bold text-slate-950">
+                      {participant.name}
+                      {participant.isGuest ? (
+                        <span className="ml-2 text-xs font-bold text-slate-500">Khách</span>
+                      ) : null}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs font-bold">
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+                        {roleLabels[participant.role]}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 ${statusBadgeClasses[participant.status]}`}
+                      >
+                        {statusLabels[participant.status]}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {canPromoteParticipant ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runAction(
+                            `promote-${participant.id}`,
+                            () => runSportMemberAction(game.id, participant.id, 'promote'),
+                            'Đã promote co-host.',
+                          )
+                        }
+                        disabled={Boolean(pendingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Promote
+                      </button>
                     ) : null}
-                  </p>
-                  <div className="mt-1 flex flex-wrap gap-2 text-xs font-bold">
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-                      {roleLabels[participant.role]}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-                      {statusLabels[participant.status]}
-                    </span>
+                    {canDemoteParticipant ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runAction(
+                            `demote-${participant.id}`,
+                            () => runSportMemberAction(game.id, participant.id, 'demote'),
+                            'Đã demote co-host.',
+                          )
+                        }
+                        disabled={Boolean(pendingAction)}
+                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Demote
+                      </button>
+                    ) : null}
+                    {canTransferParticipant ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runAction(
+                            `transfer-${participant.id}`,
+                            () => runSportMemberAction(game.id, participant.id, 'transfer'),
+                            'Đã chuyển host.',
+                          )
+                        }
+                        disabled={Boolean(pendingAction)}
+                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Chuyển host
+                      </button>
+                    ) : null}
+                    {canKickParticipant && participant.status === 'active' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runAction(
+                            `kick-${participant.id}`,
+                            () => runSportMemberAction(game.id, participant.id, 'kick'),
+                            participant.isGuest ? 'Đã xóa khách.' : 'Đã kick thành viên.',
+                          )
+                        }
+                        disabled={Boolean(pendingAction)}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        {participant.isGuest ? 'Xóa khách' : 'Kick'}
+                      </button>
+                    ) : null}
                   </div>
                 </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
 
-                <div className="flex flex-wrap gap-2">
-                  {canPromoteParticipant ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void runAction(
-                          `promote-${participant.id}`,
-                          () => runSportMemberAction(game.id, participant.id, 'promote'),
-                          'Đã promote co-host.',
-                        )
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Shield className="h-4 w-4" />
-                      Promote
-                    </button>
-                  ) : null}
-                  {canDemoteParticipant ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void runAction(
-                          `demote-${participant.id}`,
-                          () => runSportMemberAction(game.id, participant.id, 'demote'),
-                          'Đã demote co-host.',
-                        )
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Demote
-                    </button>
-                  ) : null}
-                  {canTransferParticipant ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void runAction(
-                          `transfer-${participant.id}`,
-                          () => runSportMemberAction(game.id, participant.id, 'transfer'),
-                          'Đã chuyển host.',
-                        )
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      Chuyển host
-                    </button>
-                  ) : null}
-                  {canKickParticipant && participant.status === 'active' ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void runAction(
-                          `kick-${participant.id}`,
-                          () => runSportMemberAction(game.id, participant.id, 'kick'),
-                          participant.isGuest ? 'Đã xóa khách.' : 'Đã kick thành viên.',
-                        )
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {participant.isGuest ? 'Xóa khách' : 'Kick'}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+      <SportCostManagementPanel gameId={game.id} canManageCosts={game.permissions.canManageCosts} />
     </div>
   );
 }
