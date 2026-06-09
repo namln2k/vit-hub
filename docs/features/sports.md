@@ -38,7 +38,7 @@
   - `game_time`
   - `location_name`
   - `location_url`
-  - `cost_sharing_enabled`
+- Cost sharing is always enabled; `sport_games` does not store a cost sharing toggle.
 
 ## Permissions
 
@@ -62,7 +62,7 @@
 - The host can demote a co-host back to participant.
 - The host can transfer ownership to another active account participant or co-host.
 - Guest participants cannot be promoted or receive ownership.
-- Expired or soft-deleted games lock membership and game detail actions.
+- Expired or deleted games lock membership and game detail actions.
 - Cost management details are protected and can only be viewed or edited by users with the appropriate game permissions.
 
 ## Dashboard
@@ -100,9 +100,8 @@
   - location name, optional
   - location link, optional
   - game name, optional
-  - cost sharing enabled, optional
 - The create and edit forms use a `Loại kèo` select for the sport type.
-- Host/co-hosts can edit sport type before the game expires and while it is not soft-deleted.
+- Host/co-hosts can edit sport type before the game expires and while it is not deleted.
 - Changing sport type does not automatically rename an existing game.
 - If the game name is omitted during creation, the app auto-generates:
   - `{sport type label} | {location name} | {date} | {time} | {host name}`
@@ -136,17 +135,19 @@
 
 - A game expires after its scheduled date/time.
 - If a game has a date but no time, it expires at the end of that date in Vietnam time (`Asia/Ho_Chi_Minh`).
-- The same date/time rule determines when a soft-deleted game becomes permanently deleted.
-- Soft-deleted games are locked except for restore before expiry.
-- Soft-deleted games are excluded from public active lists and cannot be joined.
+- The same date/time rule determines when a deleted game becomes permanently deleted.
+- Deleted games are locked except for restore before expiry.
+- Deleted games are excluded from public active lists and cannot be joined.
 - Expired games cannot be edited for sport type, date, time, location, or name.
 - Expired games do not allow join, leave, kick, promote, demote, or ownership transfer.
 
 ## Cost Sharing
 
-- The host can enable cost sharing when creating or editing the game.
+- Cost sharing is always available for sport games.
 - Any active account participant, co-host, or host can add, edit, or delete any cost item before or after expiry.
 - Cost items store lightweight accountability metadata:
+  - optional `label`
+  - required `amount`
   - `created_by`
   - `updated_by`
   - `updated_at`
@@ -156,7 +157,7 @@
 - Each participant has:
   - calculated `amount_due`
   - nullable `amount_override`
-  - `payment_status` of `unpaid`, `partial`, or `paid`
+  - `payment_status` of `unpaid` or `paid`
   - nullable `payment_note`
 - `payment_note` is required when `amount_override` is set.
 - Any active account participant, co-host, or host can edit/reset any account or guest participant payment information.

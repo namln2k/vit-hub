@@ -18,6 +18,7 @@ import type {
 import { getSportTypeLabel } from '@/features/sports/sportTypes';
 
 const VIETNAM_OFFSET = '+07:00';
+const VIETNAM_TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 interface SportGameRow {
   id: string;
@@ -28,7 +29,6 @@ interface SportGameRow {
   game_time: string | null;
   location_name: string | null;
   location_url: string | null;
-  cost_sharing_enabled: boolean;
   deleted_at: string | null;
   created_at: string;
 }
@@ -78,11 +78,10 @@ interface CreateSportGameInput {
   hostUserId: string;
   type: SportType;
   name?: string;
-  gameDate: string;
+  gameDate?: string;
   gameTime?: string;
   locationName?: string;
   locationUrl?: string;
-  costSharingEnabled?: boolean;
 }
 
 interface JoinGuestInput {
@@ -96,11 +95,10 @@ interface UpdateGameInput {
   gameId: string;
   type: SportType;
   name: string;
-  gameDate: string;
+  gameDate?: string;
   gameTime?: string;
   locationName?: string;
   locationUrl?: string;
-  costSharingEnabled: boolean;
 }
 
 interface UpsertCostItemInput {
@@ -127,6 +125,25 @@ function cleanString(value: unknown) {
 function toNullableString(value: unknown) {
   const cleanValue = cleanString(value);
   return cleanValue || null;
+}
+
+function getTodayDateInVietnam() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: VIETNAM_TIME_ZONE,
+    year: 'numeric',
+  }).formatToParts(new Date());
+
+  const year = parts.find((part) => part.type === 'year')?.value ?? '';
+  const month = parts.find((part) => part.type === 'month')?.value ?? '';
+  const day = parts.find((part) => part.type === 'day')?.value ?? '';
+
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeGameDate(value: string | undefined) {
+  return value?.trim() || getTodayDateInVietnam();
 }
 
 function encodeIn(values: string[]) {
@@ -195,7 +212,6 @@ function mapSummary(
     gameTime: game.game_time ?? '',
     locationName: game.location_name ?? '',
     locationUrl: game.location_url ?? '',
-    costSharingEnabled: game.cost_sharing_enabled,
     deletedAt: game.deleted_at ?? '',
     isExpired: isSportGameExpired(game),
     bucket: getGameBucket(game),
@@ -228,7 +244,7 @@ async function fetchUsersByIds(userIds: string[]) {
 async function fetchGameById(gameId: string) {
   const query = new URLSearchParams({
     select:
-      'id, type, name, host_user_id, game_date, game_time, location_name, location_url, cost_sharing_enabled, deleted_at, created_at',
+      'id, type, name, host_user_id, game_date, game_time, location_name, location_url, deleted_at, created_at',
     id: `eq.${gameId}`,
     limit: '1',
   });
@@ -406,11 +422,7 @@ function isActiveAccountParticipant(member: SportMemberRow | null | undefined) {
 
 function assertCanManageCosts(game: SportGameRow, actor: SportMemberRow | null) {
   if (game.deleted_at) {
-    throw new Error('Kèo đã bị xóa mềm.');
-  }
-
-  if (!game.cost_sharing_enabled) {
-    throw new Error('Chia chi phí chưa được bật cho kèo này.');
+    throw new Error('Kèo đã bị xóa.');
   }
 
   if (!isActiveAccountParticipant(actor)) {
@@ -420,7 +432,7 @@ function assertCanManageCosts(game: SportGameRow, actor: SportMemberRow | null) 
 
 function assertNotExpiredOrDeleted(game: SportGameRow) {
   if (game.deleted_at) {
-    throw new Error('Kèo đã bị xóa mềm.');
+    throw new Error('Kèo đã bị xóa.');
   }
 
   if (isSportGameExpired(game)) {
@@ -457,7 +469,7 @@ function getManagementPermissions(
     canPromote: actorIsHost && !isExpired && !isDeleted,
     canTransferOwnership: actorIsHost && !isExpired && !isDeleted,
     canRestore: actorIsOrganizer && isDeleted && !isExpired,
-    canManageCosts: Boolean(game.cost_sharing_enabled) && isActiveActor && !isDeleted,
+    canManageCosts: Boolean(isActiveActor) && !isDeleted,
   };
 }
 
@@ -481,7 +493,7 @@ function assertValidCostAmount(amount: number) {
 }
 
 function assertValidPaymentInput(input: UpdatePaymentInput) {
-  if (!['unpaid', 'partial', 'paid'].includes(input.paymentStatus)) {
+  if (!['unpaid', 'paid'].includes(input.paymentStatus)) {
     throw new Error('Trạng thái thanh toán không hợp lệ.');
   }
 
@@ -600,7 +612,6 @@ export async function getSportManagementGame(gameId: string, actorUserId: string
     gameTime: game.game_time ?? '',
     locationName: game.location_name ?? '',
     locationUrl: game.location_url ?? '',
-    costSharingEnabled: game.cost_sharing_enabled,
     deletedAt: game.deleted_at ?? '',
     isExpired: isSportGameExpired(game),
     currentUserMemberId: actor.id,
@@ -632,7 +643,7 @@ export async function listSportGamesForUser(userId: string) {
 
   const gameQuery = new URLSearchParams({
     select:
-      'id, type, name, host_user_id, game_date, game_time, location_name, location_url, cost_sharing_enabled, deleted_at, created_at',
+      'id, type, name, host_user_id, game_date, game_time, location_name, location_url, deleted_at, created_at',
     id: `in.${encodeIn(gameIds)}`,
     order: 'game_date.desc,game_time.desc.nullslast,created_at.desc',
   });
@@ -662,19 +673,19 @@ export async function listSportGamesForUser(userId: string) {
 export async function createSportGame(input: CreateSportGameInput) {
   const usersById = await fetchUsersByIds([input.hostUserId]);
   const hostName = getUserDisplayName(usersById.get(input.hostUserId));
-  const name = await generateGameName(input, hostName);
+  const gameDate = normalizeGameDate(input.gameDate);
+  const name = await generateGameName({ ...input, gameDate }, hostName);
   const row = {
     type: input.type,
     name,
     host_user_id: input.hostUserId,
-    game_date: input.gameDate,
+    game_date: gameDate,
     game_time: toNullableString(input.gameTime),
     location_name: toNullableString(input.locationName),
     location_url: toNullableString(input.locationUrl),
-    cost_sharing_enabled: Boolean(input.costSharingEnabled),
   };
   const { response, data } = await supabaseFetch<SportGameRow[]>(
-    '/rest/v1/sport_games?select=id, type, name, host_user_id, game_date, game_time, location_name, location_url, cost_sharing_enabled, deleted_at, created_at',
+    '/rest/v1/sport_games?select=id, type, name, host_user_id, game_date, game_time, location_name, location_url, deleted_at, created_at',
     {
       method: 'POST',
       body: row,
@@ -721,6 +732,7 @@ export async function updateSportGame(input: UpdateGameInput) {
   assertNotExpiredOrDeleted(game);
 
   const name = cleanString(input.name);
+  const gameDate = normalizeGameDate(input.gameDate);
 
   if (!name) {
     throw new Error('Tên kèo không được để trống khi chỉnh sửa.');
@@ -731,11 +743,10 @@ export async function updateSportGame(input: UpdateGameInput) {
     body: {
       name,
       type: input.type,
-      game_date: input.gameDate,
+      game_date: gameDate,
       game_time: toNullableString(input.gameTime),
       location_name: toNullableString(input.locationName),
       location_url: toNullableString(input.locationUrl),
-      cost_sharing_enabled: input.costSharingEnabled,
     },
   });
 
@@ -1097,7 +1108,6 @@ export async function getSportCostManagement(gameId: string, actorUserId: string
 
   return {
     gameId,
-    isEnabled: game.cost_sharing_enabled,
     totalCost,
     splitParticipantCount: activeMembers.length,
     baseAmountDue,
@@ -1121,10 +1131,6 @@ export async function createSportCostItem(input: UpsertCostItemInput) {
 
   assertCanManageCosts(game, actor);
   assertValidCostAmount(input.amount);
-
-  if (!label) {
-    throw new Error('Tên chi phí không được để trống.');
-  }
 
   const { response } = await supabaseFetch('/rest/v1/sport_game_cost_items', {
     method: 'POST',
@@ -1152,10 +1158,6 @@ export async function updateSportCostItem(input: UpsertCostItemInput) {
 
   if (!input.costItemId) {
     throw new Error('Thiếu chi phí cần cập nhật.');
-  }
-
-  if (!label) {
-    throw new Error('Tên chi phí không được để trống.');
   }
 
   const { response } = await supabaseFetch(

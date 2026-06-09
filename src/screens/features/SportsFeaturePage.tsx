@@ -3,7 +3,7 @@
 import { APP_ROUTES, getSportGameManagementPath, getPublicSportGamePath } from '@/constants/routes';
 import { ArrowLeft, CalendarDays, Clock, ExternalLink, MapPin, Plus, Users, X } from 'lucide-react';
 import { createSportGame, listMySportGames, type CreateSportGameData } from '@/services/sports';
-import type { SportGameBucket, SportGameSummary } from '@/features/sports/types';
+import type { SportGameBucket, SportGameSummary, SportType } from '@/features/sports/types';
 import {
   DEFAULT_SPORT_TYPE,
   SPORT_TYPE_OPTIONS,
@@ -23,7 +23,6 @@ const emptyForm: CreateSportGameData = {
   gameTime: '',
   locationName: '',
   locationUrl: '',
-  costSharingEnabled: false,
 };
 
 const bucketLabels: Record<SportGameBucket, string> = {
@@ -53,6 +52,32 @@ function groupGames(games: SportGameSummary[]) {
   );
 }
 
+function RequiredMark() {
+  return (
+    <span className="ml-1 text-red-600" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+const typeAccentEffects: Record<SportType, string> = {
+  badminton: 'border-emerald-300 shadow-emerald-200 ring-emerald-300/60',
+  pickleball: 'border-violet-300 shadow-violet-200 ring-violet-300/60',
+  swimming: 'border-cyan-300 shadow-cyan-200 ring-cyan-300/60',
+};
+
+function getGameCardClass(game: SportGameSummary) {
+  if (game.bucket === 'deleted') {
+    return 'border-red-200 bg-red-50';
+  }
+
+  if (game.bucket === 'finished') {
+    return 'border-slate-200 bg-slate-100';
+  }
+
+  return `bg-white ${SPORT_TYPE_THEMES[game.type].border}`;
+}
+
 interface GameCardProps {
   game: SportGameSummary;
 }
@@ -64,7 +89,7 @@ function GameCard({ game }: GameCardProps) {
   const sportLabel = getSportTypeLabel(game.type);
 
   return (
-    <article className={`rounded-lg border bg-white p-4 shadow-sm ${theme.border}`}>
+    <article className={`rounded-lg border p-4 shadow-sm ${getGameCardClass(game)}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex min-w-0 items-start gap-2">
@@ -118,14 +143,16 @@ function GameCard({ game }: GameCardProps) {
         >
           Quản lý
         </Link>
-        <Link
-          href={publicPath}
-          target="_blank"
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-        >
-          <ExternalLink className="h-4 w-4" />
-          Link công khai
-        </Link>
+        {game.bucket !== 'deleted' ? (
+          <Link
+            href={publicPath}
+            target="_blank"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Link công khai
+          </Link>
+        ) : null}
       </div>
     </article>
   );
@@ -169,11 +196,6 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!form.gameDate) {
-      toast.error('Vui lòng chọn ngày chơi.', { id: 'sports-create-date-error' });
-      return;
-    }
-
     try {
       setIsSaving(true);
       const result = await createSportGame(form);
@@ -190,9 +212,20 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/45 px-4 py-6 backdrop-blur-[1px] sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sports-create-title"
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white shadow-xl"
+      >
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-        <h2 className="text-lg font-bold text-slate-950">Tạo kèo</h2>
+        <h2 id="sports-create-title" className="text-lg font-bold text-slate-950">
+          Tạo kèo
+        </h2>
         <button
           type="button"
           onClick={onClose}
@@ -205,45 +238,44 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
       </div>
 
       <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Loại kèo</span>
-          <select
-            value={form.type}
-            onChange={(event) =>
-              updateForm('type', event.target.value as CreateSportGameData['type'])
-            }
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            required
-          >
+        <div className="block md:col-span-2">
+          <span className="mb-1 block text-sm font-semibold text-slate-700">
+            Loại kèo
+            <RequiredMark />
+          </span>
+          <div className="flex flex-wrap gap-2">
             {SPORT_TYPE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => updateForm('type', option.value)}
+                disabled={isSaving}
+                className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  SPORT_TYPE_THEMES[option.value].badge
+                } ${
+                  form.type === option.value
+                    ? `scale-[1.08] text-base font-extrabold shadow-md ring-2 ${typeAccentEffects[option.value]}`
+                    : 'text-[15px] font-semibold opacity-80 hover:scale-[1.01] hover:shadow-sm'
+                }`}
+                aria-pressed={form.type === option.value}
+              >
+                <img src={SPORT_TYPE_ICONS[option.value].src} alt="" className="h-6 w-6" />
                 {option.label}
-              </option>
+              </button>
             ))}
-          </select>
-        </label>
-
-        <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Tên kèo tuỳ chọn</span>
-          <input
-            value={form.name}
-            onChange={(event) => updateForm('name', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            placeholder="Bỏ trống để tự tạo tên"
-          />
-        </label>
+          </div>
+        </div>
 
         <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Ngày chơi</span>
+          <span className="mb-1 block text-sm font-semibold text-slate-700">
+            Ngày chơi
+          </span>
           <input
             type="date"
             value={form.gameDate}
             onChange={(event) => updateForm('gameDate', event.target.value)}
             disabled={isSaving}
             className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            required
           />
         </label>
 
@@ -255,6 +287,17 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
             onChange={(event) => updateForm('gameTime', event.target.value)}
             disabled={isSaving}
             className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+          />
+        </label>
+
+        <label className="block md:col-span-2">
+          <span className="mb-1 block text-sm font-semibold text-slate-700">Tên kèo tuỳ chọn</span>
+          <input
+            value={form.name}
+            onChange={(event) => updateForm('name', event.target.value)}
+            disabled={isSaving}
+            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+            placeholder="Bỏ trống để tự tạo tên"
           />
         </label>
 
@@ -279,17 +322,6 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
             placeholder="https://maps..."
           />
         </label>
-
-        <label className="flex items-center gap-3 md:col-span-2">
-          <input
-            type="checkbox"
-            checked={form.costSharingEnabled}
-            onChange={(event) => updateForm('costSharingEnabled', event.target.checked)}
-            disabled={isSaving}
-            className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-          />
-          <span className="text-sm font-semibold text-slate-700">Bật chia chi phí</span>
-        </label>
       </div>
 
       <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
@@ -310,7 +342,8 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
           {isSaving ? 'Đang tạo...' : 'Tạo kèo'}
         </button>
       </div>
-    </form>
+      </form>
+    </div>
   );
 }
 
