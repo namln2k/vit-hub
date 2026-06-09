@@ -11,11 +11,10 @@ import type {
 export interface CreateSportGameData {
   type: SportType;
   name: string;
-  gameDate: string;
+  gameDate?: string;
   gameTime: string;
   locationName: string;
   locationUrl: string;
-  costSharingEnabled: boolean;
 }
 
 async function getAccessToken() {

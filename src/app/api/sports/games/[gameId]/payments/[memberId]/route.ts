@@ -30,7 +30,7 @@ function readString(value: unknown) {
 }
 
 function readPaymentStatus(value: unknown): SportPaymentStatus {
-  if (value === 'unpaid' || value === 'partial' || value === 'paid') {
+  if (value === 'unpaid' || value === 'paid') {
     return value;
   }
 

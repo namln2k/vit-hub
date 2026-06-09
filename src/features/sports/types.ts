@@ -2,7 +2,7 @@ export type SportType = 'badminton' | 'pickleball' | 'swimming';
 export type SportMemberRole = 'host' | 'co_host' | 'participant';
 export type SportMemberStatus = 'active' | 'left' | 'kicked';
 export type SportGameBucket = 'upcoming' | 'finished' | 'deleted';
-export type SportPaymentStatus = 'unpaid' | 'partial' | 'paid';
+export type SportPaymentStatus = 'unpaid' | 'paid';
 
 export interface SportParticipant {
   id: string;
@@ -24,7 +24,6 @@ export interface SportGameSummary {
   gameTime: string;
   locationName: string;
   locationUrl: string;
-  costSharingEnabled: boolean;
   deletedAt: string;
   isExpired: boolean;
   bucket: SportGameBucket;
@@ -66,7 +65,6 @@ export interface SportManagementGame {
   gameTime: string;
   locationName: string;
   locationUrl: string;
-  costSharingEnabled: boolean;
   deletedAt: string;
   isExpired: boolean;
   currentUserMemberId: string;
@@ -104,7 +102,6 @@ export interface SportPayment {
 
 export interface SportCostManagement {
   gameId: string;
-  isEnabled: boolean;
   totalCost: number;
   splitParticipantCount: number;
   baseAmountDue: number;

@@ -16,7 +16,6 @@ import { toast } from 'sonner';
 interface SportCostManagementPanelProps {
   gameId: string;
   canManageCosts: boolean;
-  costSharingEnabled: boolean;
 }
 
 interface CostItemForm {
@@ -32,7 +31,6 @@ interface PaymentForm {
 
 const paymentStatusLabels = {
   unpaid: 'Chưa trả',
-  partial: 'Trả một phần',
   paid: 'Đã trả',
 } as const;
 
@@ -76,7 +74,6 @@ function getCostItemForms(costs: SportCostManagement): Record<string, CostItemFo
 export default function SportCostManagementPanel({
   gameId,
   canManageCosts,
-  costSharingEnabled,
 }: SportCostManagementPanelProps) {
   const [costs, setCosts] = useState<SportCostManagement | null>(null);
   const [newItem, setNewItem] = useState<CostItemForm>({ label: '', amount: '' });
@@ -139,8 +136,8 @@ export default function SportCostManagementPanel({
     const label = newItem.label.trim();
     const amount = readAmount(newItem.amount);
 
-    if (!label || !Number.isFinite(amount) || amount < 0) {
-      toast.error('Tên chi phí và số tiền phải hợp lệ.', {
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error('Số tiền chi phí phải hợp lệ.', {
         id: 'sports-cost-create-validation',
       });
       return;
@@ -152,17 +149,6 @@ export default function SportCostManagementPanel({
       'Đã thêm chi phí.',
     );
     setNewItem({ label: '', amount: '' });
-  }
-
-  if (!costSharingEnabled) {
-    return (
-      <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-950">Chia chi phí</h2>
-        <p className="mt-2 text-sm font-medium text-slate-600">
-          Chia chi phí chưa được bật cho kèo này.
-        </p>
-      </section>
-    );
   }
 
   if (!canManageCosts) {
@@ -206,19 +192,20 @@ export default function SportCostManagementPanel({
               className="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_auto]"
             >
               <input
-                value={newItem.label}
-                onChange={(event) => setNewItem({ ...newItem, label: event.target.value })}
-                placeholder="Tên chi phí"
-                disabled={Boolean(pendingAction)}
-                className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-              />
-              <input
                 type="number"
                 min="0"
                 step="1000"
                 value={newItem.amount}
                 onChange={(event) => setNewItem({ ...newItem, amount: event.target.value })}
                 placeholder="Số tiền"
+                disabled={Boolean(pendingAction)}
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                required
+              />
+              <input
+                value={newItem.label}
+                onChange={(event) => setNewItem({ ...newItem, label: event.target.value })}
+                placeholder="Tên chi phí"
                 disabled={Boolean(pendingAction)}
                 className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
@@ -244,17 +231,6 @@ export default function SportCostManagementPanel({
                 <div key={item.id} className="space-y-3 p-3">
                   <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
                     <input
-                      value={form.label}
-                      onChange={(event) =>
-                        setCostItemForms({
-                          ...costItemForms,
-                          [item.id]: { ...form, label: event.target.value },
-                        })
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                    />
-                    <input
                       type="number"
                       min="0"
                       step="1000"
@@ -263,6 +239,18 @@ export default function SportCostManagementPanel({
                         setCostItemForms({
                           ...costItemForms,
                           [item.id]: { ...form, amount: event.target.value },
+                        })
+                      }
+                      disabled={Boolean(pendingAction)}
+                      className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                      required
+                    />
+                    <input
+                      value={form.label}
+                      onChange={(event) =>
+                        setCostItemForms({
+                          ...costItemForms,
+                          [item.id]: { ...form, label: event.target.value },
                         })
                       }
                       disabled={Boolean(pendingAction)}
@@ -328,6 +316,8 @@ export default function SportCostManagementPanel({
                 paymentStatus: payment.paymentStatus,
                 paymentNote: '',
               };
+              const isPaymentSubmitting = pendingAction === `update-payment-${payment.memberId}`;
+              const nextPaymentStatus = form.paymentStatus === 'paid' ? 'unpaid' : 'paid';
 
               return (
                 <div key={payment.memberId} className="space-y-3 p-3">
@@ -350,7 +340,7 @@ export default function SportCostManagementPanel({
                     </span>
                   </div>
 
-                  <div className="grid gap-2 md:grid-cols-[140px_150px_1fr]">
+                  <div className="grid gap-2 md:grid-cols-[140px_1fr]">
                     <input
                       type="number"
                       min="0"
@@ -366,24 +356,6 @@ export default function SportCostManagementPanel({
                       disabled={Boolean(pendingAction)}
                       className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                     />
-                    <select
-                      value={form.paymentStatus}
-                      onChange={(event) =>
-                        setPaymentForms({
-                          ...paymentForms,
-                          [payment.memberId]: {
-                            ...form,
-                            paymentStatus: event.target.value as SportPaymentStatus,
-                          },
-                        })
-                      }
-                      disabled={Boolean(pendingAction)}
-                      className="h-10 rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                    >
-                      <option value="unpaid">Chưa trả</option>
-                      <option value="partial">Trả một phần</option>
-                      <option value="paid">Đã trả</option>
-                    </select>
                     <input
                       value={form.paymentNote}
                       onChange={(event) =>
@@ -405,6 +377,35 @@ export default function SportCostManagementPanel({
                         : 'Chưa có cập nhật thanh toán'}
                     </p>
                     <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void runCostAction(
+                            `update-payment-${payment.memberId}`,
+                            () =>
+                              updateSportPayment(gameId, payment.memberId, {
+                                amountOverride: form.amountOverride
+                                  ? readAmount(form.amountOverride)
+                                  : null,
+                                paymentStatus: nextPaymentStatus,
+                                paymentNote: form.paymentNote,
+                              }),
+                            'Đã cập nhật thanh toán.',
+                          )
+                        }
+                        disabled={Boolean(pendingAction)}
+                        className={`inline-flex h-9 items-center justify-center rounded-lg px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 ${
+                          form.paymentStatus === 'paid'
+                            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                            : 'border border-slate-300 text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {isPaymentSubmitting
+                          ? 'Đang lưu...'
+                          : form.paymentStatus === 'paid'
+                            ? 'Đã trả'
+                            : 'Chưa trả'}
+                      </button>
                       <button
                         type="button"
                         onClick={() =>
