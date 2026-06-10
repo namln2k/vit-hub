@@ -11,8 +11,8 @@ VIT Hub is a React web application for VIT Volunteers management.
 
 ## Requirements
 
-- Node.js `24.13.0`
-- npm `11.6.2`
+- Node.js `24.x`
+- npm `11.x`
 - A Supabase project with Auth and Postgres enabled
 - Optional Cloudflare R2 bucket for avatar uploads
 - A modern browser such as Chrome, Edge, Firefox, or Safari
