@@ -1,23 +1,16 @@
 'use client';
 
 import badmintonIcon from '@/assets/icons/badminton.webp';
-import pickleballIcon from '@/assets/icons/pickleball.webp';
 import { APP_ROUTES } from '@/constants/routes';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 const features = [
   {
-    title: 'Cầu lông',
-    description: 'Host kèo, ghép trận, oánh giải và thu họ về Cầu lông',
-    to: APP_ROUTES.badmintonFeature,
+    title: 'Host kèo',
+    description: 'Tạo và quản lý các kèo thể thao: cầu lông, pickleball, bơi lội.',
+    to: APP_ROUTES.sportsFeature,
     icon: badmintonIcon,
-  },
-  {
-    title: 'Pickleball',
-    description: 'Host kèo, ghép trận, oánh giải và thu họ về Pickleball',
-    to: APP_ROUTES.pickleballFeature,
-    icon: pickleballIcon,
   },
 ];
 

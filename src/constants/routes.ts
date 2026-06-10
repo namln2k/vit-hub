@@ -5,8 +5,7 @@ export const APP_ROUTES = {
   forgotPassword: '/forgot-password',
   profile: '/profile',
   features: '/features',
-  badmintonFeature: '/features/badminton',
-  pickleballFeature: '/features/pickleball',
+  sportsFeature: '/features/sports',
   superAdmin: '/super-admin',
   authCallback: '/auth/callback',
 } as const;
@@ -14,7 +13,7 @@ export const APP_ROUTES = {
 export const API_ROUTES = {
   authRegister: '/api/auth/register',
   avatarsPresign: '/api/avatars/presign',
-  badmintonGames: '/api/badminton/games',
+  sportsGames: '/api/sports/games',
   postsPresign: '/api/posts/presign',
   usersImport: '/api/users/import',
 } as const;
@@ -33,12 +32,12 @@ export function getPostPath(slug: string) {
   return `/posts/${slug}`;
 }
 
-export function getPublicBadmintonGamePath(gameId: string) {
-  return `/badminton/games/${gameId}`;
+export function getPublicSportGamePath(gameId: string) {
+  return `/sports/games/${gameId}`;
 }
 
-export function getBadmintonGameManagementPath(gameId: string) {
-  return `/features/badminton/games/${gameId}`;
+export function getSportGameManagementPath(gameId: string) {
+  return `/features/sports/games/${gameId}`;
 }
 
 export function withRouteQuery(pathname: string, params: Record<string, string>) {
