@@ -1,6 +1,6 @@
 'use client';
 
-import { LayoutGrid, LogIn, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowRight, LayoutGrid, LogIn, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { APP_ROUTES } from '@/constants/routes';
 import { useAuth } from '@/contexts/useAuth';
 import { usePathname, useRouter } from 'next/navigation';
@@ -10,6 +10,8 @@ import { getAllowedAvatarMenuFeatures, type AvatarMenuFeatureId } from '@/consta
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
+
+const DEV_HUB_URL = 'https://vit-task.ezlisten.io.vn/boards/1793816112392045573';
 
 const avatarMenuIcons: Record<AvatarMenuFeatureId, ReactNode> = {
   admin: <ShieldCheck className="h-4 w-4" />,
@@ -72,6 +74,19 @@ export default function Header() {
 
           {currentUser ? (
             <div className="flex items-center gap-4">
+              {appUser?.role === 'super_admin' && (
+                <Link
+                  href={DEV_HUB_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-lg border border-sky-500 px-3 text-sm font-semibold text-sky-600 transition-colors hover:text-white"
+                  aria-label="Dev Hub"
+                >
+                  <ArrowRight className="relative z-10 h-4 w-4 transition-transform duration-300 ease-out" />
+                  <span className="absolute inset-y-0 left-0 w-0 bg-sky-500 transition-all duration-300 ease-out group-hover:w-full" />
+                  <span className="relative z-10">Dev Hub</span>
+                </Link>
+              )}
               <AvatarMenu
                 avatarSrc={appUser?.avatarUrl}
                 label={fullName}
