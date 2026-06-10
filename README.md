@@ -11,50 +11,72 @@ VIT Hub is a React web application for VIT Volunteers management.
 
 ## Requirements
 
-- Node.js `24.x`
-- npm `11.x`
+- Docker Desktop for the recommended local development workflow
+- Node.js `24.16.0` for direct host-machine development
+- npm `11.6.2` for direct host-machine development
 - A Supabase project with Auth and Postgres enabled
 - Optional Cloudflare R2 bucket for avatar uploads
 - A modern browser such as Chrome, Edge, Firefox, or Safari
 
 ## Setup
 
-1. Use the project Node.js version:
-
-   ```bash
-   nvm use
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Create a local environment file:
+1. Create a local environment file:
 
    ```bash
    cp .env.example .env
    ```
 
-4. Set up Supabase. This is required for authentication and users.
+2. Set up Supabase. This is required for authentication and users.
 
    Follow the [Supabase setup guide](docs/supabase-setup.md), then copy the Supabase project URL, publishable key, and service role key into `.env`.
 
-5. Set up Cloudflare R2 if avatar uploads are enabled.
+3. Set up Cloudflare R2 if avatar uploads are enabled.
 
    Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2 values from `.env.example` wherever `/api/auth/register` and `/api/avatars/presign` run. Do not expose R2 secrets with the `VITE_` prefix.
 
-6. Start the development server:
+4. Start the development server with Docker Compose:
+
+   ```bash
+   docker compose up
+   ```
+
+   Open:
+
+   ```text
+   http://localhost:3000
+   ```
+
+## Direct Host Development
+
+Docker Compose is the recommended workflow for consistent Node.js versions across the team. If you run the app directly on your machine, use the pinned project Node.js version first:
+
+   ```bash
+   nvm use
+   ```
+
+   On nvm-windows, pass the version explicitly:
+
+   ```powershell
+   nvm install 24.16.0
+   nvm use 24.16.0
+   ```
+
+Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+Start the development server:
 
    ```bash
    npm run dev
    ```
 
-   Open the local URL printed by Vite, usually:
+Open:
 
    ```text
-   http://localhost:5173
+   http://localhost:3000
    ```
 
 ## Scripts
@@ -74,6 +96,8 @@ npm run format:check
 - [Cloudflare setup guide](docs/cloudflare-setup.md)
 
 ## Deployment
+
+Vercel only supports selecting Node.js major versions, so production deployment uses `24.x` through `package.json#engines.node`. Local development is pinned more strictly through `.nvmrc` and `.node-version`.
 
 Create a production build:
 
