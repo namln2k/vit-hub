@@ -23,16 +23,16 @@ VIT Hub is a React web application for VIT Volunteers management.
 1. Create a local environment file:
 
    ```bash
-   cp .env.example .env
+   cp .env.example .env.local
    ```
 
 2. Set up Supabase. This is required for authentication and users.
 
-   Follow the [Supabase setup guide](docs/supabase-setup.md), then copy the Supabase project URL, publishable key, and service role key into `.env`.
+   Follow the [Supabase setup guide](docs/supabase-setup.md), then copy the Supabase project URL, publishable key, and service role key into `.env.local`.
 
 3. Set up Cloudflare R2 if avatar uploads are enabled.
 
-   Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2 values from `.env.example` wherever `/api/auth/register` and `/api/avatars/presign` run. Do not expose R2 secrets with the `VITE_` prefix.
+   Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2 values from `.env.example` wherever `/api/auth/register` and `/api/avatars/presign` run. Do not expose R2 secrets with the `NEXT_PUBLIC_` prefix.
 
 4. Start the development server with Docker Compose:
 

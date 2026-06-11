@@ -29,5 +29,6 @@ npm-debug.log*
 # Supabase
 .supabase/
 supabase/.temp/
+supabase/.branches/
 supabase/.migrations/
 .supabase/functions/.env
