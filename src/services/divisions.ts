@@ -1,6 +1,12 @@
 import { supabase } from '@/services/supabase';
 import { mapUserRow, type UserRow } from '@/services/users';
 import type { AppUser } from '@/contexts/auth';
+import {
+  addScopeMembers,
+  listScopeMembers,
+  removeScopeMembers,
+  type OrganizationMember,
+} from '@/services/organizationAdmin';
 
 export interface Division {
   id: string;
@@ -16,11 +22,6 @@ interface DivisionRow {
 
 interface UserDivisionRow {
   user: UserRow | null;
-}
-
-interface UserDivisionWrite {
-  division_id: string;
-  user_id: string;
 }
 
 function mapDivisionRow(row: DivisionRow): Division {
@@ -65,42 +66,19 @@ export async function listUsersByDivision(divisionId: string): Promise<AppUser[]
     .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
 }
 
+export async function listDivisionMembers(divisionId: string): Promise<OrganizationMember[]> {
+  return listScopeMembers('division', divisionId);
+}
+
 export async function addUsersToDivision(divisionId: string, userIds: string[]): Promise<void> {
-  if (userIds.length === 0) {
-    return;
-  }
-
-  const rows: UserDivisionWrite[] = userIds.map((userId) => ({
-    division_id: divisionId,
-    user_id: userId,
-  }));
-
-  const { error } = await supabase
-    .from('user_divisions')
-    .upsert(rows, { onConflict: 'division_id,user_id', ignoreDuplicates: true });
-
-  if (error) {
-    throw error;
-  }
+  return addScopeMembers('division', divisionId, userIds);
 }
 
 export async function removeUsersFromDivision(
   divisionId: string,
   userIds: string[],
 ): Promise<void> {
-  if (userIds.length === 0) {
-    return;
-  }
-
-  const { error } = await supabase
-    .from('user_divisions')
-    .delete()
-    .eq('division_id', divisionId)
-    .in('user_id', userIds);
-
-  if (error) {
-    throw error;
-  }
+  return removeScopeMembers('division', divisionId, userIds);
 }
 
 function getUserSortName(user: AppUser) {

@@ -1,9 +1,4 @@
-import {
-  listUsersByGroup,
-  removeUsersFromGroup,
-  type Group,
-} from '@/services/groups';
-import type { AppUser } from '@/contexts/auth';
+import { listGroupMembers, removeUsersFromGroup, type Group } from '@/services/groups';
 import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
@@ -16,8 +11,14 @@ import {
 } from '@/features/super-admin/lib/userUtils';
 import DeleteGroupModal from './DeleteGroupModal';
 import GroupFormModal from './GroupFormModal';
-import GroupMembersTable from './GroupMembersTable';
 import GroupsTable from './GroupsTable';
+import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
+import {
+  assignScopeRole,
+  removeScopeRole,
+  type OrganizationMember,
+} from '@/services/organizationAdmin';
+import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 import { toast } from 'sonner';
 
 interface GroupsManagementProps {
@@ -39,7 +40,7 @@ export default function GroupsManagement({
   onGroupUpdated,
   onGroupDeleted,
 }: GroupsManagementProps) {
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
@@ -72,9 +73,13 @@ export default function GroupsManagement({
     async (groupId: string, isMounted: () => boolean = () => true) => {
       setIsLoadingUsers(true);
       setUserError('');
+      setSelectedUserIds([]);
+      setIsEditModalOpen(false);
+      setIsAddUsersModalOpen(false);
+      setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listUsersByGroup(groupId);
+        const nextUsers = await listGroupMembers(groupId);
 
         if (isMounted()) {
           setUsers(nextUsers);
@@ -100,28 +105,20 @@ export default function GroupsManagement({
 
   useEffect(() => {
     if (!activeGroup) {
-      setUsers([]);
-      setIsEditModalOpen(false);
-      setIsAddUsersModalOpen(false);
-      setSelectedUserIds([]);
-      setIsRemoveUsersModalOpen(false);
       return;
     }
 
     const groupId = activeGroup.id;
     let isMounted = true;
-
-    void loadGroupUsers(groupId, () => isMounted);
+    const timeoutId = window.setTimeout(() => {
+      void loadGroupUsers(groupId, () => isMounted);
+    }, 0);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, [activeGroup, loadGroupUsers]);
-
-  useEffect(() => {
-    const userIdSet = new Set(users.map((user) => user.uid));
-    setSelectedUserIds((currentIds) => currentIds.filter((userId) => userIdSet.has(userId)));
-  }, [users]);
 
   function toggleUserSelection(userId: string) {
     setSelectedUserIds((currentIds) =>
@@ -171,6 +168,43 @@ export default function GroupsManagement({
       toast.error(errorMessage, { id: 'group-remove-users-error' });
     } finally {
       setIsRemovingUsers(false);
+    }
+  }
+
+  async function handleAssignRole(userId: string, roleKey: NonEventRoleKey) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await assignScopeRole('group', activeGroup.id, userId, roleKey);
+      toast.success('Đã cập nhật chức vụ trong nhóm.', { id: 'group-role-success' });
+      void loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể cập nhật chức vụ: ${message}` : 'Không thể cập nhật chức vụ.',
+        {
+          id: 'group-role-error',
+        },
+      );
+    }
+  }
+
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await removeScopeRole('group', activeGroup.id, userId, roleKey);
+      toast.success('Đã gỡ chức vụ trong nhóm.', { id: 'group-role-remove-success' });
+      void loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
+        id: 'group-role-remove-error',
+      });
     }
   }
 
@@ -283,13 +317,17 @@ export default function GroupsManagement({
         </>
       }
     >
-      <GroupMembersTable
+      <ScopeMembersTable
+        scopeType="group"
         users={filteredUsers}
         isLoading={isLoadingUsers}
         error={userError}
+        accent="emerald"
         selectedUserIdSet={selectedUserIdSet}
         onToggleUser={toggleUserSelection}
         onToggleVisibleUsers={toggleVisibleUsersSelection}
+        onAssignRole={handleAssignRole}
+        onRemoveRole={handleRemoveRole}
       />
       {isEditModalOpen && (
         <GroupFormModal

@@ -3,6 +3,7 @@
 import PlaceholderManagement from '@/features/super-admin/components/common/PlaceholderManagement';
 import DivisionsManagement from '@/features/super-admin/components/division/DivisionsManagement';
 import GroupsManagement from '@/features/super-admin/components/group/GroupsManagement';
+import PermissionsManagement from '@/features/super-admin/components/permission/PermissionsManagement';
 import PostsManagement from '@/features/super-admin/components/post/PostsManagement';
 import UsersManagement from '@/features/super-admin/components/user/UsersManagement';
 import { useSuperAdminLayout } from '@/features/super-admin/contexts/SuperAdminLayoutContext';
@@ -55,6 +56,10 @@ export default function SuperAdminPage() {
 
   if (activeSectionId === 'posts') {
     return <PostsManagement />;
+  }
+
+  if (activeSectionId === 'permissions') {
+    return <PermissionsManagement />;
   }
 
   return <PlaceholderManagement section={activeSection} />;
