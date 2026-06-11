@@ -2,6 +2,26 @@ function stripTrailingSlash(value: string) {
   return value.replace(/\/$/, '');
 }
 
+function isLocalSupabaseUrl(value: string) {
+  const url = new URL(value);
+
+  return (
+    url.port === '54321' &&
+    ['127.0.0.1', 'localhost', 'host.docker.internal'].includes(url.hostname)
+  );
+}
+
+function getContainerReachableSupabaseUrl(value: string) {
+  const url = new URL(value);
+  const isLocalSupabase = isLocalSupabaseUrl(value);
+
+  if (process.env.DOCKER_CONTAINER === 'true' && isLocalSupabase) {
+    url.hostname = 'host.docker.internal';
+  }
+
+  return stripTrailingSlash(url.toString());
+}
+
 function requireEnv(name: string) {
   const value = process.env[name];
 
@@ -13,7 +33,11 @@ function requireEnv(name: string) {
 }
 
 export function getSupabasePublicServerConfig() {
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publicSupabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl =
+    publicSupabaseUrl && isLocalSupabaseUrl(publicSupabaseUrl)
+      ? (process.env.SUPABASE_INTERNAL_URL ?? publicSupabaseUrl)
+      : publicSupabaseUrl;
   const publishableKey =
     process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -24,7 +48,7 @@ export function getSupabasePublicServerConfig() {
   }
 
   return {
-    supabaseUrl: stripTrailingSlash(supabaseUrl),
+    supabaseUrl: getContainerReachableSupabaseUrl(supabaseUrl),
     publishableKey,
   };
 }

@@ -7,14 +7,21 @@ import {
 import { getUserRole } from '@/server/supabase';
 import { NextResponse } from 'next/server';
 
+function getAppOrigin() {
+  return (process.env.NEXT_PUBLIC_APP_ORIGIN ?? 'http://localhost:3000').replace(/\/$/, '');
+}
+
 export async function GET(request: Request) {
-  const { origin, searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const next = getSafeAuthNextPath(searchParams.get('next'));
+  const origin = getAppOrigin();
 
   if (code) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    console.log({ data, error });
 
     if (!error) {
       if (next) {

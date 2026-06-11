@@ -1,13 +1,19 @@
 import { createServerClient } from '@supabase/ssr';
+import { getSupabasePublicServerConfig } from '@/server/env';
+import { SUPABASE_AUTH_COOKIE_NAME } from './config';
 import { cookies } from 'next/headers';
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    supabaseUrl,
+    publishableKey,
     {
+      cookieOptions: {
+        name: SUPABASE_AUTH_COOKIE_NAME,
+      },
       cookies: {
         getAll() {
           return cookieStore.getAll();

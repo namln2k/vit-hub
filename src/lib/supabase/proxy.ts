@@ -1,5 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { APP_ROUTES, PROTECTED_APP_ROUTES, isPathInRoute } from '@/constants/routes';
+import { getSupabasePublicServerConfig } from '@/server/env';
+import { SUPABASE_AUTH_COOKIE_NAME } from './config';
 import { NextResponse, type NextRequest } from 'next/server';
 
 function isProtectedPath(pathname: string) {
@@ -11,15 +13,27 @@ function isSuperAdminPath(pathname: string) {
 }
 
 function getSupabaseUrl() {
-  return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+  try {
+    return getSupabasePublicServerConfig().supabaseUrl;
+  } catch {
+    return undefined;
+  }
 }
 
 function getSupabasePublishableKey() {
-  return process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  try {
+    return getSupabasePublicServerConfig().publishableKey;
+  } catch {
+    return undefined;
+  }
 }
 
-function redirectTo(request: NextRequest, pathname: string) {
-  const url = request.nextUrl.clone();
+function getAppOrigin() {
+  return (process.env.NEXT_PUBLIC_APP_ORIGIN ?? 'http://localhost:3000').replace(/\/$/, '');
+}
+
+function redirectTo(pathname: string) {
+  const url = new URL(pathname, getAppOrigin());
   url.pathname = pathname;
   url.search = '';
   return NextResponse.redirect(url);
@@ -60,13 +74,16 @@ export async function updateSession(request: NextRequest) {
 
   if (!supabaseUrl || !publishableKey) {
     if (isProtectedPath(request.nextUrl.pathname)) {
-      return redirectTo(request, APP_ROUTES.login);
+      return redirectTo(APP_ROUTES.login);
     }
 
     return supabaseResponse;
   }
 
   const supabase = createServerClient(supabaseUrl, publishableKey, {
+    cookieOptions: {
+      name: SUPABASE_AUTH_COOKIE_NAME,
+    },
     cookies: {
       getAll() {
         return request.cookies.getAll();
@@ -88,8 +105,7 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (isProtectedPath(pathname) && !uid) {
-    const url = request.nextUrl.clone();
-    url.pathname = APP_ROUTES.login;
+    const url = new URL(APP_ROUTES.login, getAppOrigin());
     url.searchParams.set('next', `${pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(url);
   }
@@ -98,7 +114,7 @@ export async function updateSession(request: NextRequest) {
     const role = await getUserRole(uid);
 
     if (role !== 'super_admin') {
-      return redirectTo(request, APP_ROUTES.profile);
+      return redirectTo(APP_ROUTES.profile);
     }
   }
 

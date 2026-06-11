@@ -37,11 +37,18 @@ function getAuthErrorMessage(error: unknown) {
     return 'Không thể gửi email xác nhận. Vui lòng kiểm tra cấu hình SMTP trong Supabase Auth.';
   }
 
+  if (/unsupported provider|provider is not enabled/i.test(message)) {
+    return 'Google login chưa được bật trong Supabase Auth. Vui lòng kiểm tra cấu hình provider Google.';
+  }
+
   return message || 'Không thể xử lý yêu cầu xác thực.';
 }
 
 function getAppOrigin() {
-  return window.location.origin.replace(/\/$/, '');
+  const configuredOrigin = process.env.NEXT_PUBLIC_APP_ORIGIN;
+  const origin = configuredOrigin || window.location.origin;
+
+  return origin.replace(/\/$/, '');
 }
 
 function getAuthRedirectUrl(path: string) {

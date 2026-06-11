@@ -13,27 +13,29 @@ VIT Hub uses Supabase Auth for email/password and Google accounts, and a `user` 
 
 ## Environment Variables
 
-Create a `.env` file in the project root:
+Create a `.env.local` file in the project root:
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
 
 Fill in the Supabase values:
 
 ```env
-VITE_SUPABASE_URL=https://your-project-ref.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
+NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-If you are using a legacy anon key instead of a publishable key, set:
+For local Supabase while the app runs in Docker, keep the public URL reachable from your browser and set the server-side URL reachable from the app container:
 
 ```env
-VITE_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_INTERNAL_URL=http://host.docker.internal:54321
 ```
 
 The avatar and registration APIs validate users and write pending signup users server-side.
@@ -46,8 +48,8 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
 If you are using a legacy anon key, `SUPABASE_ANON_KEY` can replace `SUPABASE_PUBLISHABLE_KEY`.
-Do not put the service role key in frontend `VITE_*` variables.
-Only the `VITE_SUPABASE_*` values are intended for the browser. Keep `SUPABASE_SERVICE_ROLE_KEY`
+Do not put the service role key in frontend `NEXT_PUBLIC_*` variables.
+Only the `NEXT_PUBLIC_SUPABASE_*` values are intended for the browser. Keep `SUPABASE_SERVICE_ROLE_KEY`
 and all R2 credentials server-only.
 
 Restart the dev server after changing environment variables.
@@ -57,15 +59,15 @@ Restart the dev server after changing environment variables.
 In `Authentication` -> `URL Configuration`, set the Site URL for each environment:
 
 ```text
-http://localhost:5173
+http://localhost:3000
 https://vithub-soict.vercel.app
 ```
 
 Add redirect URLs for the routes used by the app:
 
 ```text
-http://localhost:5173/auth/callback
-http://localhost:5173/login
+http://localhost:3000/auth/callback
+http://localhost:3000/login
 https://vithub-soict.vercel.app/auth/callback
 https://vithub-soict.vercel.app/login
 ```
@@ -78,6 +80,12 @@ https://your-project-ref.supabase.co/auth/v1/callback
 
 Copy the Google client ID and client secret into the Supabase Google provider settings.
 
+For local Supabase, Google Cloud also needs the local Supabase callback URL:
+
+```text
+http://127.0.0.1:54321/auth/v1/callback
+```
+
 ## Required Services
 
 - Supabase Auth: email/password accounts and optional Google accounts
@@ -89,7 +97,7 @@ Copy the Google client ID and client secret into the Supabase Google provider se
 
 ### Supabase config is missing
 
-Confirm that `.env` exists and has `VITE_SUPABASE_URL` plus either `VITE_SUPABASE_PUBLISHABLE_KEY` or `VITE_SUPABASE_ANON_KEY`. Restart the dev server after changing environment variables.
+Confirm that `.env.local` exists and has `NEXT_PUBLIC_SUPABASE_URL` plus `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Restart the dev server after changing environment variables.
 For API routes, also confirm `SUPABASE_URL`, either `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are configured wherever the server route runs.
 
 ### Register fails with permission errors
