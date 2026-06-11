@@ -281,21 +281,21 @@ on conflict (key) do update set
 
 insert into public.permissions (key, label, description)
 values
-  ('scope.member.view_contact', 'Xem liên hệ thành viên scope', 'Xem email và số điện thoại của thành viên trong scope được phép.'),
-  ('scope.member.manage', 'Quản lý thành viên scope', 'Thêm hoặc kết thúc membership trong scope được phép.'),
-  ('scope.role.assign_deputy', 'Bổ nhiệm cấp phó', 'Bổ nhiệm cấp phó trong scope được phép.'),
-  ('scope.role.assign_lead', 'Bổ nhiệm trưởng chính', 'Bổ nhiệm hoặc transfer trưởng chính trong scope được phép.'),
-  ('scope.role.revoke_deputy', 'Gỡ cấp phó', 'Kết thúc hoặc revoke cấp phó trong scope được phép.'),
-  ('scope.role.revoke_lead', 'Gỡ trưởng chính', 'Kết thúc hoặc revoke trưởng chính trong scope được phép.'),
-  ('event.create', 'Tạo event', 'Tạo event chính thức trong owner scope được phép.'),
-  ('event.view_private', 'Xem dữ liệu riêng tư event', 'Xem dữ liệu vận hành riêng tư của event.'),
-  ('event.manage', 'Quản lý event', 'Cập nhật metadata và cấu hình event.'),
-  ('event.member.manage', 'Quản lý thành viên event', 'Thêm hoặc cập nhật thành viên event.'),
-  ('event.role.assign', 'Bổ nhiệm role event', 'Bổ nhiệm role trong event.'),
-  ('event.role.revoke', 'Gỡ role event', 'Gỡ role trong event.'),
-  ('event.attendance.update', 'Cập nhật attendance event', 'Cập nhật trạng thái attendance của event members.'),
-  ('permission.view', 'Xem permission matrix', 'Xem role permission grants.'),
-  ('permission.manage', 'Quản lý permission matrix', 'Cập nhật role permission grants.')
+  ('scope.member.view_contact', 'Xem liên hệ thành viên trong phạm vi', 'Xem email và số điện thoại của thành viên trong phạm vi quản lý.'),
+  ('scope.member.manage', 'Quản lý thành viên trong phạm vi', 'Thêm hoặc kick thành viên trong phạm vi quản lý.'),
+  ('scope.role.assign_deputy', 'Bổ nhiệm cấp phó', 'Bổ nhiệm cấp phó trong phạm vi quản lý.'),
+  ('scope.role.assign_lead', 'Bổ nhiệm cấp trưởng', 'Bổ nhiệm hoặc chuyển giao cấp trưởng trong phạm vi quản lý.'),
+  ('scope.role.revoke_deputy', 'Gỡ cấp phó', 'Kết thúc hoặc gỡ cấp phó trong phạm vi quản lý.'),
+  ('scope.role.revoke_lead', 'Gỡ cấp trưởng', 'Kết thúc hoặc gỡ cấp trưởng trong phạm vi quản lý.'),
+  ('event.create', 'Tạo sự kiện', 'Tạo sự kiện trong phạm vi quản lý.'),
+  ('event.view_private', 'Xem chi tiết vận hành sự kiện', 'Xem chi tiết vận hành sự kiện, bao gồm ghi chú nội bộ, cấu hình riêng tư, danh sách thành viên, vai trò trong sự kiện và trạng thái tham gia.'),
+  ('event.manage', 'Quản lý sự kiện', 'Cập nhật thông tin tổng quan sự kiện.'),
+  ('event.member.manage', 'Quản lý thành viên sự kiện', 'Thêm hoặc cập nhật thành viên sự kiện.'),
+  ('event.role.assign', 'Bổ nhiệm vai trò trong sự kiện', 'Bổ nhiệm vai trò trong sự kiện.'),
+  ('event.role.revoke', 'Gỡ vai trò trong sự kiện', 'Gỡ vai trò trong sự kiện.'),
+  ('event.attendance.update', 'Cập nhật trạng thái tham gia sự kiện', 'Cập nhật trạng thái tham gia của thành viên sự kiện.'),
+  ('permission.view', 'Xem quản lý phân quyền', 'Xem các quyền được cấp cho từng vai trò.'),
+  ('permission.manage', 'Quản lý phân quyền', 'Cập nhật các quyền được cấp cho từng vai trò.')
 on conflict (key) do update set
   label = excluded.label,
   description = excluded.description;

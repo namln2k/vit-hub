@@ -1,6 +1,12 @@
 import { supabase } from '@/services/supabase';
 import { mapUserRow, type UserRow } from '@/services/users';
 import type { AppUser } from '@/contexts/auth';
+import {
+  addScopeMembers,
+  listScopeMembers,
+  removeScopeMembers,
+  type OrganizationMember,
+} from '@/services/organizationAdmin';
 
 export interface Group {
   id: string;
@@ -21,11 +27,6 @@ interface UserGroupRow {
 interface GroupWrite {
   name: string;
   description: string | null;
-}
-
-interface UserGroupWrite {
-  group_id: string;
-  user_id: string;
 }
 
 function mapGroupRow(row: GroupRow): Group {
@@ -130,39 +131,16 @@ export async function listUsersByGroup(groupId: string): Promise<AppUser[]> {
     .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
 }
 
+export async function listGroupMembers(groupId: string): Promise<OrganizationMember[]> {
+  return listScopeMembers('group', groupId);
+}
+
 export async function addUsersToGroup(groupId: string, userIds: string[]): Promise<void> {
-  if (userIds.length === 0) {
-    return;
-  }
-
-  const rows: UserGroupWrite[] = userIds.map((userId) => ({
-    group_id: groupId,
-    user_id: userId,
-  }));
-
-  const { error } = await supabase
-    .from('user_groups')
-    .upsert(rows, { onConflict: 'group_id,user_id', ignoreDuplicates: true });
-
-  if (error) {
-    throw error;
-  }
+  return addScopeMembers('group', groupId, userIds);
 }
 
 export async function removeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
-  if (userIds.length === 0) {
-    return;
-  }
-
-  const { error } = await supabase
-    .from('user_groups')
-    .delete()
-    .eq('group_id', groupId)
-    .in('user_id', userIds);
-
-  if (error) {
-    throw error;
-  }
+  return removeScopeMembers('group', groupId, userIds);
 }
 
 function getUserSortName(user: AppUser) {

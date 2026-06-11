@@ -1,5 +1,4 @@
-import { listUsersByDivision, removeUsersFromDivision, type Division } from '@/services/divisions';
-import type { AppUser } from '@/contexts/auth';
+import { listDivisionMembers, removeUsersFromDivision, type Division } from '@/services/divisions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
@@ -9,9 +8,15 @@ import {
   normalizeSearchValue,
 } from '@/features/super-admin/lib/userUtils';
 import AddDivisionUsersModal from './AddDivisionUsersModal';
-import DivisionMembersTable from './DivisionMembersTable';
 import DivisionPanelActions from './DivisionPanelActions';
 import DivisionsTable from './DivisionsTable';
+import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
+import {
+  assignScopeRole,
+  removeScopeRole,
+  type OrganizationMember,
+} from '@/services/organizationAdmin';
+import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 import { toast } from 'sonner';
 
 interface DivisionsManagementProps {
@@ -27,7 +32,7 @@ export default function DivisionsManagement({
   isLoadingDivisions,
   divisionError,
 }: DivisionsManagementProps) {
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
@@ -69,9 +74,12 @@ export default function DivisionsManagement({
     async (divisionId: string, isMounted: () => boolean = () => true) => {
       setIsLoadingUsers(true);
       setUserError('');
+      setSelectedUserIds([]);
+      setIsAddUsersModalOpen(false);
+      setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listUsersByDivision(divisionId);
+        const nextUsers = await listDivisionMembers(divisionId);
 
         if (isMounted()) {
           setUsers(nextUsers);
@@ -97,27 +105,20 @@ export default function DivisionsManagement({
 
   useEffect(() => {
     if (!activeDivision) {
-      setUsers([]);
-      setIsAddUsersModalOpen(false);
-      setSelectedUserIds([]);
-      setIsRemoveUsersModalOpen(false);
       return;
     }
 
     const divisionId = activeDivision.id;
     let isMounted = true;
-
-    void loadDivisionUsers(divisionId, () => isMounted);
+    const timeoutId = window.setTimeout(() => {
+      void loadDivisionUsers(divisionId, () => isMounted);
+    }, 0);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, [activeDivision, loadDivisionUsers]);
-
-  useEffect(() => {
-    const userIdSet = new Set(users.map((user) => user.uid));
-    setSelectedUserIds((currentIds) => currentIds.filter((userId) => userIdSet.has(userId)));
-  }, [users]);
 
   function toggleUserSelection(userId: string) {
     setSelectedUserIds((currentIds) =>
@@ -170,6 +171,43 @@ export default function DivisionsManagement({
     }
   }
 
+  async function handleAssignRole(userId: string, roleKey: NonEventRoleKey) {
+    if (!activeDivision) {
+      return;
+    }
+
+    try {
+      await assignScopeRole('division', activeDivision.id, userId, roleKey);
+      toast.success('Đã cập nhật chức vụ trong mảng.', { id: 'division-role-success' });
+      void loadDivisionUsers(activeDivision.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể cập nhật chức vụ: ${message}` : 'Không thể cập nhật chức vụ.',
+        {
+          id: 'division-role-error',
+        },
+      );
+    }
+  }
+
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey) {
+    if (!activeDivision) {
+      return;
+    }
+
+    try {
+      await removeScopeRole('division', activeDivision.id, userId, roleKey);
+      toast.success('Đã gỡ chức vụ trong mảng.', { id: 'division-role-remove-success' });
+      void loadDivisionUsers(activeDivision.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
+        id: 'division-role-remove-error',
+      });
+    }
+  }
+
   const isViewingDivisionList = !activeDivision;
   const visibleCount = isViewingDivisionList
     ? `${filteredDivisions.length} mảng`
@@ -200,13 +238,17 @@ export default function DivisionsManagement({
           error={divisionError}
         />
       ) : (
-        <DivisionMembersTable
+        <ScopeMembersTable
+          scopeType="division"
           users={filteredUsers}
           isLoading={isLoadingUsers}
           error={userError}
+          accent="indigo"
           selectedUserIdSet={selectedUserIdSet}
           onToggleUser={toggleUserSelection}
           onToggleVisibleUsers={toggleVisibleUsersSelection}
+          onAssignRole={handleAssignRole}
+          onRemoveRole={handleRemoveRole}
         />
       )}
       {activeDivision && isAddUsersModalOpen && (

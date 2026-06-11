@@ -1,4 +1,4 @@
-import { Banknote, Building2, Newspaper, UserCog, UsersRound } from 'lucide-react';
+import { Banknote, Building2, KeyRound, Newspaper, UserCog, UsersRound } from 'lucide-react';
 import type { AdminSection } from '@/features/super-admin/types';
 
 export const ADMIN_SECTIONS: AdminSection[] = [
@@ -29,6 +29,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     icon: <Newspaper className="h-4 w-4" />,
     countLabel: 'bài viết',
     accentClassName: 'bg-violet-50 text-violet-700 border-violet-200',
+  },
+  {
+    id: 'permissions',
+    label: 'Phân quyền',
+    icon: <KeyRound className="h-4 w-4" />,
+    countLabel: 'grants',
+    accentClassName: 'bg-rose-50 text-rose-700 border-rose-200',
   },
   {
     id: 'fund',
