@@ -1,5 +1,6 @@
 import Avatar from '@/shared/layout/Avatar';
-import { useState, type ReactNode } from 'react';
+import type { AppUser } from '@/contexts/auth';
+import { useEffect, useState, type ReactNode } from 'react';
 import MembersLoadingOverlay from '@/features/super-admin/components/common/MembersLoadingOverlay';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import {
@@ -13,7 +14,8 @@ import {
   type NonEventRoleKey,
 } from '@/features/organization-structure/permissions';
 import type { ManageableScopeType, OrganizationMember } from '@/services/organizationAdmin';
-import { Ban, ShieldCheck, ShieldMinus, ShieldPlus, X } from 'lucide-react';
+import { queryUsers } from '@/services/users';
+import { ArrowRightLeft, Ban, Search, ShieldCheck, ShieldMinus, ShieldPlus, X } from 'lucide-react';
 
 interface ScopeMembersTableProps {
   scopeType: ManageableScopeType;
@@ -32,6 +34,7 @@ interface ScopeMembersTableProps {
   ) => Promise<void>;
   onRemoveRole: (userId: string, roleKey: NonEventRoleKey, endedAt: string) => Promise<void>;
   onRevokeMembership: (userId: string) => void;
+  onTransferLead: (targetUserId: string) => Promise<void>;
 }
 
 type RoleActionDialogState = {
@@ -52,13 +55,20 @@ export default function ScopeMembersTable({
   onAssignRole,
   onRemoveRole,
   onRevokeMembership,
+  onTransferLead,
 }: ScopeMembersTableProps) {
   const [roleActionDialog, setRoleActionDialog] = useState<RoleActionDialogState>(null);
+  const [isTransferLeadModalOpen, setIsTransferLeadModalOpen] = useState(false);
   const selectableUsers = users.filter((user) => canEndMembership(user));
   const areAllVisibleUsersSelected =
     selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIdSet.has(user.uid));
   const leadRoleKey = getLeadRoleForScope(scopeType);
   const deputyRoleKey = getDeputyRoleForScope(scopeType);
+  const currentLead = users.find((user) =>
+    user.roleAssignments.some(
+      (assignment) => assignment.roleKey === leadRoleKey && isActiveNowAssignment(assignment),
+    ),
+  );
   const checkboxClassName =
     accent === 'indigo'
       ? 'h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500'
@@ -69,6 +79,17 @@ export default function ScopeMembersTable({
   return (
     <div className="relative min-h-72 flex-1">
       {isLoading && <MembersLoadingOverlay />}
+      <div className="flex justify-end border-b border-slate-200 bg-white px-5 py-3">
+        <button
+          type="button"
+          onClick={() => setIsTransferLeadModalOpen(true)}
+          disabled={!currentLead || isLoading}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
+        >
+          <ArrowRightLeft className="h-4 w-4" />
+          Chuyển giao trưởng
+        </button>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -111,6 +132,7 @@ export default function ScopeMembersTable({
                 const hasDeputyRole = visibleRoleAssignments.some(
                   (assignment) => assignment.roleKey === deputyRoleKey,
                 );
+                const isCurrentLead = currentLead?.uid === user.uid;
                 const isSelectable = canEndMembership(user);
                 const canRevoke = canRevokeMembership(user);
                 const isRoleActionDisabled =
@@ -179,24 +201,26 @@ export default function ScopeMembersTable({
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
-                        <ActionButton
-                          label={hasLeadRole ? 'Gỡ trưởng' : 'Gán trưởng'}
-                          tone={hasLeadRole ? 'danger' : 'neutral'}
-                          onClick={() =>
-                            setRoleActionDialog({
-                              mode: hasLeadRole ? 'end' : 'assign',
-                              user,
-                              roleKey: leadRoleKey,
-                            })
-                          }
-                          disabled={isRoleActionDisabled}
-                        >
-                          {hasLeadRole ? (
-                            <ShieldMinus className="h-4 w-4" />
-                          ) : (
-                            <ShieldCheck className="h-4 w-4" />
-                          )}
-                        </ActionButton>
+                        {(isCurrentLead || !currentLead) && (
+                          <ActionButton
+                            label={hasLeadRole ? 'Gỡ trưởng' : 'Gán trưởng'}
+                            tone={hasLeadRole ? 'danger' : 'neutral'}
+                            onClick={() =>
+                              setRoleActionDialog({
+                                mode: hasLeadRole ? 'end' : 'assign',
+                                user,
+                                roleKey: leadRoleKey,
+                              })
+                            }
+                            disabled={isRoleActionDisabled}
+                          >
+                            {hasLeadRole ? (
+                              <ShieldMinus className="h-4 w-4" />
+                            ) : (
+                              <ShieldCheck className="h-4 w-4" />
+                            )}
+                          </ActionButton>
+                        )}
                         <ActionButton
                           label={hasDeputyRole ? 'Gỡ phó' : 'Gán phó'}
                           tone={hasDeputyRole ? 'danger' : 'neutral'}
@@ -240,6 +264,13 @@ export default function ScopeMembersTable({
           onClose={() => setRoleActionDialog(null)}
           onAssignRole={onAssignRole}
           onRemoveRole={onRemoveRole}
+        />
+      )}
+      {isTransferLeadModalOpen && currentLead && (
+        <TransferLeadModal
+          currentLead={currentLead}
+          onClose={() => setIsTransferLeadModalOpen(false)}
+          onTransferLead={onTransferLead}
         />
       )}
     </div>
@@ -435,6 +466,233 @@ function RoleActionModal({ action, onClose, onAssignRole, onRemoveRole }: RoleAc
   );
 }
 
+interface TransferLeadModalProps {
+  currentLead: OrganizationMember;
+  onClose: () => void;
+  onTransferLead: ScopeMembersTableProps['onTransferLead'];
+}
+
+function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLeadModalProps) {
+  const [searchValue, setSearchValue] = useState('');
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [targetUser, setTargetUser] = useState<AppUser | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
+  const queryText = searchValue.trim();
+
+  useEffect(() => {
+    let isActive = true;
+    const timeoutId = window.setTimeout(
+      async () => {
+        if (queryText.length > 0 && queryText.length < 2) {
+          setUsers([]);
+          setIsSearching(false);
+          return;
+        }
+
+        setIsSearching(true);
+        setError('');
+
+        try {
+          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+
+          if (isActive) {
+            setUsers(nextUsers);
+          }
+        } catch {
+          if (isActive) {
+            setUsers([]);
+            setError('Không thể tải danh sách thành viên.');
+          }
+        } finally {
+          if (isActive) {
+            setIsSearching(false);
+          }
+        }
+      },
+      queryText ? 250 : 0,
+    );
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [queryText]);
+
+  async function handleTransfer() {
+    if (!targetUser) {
+      return;
+    }
+
+    setError('');
+    setIsSaving(true);
+
+    try {
+      await onTransferLead(targetUser.uid);
+      onClose();
+    } catch (transferError) {
+      setError(
+        transferError instanceof Error ? transferError.message : 'Không thể chuyển giao trưởng.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+      <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-950">Chuyển giao trưởng</h2>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              Chuyển giao có hiệu lực ngay sau khi xác nhận.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Đóng"
+            title="Đóng"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+            <TransferUserCard label="Trưởng hiện tại" user={currentLead} />
+            <div className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 sm:flex">
+              <ArrowRightLeft className="h-4 w-4" />
+            </div>
+            <TransferUserCard label="Trưởng mới" user={targetUser} />
+          </div>
+
+          <label className="relative mt-4 block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              autoFocus
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Tìm theo username, email hoặc tên"
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-500 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
+          </label>
+
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
+            {queryText.length > 0 && queryText.length < 2 ? (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Nhập ít nhất 2 ký tự để tìm thành viên.
+              </p>
+            ) : isSearching ? (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Đang tìm kiếm...
+              </p>
+            ) : users.length > 0 ? (
+              <div className="max-h-72 divide-y divide-slate-200 overflow-y-auto">
+                {users.map((user) => (
+                  <button
+                    key={user.uid}
+                    type="button"
+                    onClick={() => {
+                      if (user.status === 'active') {
+                        setTargetUser(user);
+                      }
+                    }}
+                    disabled={isSaving || user.status !== 'active'}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Avatar src={user.avatarUrl} size="sm" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-slate-950">
+                          {getFullName(user)}
+                        </span>
+                        <span className="block truncate text-xs font-medium text-slate-500">
+                          @{user.username} · {user.email}
+                        </span>
+                        {user.status !== 'active' && (
+                          <span className="mt-1 inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                            Đã vô hiệu hóa
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600">
+                      Chọn
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="px-4 py-6 text-center text-sm font-medium text-slate-500">
+                Không tìm thấy thành viên phù hợp.
+              </p>
+            )}
+          </div>
+
+          {error && (
+            <p className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleTransfer()}
+            disabled={isSaving || !targetUser}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            {isSaving ? 'Đang chuyển giao' : 'Xác nhận chuyển giao'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TransferUserCard({
+  label,
+  user,
+}: {
+  label: string;
+  user: OrganizationMember | AppUser | null;
+}) {
+  return (
+    <div className="min-h-24 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="text-xs font-bold uppercase text-slate-500">{label}</div>
+      {user ? (
+        <div className="mt-3 flex min-w-0 items-center gap-3">
+          <Avatar src={user.avatarUrl} size="sm" />
+          <div className="min-w-0">
+            <div className="truncate text-sm font-bold text-slate-950">{getFullName(user)}</div>
+            <div className="truncate text-xs font-medium text-slate-500">
+              @{user.username} · {user.email}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 text-sm font-medium text-slate-400">Chưa chọn</div>
+      )}
+    </div>
+  );
+}
+
 interface DateTimeFieldProps {
   label: string;
   value: string;
@@ -471,6 +729,18 @@ function isCurrentOrUpcomingAssignment(assignment: RoleAssignment) {
   const endsAt = assignment.endsAt ? new Date(assignment.endsAt).getTime() : null;
 
   return endsAt === null || endsAt > Date.now();
+}
+
+function isActiveNowAssignment(assignment: RoleAssignment) {
+  if (assignment.status !== 'active') {
+    return false;
+  }
+
+  const now = Date.now();
+  const startsAt = new Date(assignment.startsAt).getTime();
+  const endsAt = assignment.endsAt ? new Date(assignment.endsAt).getTime() : null;
+
+  return startsAt <= now && (endsAt === null || endsAt > now);
 }
 
 function getRoleAssignmentLifecycleState(

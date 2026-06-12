@@ -163,6 +163,10 @@ export class RepositoryConflictError extends Error {
   readonly status = 409;
 }
 
+export class RepositoryForbiddenError extends Error {
+  readonly status = 403;
+}
+
 const USER_SELECT =
   'id,email,first_name,last_name,middle_name,nickname,username,phone_number,school_name,enter_year,cohort,gender,avatar_url,avatar_key,role,status';
 
@@ -754,6 +758,44 @@ export async function endScopeRoleAssignments({
   }
 }
 
+export async function transferScopeLead({
+  actorId,
+  scopeType,
+  scopeId,
+  targetUserId,
+}: {
+  actorId: string;
+  scopeType: ManageableScopeType;
+  scopeId: string;
+  targetUserId: string;
+}) {
+  const targetUsers = await listUsersByIds([targetUserId]);
+  const targetUser = targetUsers[0] ?? null;
+
+  if (!targetUser) {
+    throw new RepositoryConflictError('Không tìm thấy người nhận chuyển giao.');
+  }
+
+  if (targetUser.status !== 'active') {
+    throw new RepositoryForbiddenError('Người nhận chuyển giao phải là tài khoản đang hoạt động.');
+  }
+
+  const { response, data } = await supabaseFetch('/rest/v1/rpc/transfer_scope_lead', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      p_actor_id: actorId,
+      p_scope_type: scopeType,
+      p_scope_id: scopeId,
+      p_target_user_id: targetUserId,
+    },
+  });
+
+  if (!response.ok) {
+    throwTransferLeadError(data);
+  }
+}
+
 export async function revokeScopeRoleAssignments({
   actorId,
   scopeType,
@@ -1187,6 +1229,25 @@ function throwRoleAssignmentWriteError(data: unknown, roleKey: NonEventRoleKey):
   }
 
   throw new Error(getRestErrorMessage(data, 'Không thể bổ nhiệm vai trò.'));
+}
+
+function throwTransferLeadError(data: unknown): never {
+  const errorCode =
+    data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
+      ? data.code
+      : '';
+
+  if (errorCode === '42501') {
+    throw new RepositoryForbiddenError(getRestErrorMessage(data, 'Không có quyền chuyển giao trưởng.'));
+  }
+
+  if (errorCode === '23505' || errorCode === '23P01' || errorCode === 'P0002') {
+    throw new RepositoryConflictError(
+      getRestErrorMessage(data, 'Không thể chuyển giao trưởng do trạng thái scope không hợp lệ.'),
+    );
+  }
+
+  throw new Error(getRestErrorMessage(data, 'Không thể chuyển giao trưởng.'));
 }
 
 function throwRestWriteError(data: unknown, fallback: string): never {

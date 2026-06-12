@@ -24,6 +24,7 @@ import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMem
 import {
   assignScopeRole,
   removeScopeRole,
+  transferScopeLead,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
@@ -229,6 +230,25 @@ export default function DivisionsManagement({
     }
   }
 
+  async function handleTransferLead(targetUserId: string) {
+    if (!activeDivision) {
+      return;
+    }
+
+    try {
+      await transferScopeLead('division', activeDivision.id, targetUserId);
+      toast.success('Đã chuyển giao trưởng mảng.', { id: 'division-transfer-lead-success' });
+      await loadDivisionUsers(activeDivision.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể chuyển giao trưởng mảng: ${message}` : 'Không thể chuyển giao trưởng mảng.',
+        { id: 'division-transfer-lead-error' },
+      );
+      throw error;
+    }
+  }
+
   async function handleRevokeMembership(userId: string) {
     if (!activeDivision) {
       return;
@@ -303,6 +323,7 @@ export default function DivisionsManagement({
           onAssignRole={handleAssignRole}
           onRemoveRole={handleRemoveRole}
           onRevokeMembership={handleRevokeMembership}
+          onTransferLead={handleTransferLead}
         />
       )}
       {activeDivision && isAddUsersModalOpen && (

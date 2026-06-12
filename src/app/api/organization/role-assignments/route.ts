@@ -2,6 +2,7 @@ import { jsonResponse, readJsonBody } from '@/server/api';
 import {
   authorizationErrorResponse,
   hasDomainPermission,
+  type OrganizationActor,
   requireOrganizationActor,
 } from '@/features/organization-structure/server/authorization';
 import {
@@ -11,6 +12,8 @@ import {
   getLeadRoleKey,
   isManageableScopeType,
   RepositoryConflictError,
+  RepositoryForbiddenError,
+  transferScopeLead,
 } from '@/features/organization-structure/server/adminRepository';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 
@@ -24,6 +27,7 @@ interface RoleAssignmentBody {
   startsAt?: unknown;
   endsAt?: unknown;
   endedAt?: unknown;
+  targetUserId?: unknown;
 }
 
 function readString(value: unknown) {
@@ -77,6 +81,35 @@ async function canChangeRole(
       : 'scope.role.revoke_deputy';
 
   return hasDomainPermission(actor, permissionKey, { type: scopeType, id: scopeId });
+}
+
+async function canTransferLead(
+  actor: OrganizationActor,
+  scopeType: 'division' | 'group' | 'club',
+  scopeId: string,
+) {
+  if (!(await hasDomainPermission(actor, 'scope.role.assign_lead', { type: scopeType, id: scopeId }))) {
+    return false;
+  }
+
+  const leadRoleKey = getLeadRoleKey(scopeType);
+  const filteredActor: OrganizationActor = {
+    ...actor,
+    roleAssignments: actor.roleAssignments.filter(
+      (assignment) =>
+        !(
+          assignment.scope_type === scopeType &&
+          assignment.scope_id === scopeId &&
+          assignment.role_key === leadRoleKey
+        ),
+    ),
+  };
+
+  if (filteredActor.roleAssignments.length === actor.roleAssignments.length) {
+    return true;
+  }
+
+  return hasDomainPermission(filteredActor, 'scope.role.assign_lead', { type: scopeType, id: scopeId });
 }
 
 export async function POST(request: Request) {
@@ -182,6 +215,53 @@ export async function DELETE(request: Request) {
 
     return jsonResponse(
       { error: error instanceof Error ? error.message : 'Không thể gỡ vai trò.' },
+      500,
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const actor = await requireOrganizationActor(request);
+    const body = await readJsonBody<RoleAssignmentBody>(request, 20_000);
+    const scopeType = body.scopeType;
+    const scopeId = readString(body.scopeId);
+    const targetUserId = readString(body.targetUserId);
+
+    if (!isManageableScopeType(scopeType) || !scopeId || !targetUserId) {
+      return jsonResponse({ error: 'Dữ liệu chuyển giao trưởng không hợp lệ.' }, 400);
+    }
+
+    if (!(await canTransferLead(actor, scopeType, scopeId))) {
+      return jsonResponse(
+        {
+          error:
+            'Bạn không có quyền chuyển giao trưởng scope này hoặc quyền của bạn chỉ đến từ chức trưởng hiện tại.',
+        },
+        403,
+      );
+    }
+
+    await transferScopeLead({
+      actorId: actor.id,
+      scopeType,
+      scopeId,
+      targetUserId,
+    });
+    return jsonResponse({ ok: true });
+  } catch (error) {
+    const authResponse = authorizationErrorResponse(error);
+
+    if (authResponse) {
+      return authResponse;
+    }
+
+    if (error instanceof RepositoryForbiddenError || error instanceof RepositoryConflictError) {
+      return jsonResponse({ error: error.message }, error.status);
+    }
+
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : 'Không thể chuyển giao trưởng.' },
       500,
     );
   }
