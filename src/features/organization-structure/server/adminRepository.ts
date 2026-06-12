@@ -7,7 +7,7 @@ import type {
   PermissionKey,
 } from '@/features/organization-structure/permissions';
 
-export type ManageableScopeType = 'division' | 'group';
+export type ManageableScopeType = 'division' | 'group' | 'club';
 
 interface MembershipRow {
   id: string;
@@ -57,6 +57,21 @@ interface RoleAssignmentRow {
   starts_at: string;
   ends_at: string | null;
   status: 'active' | 'ended' | 'revoked';
+}
+
+interface ClubRow {
+  id: string;
+  division_id: string;
+  name: string;
+  description: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface DivisionRow {
+  id: string;
+  name: string;
 }
 
 interface RoleRow {
@@ -118,27 +133,242 @@ export interface PermissionMatrix {
   }>;
 }
 
+export interface ClubSummary {
+  id: string;
+  divisionId: string;
+  divisionName: string;
+  name: string;
+  description: string;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  memberCount: number;
+  leads: Array<{ userId: string; name: string; email: string }>;
+  deputies: Array<{ userId: string; name: string; email: string }>;
+}
+
+export class RepositoryConflictError extends Error {
+  readonly status = 409;
+}
+
 const USER_SELECT =
   'id,email,first_name,last_name,middle_name,nickname,username,phone_number,school_name,enter_year,cohort,gender,avatar_url,avatar_key,role,status';
 
 export function getMembershipTable(scopeType: ManageableScopeType) {
-  return scopeType === 'division' ? 'division_memberships' : 'group_memberships';
+  if (scopeType === 'division') {
+    return 'division_memberships';
+  }
+
+  if (scopeType === 'group') {
+    return 'group_memberships';
+  }
+
+  return 'club_memberships';
 }
 
 export function getScopeIdColumn(scopeType: ManageableScopeType) {
-  return scopeType === 'division' ? 'division_id' : 'group_id';
+  if (scopeType === 'division') {
+    return 'division_id';
+  }
+
+  if (scopeType === 'group') {
+    return 'group_id';
+  }
+
+  return 'club_id';
 }
 
 export function getLeadRoleKey(scopeType: ManageableScopeType): NonEventRoleKey {
-  return scopeType === 'division' ? 'division_lead' : 'group_lead';
+  if (scopeType === 'division') {
+    return 'division_lead';
+  }
+
+  if (scopeType === 'group') {
+    return 'group_lead';
+  }
+
+  return 'club_lead';
 }
 
 export function getDeputyRoleKey(scopeType: ManageableScopeType): NonEventRoleKey {
-  return scopeType === 'division' ? 'division_deputy' : 'group_deputy';
+  if (scopeType === 'division') {
+    return 'division_deputy';
+  }
+
+  if (scopeType === 'group') {
+    return 'group_deputy';
+  }
+
+  return 'club_deputy';
 }
 
 export function isManageableScopeType(value: unknown): value is ManageableScopeType {
-  return value === 'division' || value === 'group';
+  return value === 'division' || value === 'group' || value === 'club';
+}
+
+export async function listClubs(): Promise<ClubSummary[]> {
+  const { response, data } = await supabaseFetch<ClubRow[]>(
+    '/rest/v1/clubs?select=id,division_id,name,description,archived_at,created_at,updated_at&order=name.asc',
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách CLB/tổ.');
+  }
+
+  const clubs = Array.isArray(data) ? data : [];
+
+  if (clubs.length === 0) {
+    return [];
+  }
+
+  const [divisions, memberCounts, roleSummaries] = await Promise.all([
+    listDivisionsByIds(clubs.map((club) => club.division_id)),
+    countClubMembers(clubs.map((club) => club.id)),
+    listClubRoleSummaries(clubs.map((club) => club.id)),
+  ]);
+  const divisionsById = new Map(divisions.map((division) => [division.id, division]));
+
+  return clubs.map((club) => mapClubRow(club, divisionsById, memberCounts, roleSummaries));
+}
+
+export async function getClub(clubId: string): Promise<ClubSummary | null> {
+  const query = new URLSearchParams({
+    select: 'id,division_id,name,description,archived_at,created_at,updated_at',
+    id: `eq.${clubId}`,
+    limit: '1',
+  });
+  const { response, data } = await supabaseFetch<ClubRow[]>(`/rest/v1/clubs?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể tải CLB/tổ.');
+  }
+
+  const club = Array.isArray(data) ? data[0] : null;
+
+  if (!club) {
+    return null;
+  }
+
+  const [divisions, memberCounts, roleSummaries] = await Promise.all([
+    listDivisionsByIds([club.division_id]),
+    countClubMembers([club.id]),
+    listClubRoleSummaries([club.id]),
+  ]);
+
+  return mapClubRow(
+    club,
+    new Map(divisions.map((division) => [division.id, division])),
+    memberCounts,
+    roleSummaries,
+  );
+}
+
+export async function createClub({
+  actorId,
+  divisionId,
+  name,
+  description,
+}: {
+  actorId: string;
+  divisionId: string;
+  name: string;
+  description: string;
+}) {
+  const { response, data } = await supabaseFetch<ClubRow[]>('/rest/v1/clubs', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: {
+      division_id: divisionId,
+      name,
+      description: description || null,
+      created_by: actorId,
+      updated_by: actorId,
+    },
+  });
+
+  if (!response.ok) {
+    throwRestWriteError(data, 'Không thể tạo CLB/tổ.');
+  }
+
+  const club = Array.isArray(data) ? data[0] : null;
+
+  if (!club) {
+    throw new Error('Không thể tạo CLB/tổ.');
+  }
+
+  return getCreatedOrUpdatedClub(club.id);
+}
+
+export async function updateClub({
+  actorId,
+  clubId,
+  divisionId,
+  name,
+  description,
+}: {
+  actorId: string;
+  clubId: string;
+  divisionId: string;
+  name: string;
+  description: string;
+}) {
+  const query = new URLSearchParams({ id: `eq.${clubId}` });
+  const { response, data } = await supabaseFetch<ClubRow[]>(`/rest/v1/clubs?${query.toString()}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: {
+      division_id: divisionId,
+      name,
+      description: description || null,
+      updated_by: actorId,
+      updated_at: new Date().toISOString(),
+    },
+  });
+
+  if (!response.ok) {
+    throwRestWriteError(data, 'Không thể cập nhật CLB/tổ.');
+  }
+
+  const club = Array.isArray(data) ? data[0] : null;
+
+  if (!club) {
+    throw new Error('Không tìm thấy CLB/tổ.');
+  }
+
+  return getCreatedOrUpdatedClub(club.id);
+}
+
+export async function archiveClub({
+  actorId,
+  clubId,
+}: {
+  actorId: string;
+  clubId: string;
+}) {
+  const archivedAt = new Date().toISOString();
+  const query = new URLSearchParams({ id: `eq.${clubId}` });
+  const { response, data } = await supabaseFetch<ClubRow[]>(`/rest/v1/clubs?${query.toString()}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=representation' },
+    body: {
+      archived_at: archivedAt,
+      archived_by: actorId,
+      updated_by: actorId,
+      updated_at: archivedAt,
+    },
+  });
+
+  if (!response.ok) {
+    throwRestWriteError(data, 'Không thể lưu trữ CLB/tổ.');
+  }
+
+  const club = Array.isArray(data) ? data[0] : null;
+
+  if (!club) {
+    throw new Error('Không tìm thấy CLB/tổ.');
+  }
+
+  return getCreatedOrUpdatedClub(club.id);
 }
 
 export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: string) {
@@ -502,6 +732,158 @@ async function listUsersByIds(userIds: string[]) {
   return Array.isArray(data) ? data : [];
 }
 
+async function listDivisionsByIds(divisionIds: string[]) {
+  const uniqueDivisionIds = Array.from(new Set(divisionIds));
+
+  if (uniqueDivisionIds.length === 0) {
+    return [];
+  }
+
+  const query = new URLSearchParams({
+    select: 'id,name',
+    id: `in.(${uniqueDivisionIds.join(',')})`,
+  });
+  const { response, data } = await supabaseFetch<DivisionRow[]>(
+    `/rest/v1/divisions?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải mảng của CLB/tổ.');
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function countClubMembers(clubIds: string[]) {
+  const uniqueClubIds = Array.from(new Set(clubIds));
+  const counts = new Map<string, number>();
+
+  if (uniqueClubIds.length === 0) {
+    return counts;
+  }
+
+  const query = new URLSearchParams({
+    select: 'club_id',
+    club_id: `in.(${uniqueClubIds.join(',')})`,
+    status: 'eq.active',
+  });
+  const { response, data } = await supabaseFetch<Array<{ club_id: string }>>(
+    `/rest/v1/club_memberships?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải số thành viên CLB/tổ.');
+  }
+
+  for (const row of Array.isArray(data) ? data : []) {
+    counts.set(row.club_id, (counts.get(row.club_id) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
+async function listClubRoleSummaries(clubIds: string[]) {
+  const uniqueClubIds = Array.from(new Set(clubIds));
+  const summaries = new Map<
+    string,
+    {
+      leads: Array<{ userId: string; name: string; email: string }>;
+      deputies: Array<{ userId: string; name: string; email: string }>;
+    }
+  >();
+
+  if (uniqueClubIds.length === 0) {
+    return summaries;
+  }
+
+  const query = new URLSearchParams({
+    select: 'id,user_id,role_key,scope_type,scope_id,starts_at,ends_at,status',
+    scope_type: 'eq.club',
+    scope_id: `in.(${uniqueClubIds.join(',')})`,
+    role_key: 'in.(club_lead,club_deputy)',
+    status: 'eq.active',
+  });
+  const { response, data } = await supabaseFetch<RoleAssignmentRow[]>(
+    `/rest/v1/role_assignments?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải chức vụ CLB/tổ.');
+  }
+
+  const assignments = Array.isArray(data) ? data : [];
+  const users = await listUsersByIds(assignments.map((assignment) => assignment.user_id));
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
+  for (const assignment of assignments) {
+    if (!assignment.scope_id) {
+      continue;
+    }
+
+    const user = usersById.get(assignment.user_id);
+
+    if (!user) {
+      continue;
+    }
+
+    const summary = summaries.get(assignment.scope_id) ?? { leads: [], deputies: [] };
+    const userSummary = {
+      userId: user.id,
+      name: getUserSortName(mapUserRow(user)),
+      email: user.email,
+    };
+
+    if (assignment.role_key === 'club_lead') {
+      summary.leads.push(userSummary);
+    } else if (assignment.role_key === 'club_deputy') {
+      summary.deputies.push(userSummary);
+    }
+
+    summaries.set(assignment.scope_id, summary);
+  }
+
+  return summaries;
+}
+
+async function getCreatedOrUpdatedClub(clubId: string) {
+  const club = await getClub(clubId);
+
+  if (!club) {
+    throw new Error('Không tìm thấy CLB/tổ.');
+  }
+
+  return club;
+}
+
+function mapClubRow(
+  row: ClubRow,
+  divisionsById: Map<string, DivisionRow>,
+  memberCounts: Map<string, number>,
+  roleSummaries: Map<
+    string,
+    {
+      leads: Array<{ userId: string; name: string; email: string }>;
+      deputies: Array<{ userId: string; name: string; email: string }>;
+    }
+  >,
+): ClubSummary {
+  const roleSummary = roleSummaries.get(row.id) ?? { leads: [], deputies: [] };
+
+  return {
+    id: row.id,
+    divisionId: row.division_id,
+    divisionName: divisionsById.get(row.division_id)?.name ?? 'Không rõ mảng',
+    name: row.name,
+    description: row.description ?? '',
+    archivedAt: row.archived_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    memberCount: memberCounts.get(row.id) ?? 0,
+    leads: roleSummary.leads,
+    deputies: roleSummary.deputies,
+  };
+}
+
 async function listScopeRoleAssignments(
   scopeType: ManageableScopeType,
   scopeId: string,
@@ -575,4 +957,12 @@ function getRestErrorMessage(data: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function throwRestWriteError(data: unknown, fallback: string): never {
+  if (data && typeof data === 'object' && 'code' in data && data.code === '23505') {
+    throw new RepositoryConflictError('Tên CLB/tổ đã tồn tại trong mảng này.');
+  }
+
+  throw new Error(getRestErrorMessage(data, fallback));
 }

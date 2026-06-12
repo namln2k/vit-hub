@@ -1,45 +1,51 @@
-import { createGroup, updateGroup, type Group } from '@/services/groups';
+import { createClub, updateClub, type Club } from '@/services/clubs';
+import type { Division } from '@/services/divisions';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, Save, X } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 
-interface GroupFormModalProps {
-  group?: Group;
+interface ClubFormModalProps {
+  club?: Club;
+  divisions: Division[];
+  initialDivisionId?: string;
   onClose: () => void;
-  onSaved: (group: Group) => void;
+  onSaved: (club: Club) => void;
 }
 
-export default function GroupFormModal({ group, onClose, onSaved }: GroupFormModalProps) {
-  const isEditing = Boolean(group);
-  const [name, setName] = useState(group?.name ?? '');
-  const [description, setDescription] = useState(group?.description ?? '');
+export default function ClubFormModal({
+  club,
+  divisions,
+  initialDivisionId = '',
+  onClose,
+  onSaved,
+}: ClubFormModalProps) {
+  const isEditing = Boolean(club);
+  const [divisionId, setDivisionId] = useState(club?.divisionId ?? initialDivisionId);
+  const [name, setName] = useState(club?.name ?? '');
+  const [description, setDescription] = useState(club?.description ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setName(group?.name ?? '');
-      setDescription(group?.description ?? '');
-      setError('');
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [group]);
 
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
   const hasChanges =
-    !group ||
-    trimmedName !== group.name ||
-    trimmedDescription !== group.description.trim();
+    !club ||
+    divisionId !== club.divisionId ||
+    trimmedName !== club.name ||
+    trimmedDescription !== club.description.trim();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!divisionId) {
+      setError('Chọn mảng parent cho CLB/tổ.');
+      return;
+    }
+
     if (!trimmedName) {
-      setError('Tên nhóm không được để trống.');
+      setError('Tên CLB/tổ không được để trống.');
       return;
     }
 
@@ -52,30 +58,30 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
     setError('');
 
     try {
-      const savedGroup = group
-        ? await updateGroup(group.id, trimmedName, trimmedDescription)
-        : await createGroup(trimmedName, trimmedDescription);
-      onSaved(savedGroup);
-      toast.success(isEditing ? 'Đã cập nhật nhóm.' : 'Đã tạo nhóm mới.', {
-        id: isEditing ? 'group-update-success' : 'group-create-success',
+      const savedClub = club
+        ? await updateClub(club.id, divisionId, trimmedName, trimmedDescription)
+        : await createClub(divisionId, trimmedName, trimmedDescription);
+      onSaved(savedClub);
+      toast.success(isEditing ? 'Đã cập nhật CLB/tổ.' : 'Đã tạo CLB/tổ mới.', {
+        id: isEditing ? 'club-update-success' : 'club-create-success',
       });
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : '';
       const actionText = isEditing ? 'cập nhật' : 'tạo';
       toast.error(
         message
-          ? `Không thể ${actionText} nhóm: ${message}`
-          : `Không thể ${actionText} nhóm.`,
-        { id: isEditing ? 'group-update-error' : 'group-create-error' },
+          ? `Không thể ${actionText} CLB/tổ: ${message}`
+          : `Không thể ${actionText} CLB/tổ.`,
+        { id: isEditing ? 'club-update-error' : 'club-create-error' },
       );
     } finally {
       setIsSaving(false);
     }
   }
 
-  const title = isEditing ? 'Chỉnh sửa nhóm' : 'Tạo nhóm mới';
-  const submitText = isEditing ? 'Lưu' : 'Tạo nhóm';
-  const modalTitleId = isEditing ? 'edit-group-title' : 'create-group-title';
+  const title = isEditing ? 'Chỉnh sửa CLB/tổ' : 'Tạo CLB/tổ mới';
+  const submitText = isEditing ? 'Lưu' : 'Tạo CLB/tổ';
+  const modalTitleId = isEditing ? 'edit-club-title' : 'create-club-title';
 
   return (
     <div
@@ -110,7 +116,27 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
 
         <div className="space-y-4 px-5 py-4">
           <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-slate-700">Tên nhóm</span>
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Mảng parent</span>
+            <select
+              value={divisionId}
+              onChange={(event) => {
+                setDivisionId(event.target.value);
+                setError('');
+              }}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+            >
+              <option value="">Chọn mảng</option>
+              {divisions.map((division) => (
+                <option key={division.id} value={division.id}>
+                  {division.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Tên CLB/tổ</span>
             <input
               autoFocus
               value={name}
@@ -119,8 +145,8 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
                 setError('');
               }}
               disabled={isSaving}
-              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-              placeholder={isEditing ? 'Tên nhóm' : 'VD: Nhóm 7'}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              placeholder="VD: CLB Pickleball"
             />
           </label>
 
@@ -133,8 +159,8 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
                 setError('');
               }}
               disabled={isSaving}
-              className="min-h-24 w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-              placeholder="Mô tả ngắn về nhóm"
+              className="min-h-24 w-full resize-y rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              placeholder="Mô tả ngắn về CLB/tổ"
             />
           </label>
 
@@ -152,11 +178,11 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
           </button>
           <button
             type="submit"
-            disabled={isSaving || !hasChanges}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSaving || !divisionId || !trimmedName}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-cyan-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-cyan-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isSaving ? (
-              <Sharingan size={16} label="Đang lưu nhóm" />
+              <Sharingan size={16} label="Đang lưu CLB/tổ" />
             ) : isEditing ? (
               <Save className="h-4 w-4" />
             ) : (

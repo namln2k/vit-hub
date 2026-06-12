@@ -3,7 +3,7 @@ import { Trash2, X } from 'lucide-react';
 
 interface ConfirmRemoveUsersModalProps {
   contextName: string;
-  contextType: 'division' | 'group';
+  contextType: 'division' | 'group' | 'club';
   selectedCount: number;
   isRemoving: boolean;
   onCancel: () => void;
@@ -13,6 +13,7 @@ interface ConfirmRemoveUsersModalProps {
 const CONTEXT_LABELS = {
   division: 'mảng',
   group: 'nhóm',
+  club: 'CLB/tổ',
 };
 
 export default function ConfirmRemoveUsersModal({

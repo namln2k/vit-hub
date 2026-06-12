@@ -1,4 +1,14 @@
-import { Banknote, Building2, KeyRound, Newspaper, UserCog, UsersRound } from 'lucide-react';
+import {
+  BadgeCheck,
+  Banknote,
+  Building2,
+  CalendarDays,
+  KeyRound,
+  Network,
+  Newspaper,
+  UserCog,
+  UsersRound,
+} from 'lucide-react';
 import type { AdminSection } from '@/features/super-admin/types';
 
 export const ADMIN_SECTIONS: AdminSection[] = [
@@ -15,6 +25,27 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     icon: <UsersRound className="h-4 w-4" />,
     countLabel: 'nhóm',
     accentClassName: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  {
+    id: 'clubs',
+    label: 'Quản lý CLB/tổ',
+    icon: <Network className="h-4 w-4" />,
+    countLabel: 'CLB/tổ',
+    accentClassName: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+  },
+  {
+    id: 'events',
+    label: 'Quản lý sự kiện',
+    icon: <CalendarDays className="h-4 w-4" />,
+    countLabel: 'sự kiện',
+    accentClassName: 'bg-orange-50 text-orange-700 border-orange-200',
+  },
+  {
+    id: 'organization-roles',
+    label: 'Chức vụ Đội',
+    icon: <BadgeCheck className="h-4 w-4" />,
+    countLabel: 'chức vụ',
+    accentClassName: 'bg-teal-50 text-teal-700 border-teal-200',
   },
   {
     id: 'users',

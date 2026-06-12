@@ -28,6 +28,10 @@ function SuperAdminLayoutShell({ children }: { children: ReactNode }) {
     groupError,
     activeDivision,
     activeGroup,
+    clubs,
+    isLoadingClubs,
+    clubError,
+    activeClub,
   } = useSuperAdminLayout();
 
   return (
@@ -55,6 +59,10 @@ function SuperAdminLayoutShell({ children }: { children: ReactNode }) {
             activeGroupId={activeGroup?.id ?? ''}
             isLoadingGroups={isLoadingGroups}
             groupError={groupError}
+            clubs={clubs}
+            activeClubId={activeClub?.id ?? ''}
+            isLoadingClubs={isLoadingClubs}
+            clubError={clubError}
           />
 
           {children}

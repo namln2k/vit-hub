@@ -26,7 +26,10 @@ function readString(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function readRoleKey(scopeType: 'division' | 'group', value: unknown): NonEventRoleKey | null {
+function readRoleKey(
+  scopeType: 'division' | 'group' | 'club',
+  value: unknown,
+): NonEventRoleKey | null {
   if (
     typeof value === 'string' &&
     (value === getLeadRoleKey(scopeType) || value === getDeputyRoleKey(scopeType))
@@ -39,7 +42,7 @@ function readRoleKey(scopeType: 'division' | 'group', value: unknown): NonEventR
 
 async function canChangeRole(
   actor: Awaited<ReturnType<typeof requireOrganizationActor>>,
-  scopeType: 'division' | 'group',
+  scopeType: 'division' | 'group' | 'club',
   scopeId: string,
   roleKey: NonEventRoleKey,
   operation: 'assign' | 'revoke',

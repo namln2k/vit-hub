@@ -17,7 +17,7 @@ interface ScopeMembersTableProps {
   isLoading: boolean;
   error: string;
   selectedUserIdSet: Set<string>;
-  accent: 'indigo' | 'emerald';
+  accent: 'indigo' | 'emerald' | 'cyan';
   onToggleUser: (userId: string) => void;
   onToggleVisibleUsers: () => void;
   onAssignRole: (userId: string, roleKey: NonEventRoleKey) => void;
@@ -43,7 +43,9 @@ export default function ScopeMembersTable({
   const checkboxClassName =
     accent === 'indigo'
       ? 'h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500'
-      : 'h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500';
+      : accent === 'emerald'
+        ? 'h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500'
+        : 'h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500';
 
   return (
     <div className="relative min-h-72 flex-1">

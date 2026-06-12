@@ -61,10 +61,13 @@ export function useAddUsersModal({
 
   useEffect(() => {
     if (queryText.length > 0 && queryText.length < 2) {
-      setUsers([]);
-      setSearchError('');
-      setIsSearching(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setUsers([]);
+        setSearchError('');
+        setIsSearching(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     let isActive = true;

@@ -2,6 +2,7 @@ import Sharingan from '@/shared/loading/Sharingan';
 import { ChevronRight } from 'lucide-react';
 import type { Division } from '@/services/divisions';
 import type { Group } from '@/services/groups';
+import type { Club } from '@/services/clubs';
 import {
   getAdminItemPath,
   getAdminSectionPath,
@@ -23,6 +24,10 @@ interface SuperAdminSidebarProps {
   activeGroupId: string;
   isLoadingGroups: boolean;
   groupError: string;
+  clubs: Club[];
+  activeClubId: string;
+  isLoadingClubs: boolean;
+  clubError: string;
 }
 
 export default function SuperAdminSidebar({
@@ -36,6 +41,10 @@ export default function SuperAdminSidebar({
   activeGroupId,
   isLoadingGroups,
   groupError,
+  clubs,
+  activeClubId,
+  isLoadingClubs,
+  clubError,
 }: SuperAdminSidebarProps) {
   const searchParams = useSearchParams();
   const activeUsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
@@ -63,6 +72,7 @@ export default function SuperAdminSidebar({
                 </span>
                 {(section.id === 'divisions' ||
                   section.id === 'groups' ||
+                  section.id === 'clubs' ||
                   section.id === 'users' ||
                   section.id === 'posts') && (
                   <ChevronRight
@@ -94,6 +104,19 @@ export default function SuperAdminSidebar({
                   loadingLabel="Đang tải nhóm"
                   emptyLabel="Chưa có nhóm."
                   activeClassName="bg-emerald-50 text-emerald-700"
+                />
+              )}
+
+              {section.id === 'clubs' && isActive && (
+                <NestedNavItems
+                  sectionId="clubs"
+                  items={clubs.filter((club) => !club.archivedAt)}
+                  activeItemId={activeClubId}
+                  isLoading={isLoadingClubs}
+                  error={clubError}
+                  loadingLabel="Đang tải CLB/tổ"
+                  emptyLabel="Chưa có CLB/tổ."
+                  activeClassName="bg-cyan-50 text-cyan-700"
                 />
               )}
 
@@ -176,7 +199,7 @@ interface NestedNavItem {
 }
 
 interface NestedNavItemsProps {
-  sectionId: 'divisions' | 'groups';
+  sectionId: 'divisions' | 'groups' | 'clubs';
   items: NestedNavItem[];
   activeItemId: string;
   isLoading: boolean;
