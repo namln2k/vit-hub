@@ -370,7 +370,11 @@ export default function SportsFeaturePage() {
   }, []);
 
   useEffect(() => {
-    void loadGames();
+    const timeoutId = window.setTimeout(() => {
+      void loadGames();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadGames]);
 
   return (

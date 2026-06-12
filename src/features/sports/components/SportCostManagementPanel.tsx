@@ -107,7 +107,11 @@ export default function SportCostManagementPanel({
   }, [canManageCosts, gameId]);
 
   useEffect(() => {
-    void loadCosts();
+    const timeoutId = window.setTimeout(() => {
+      void loadCosts();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadCosts]);
 
   async function runCostAction(
