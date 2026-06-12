@@ -139,7 +139,11 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
   }, [gameId]);
 
   useEffect(() => {
-    void loadGame();
+    const timeoutId = window.setTimeout(() => {
+      void loadGame();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadGame]);
 
   async function runAction(
