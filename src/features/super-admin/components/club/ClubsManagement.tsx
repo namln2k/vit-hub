@@ -1,6 +1,7 @@
 import {
   listClubMembers,
   removeUsersFromClub,
+  revokeUsersFromClub,
   type Club,
 } from '@/services/clubs';
 import type { Division } from '@/services/divisions';
@@ -14,6 +15,11 @@ import ClubsTable from './ClubsTable';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
+import {
+  getFullName,
   getSearchableUserValues,
   normalizeSearchValue,
 } from '@/features/super-admin/lib/userUtils';
@@ -58,6 +64,7 @@ export default function ClubsManagement({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [endedAtValue, setEndedAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
 
   const filteredClubs = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -156,7 +163,9 @@ export default function ClubsManagement({
   }
 
   function toggleVisibleUsersSelection() {
-    const visibleUserIds = filteredUsers.map((user) => user.uid);
+    const visibleUserIds = filteredUsers
+      .filter((user) => user.membership.status === 'active')
+      .map((user) => user.uid);
     const areAllVisibleUsersSelected =
       visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
 
@@ -177,22 +186,26 @@ export default function ClubsManagement({
     setIsRemovingUsers(true);
 
     try {
-      await removeUsersFromClub(activeClub.id, selectedUserIds);
-      setUsers((currentUsers) =>
-        currentUsers.filter((user) => !selectedUserIds.includes(user.uid)),
+      await removeUsersFromClub(
+        activeClub.id,
+        selectedUserIds,
+        fromVietnamDateTimeLocalValue(endedAtValue),
       );
       setSelectedUserIds([]);
       setIsRemoveUsersModalOpen(false);
-      toast.success(`Đã xóa ${selectedUserIds.length} thành viên khỏi CLB/tổ.`, {
-        id: 'club-remove-users-success',
-      });
-      void loadClubUsers(activeClub.id);
+      toast.success(
+        `Đã kết thúc membership của ${selectedUserIds.length} thành viên trong CLB/tổ.`,
+        {
+          id: 'club-remove-users-success',
+        },
+      );
+      await loadClubUsers(activeClub.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       toast.error(
         message
-          ? `Không thể xóa thành viên khỏi CLB/tổ: ${message}`
-          : 'Không thể xóa thành viên khỏi CLB/tổ.',
+          ? `Không thể kết thúc membership trong CLB/tổ: ${message}`
+          : 'Không thể kết thúc membership trong CLB/tổ.',
         { id: 'club-remove-users-error' },
       );
     } finally {
@@ -200,38 +213,74 @@ export default function ClubsManagement({
     }
   }
 
-  async function handleAssignRole(userId: string, roleKey: NonEventRoleKey) {
+  async function handleAssignRole(
+    userId: string,
+    roleKey: NonEventRoleKey,
+    startsAt: string,
+    endsAt: string | null,
+  ) {
     if (!activeClub) {
       return;
     }
 
     try {
-      await assignScopeRole('club', activeClub.id, userId, roleKey);
+      await assignScopeRole('club', activeClub.id, userId, roleKey, startsAt, endsAt);
       toast.success('Đã cập nhật chức vụ trong CLB/tổ.', { id: 'club-role-success' });
-      void loadClubUsers(activeClub.id);
+      await loadClubUsers(activeClub.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       toast.error(
         message ? `Không thể cập nhật chức vụ: ${message}` : 'Không thể cập nhật chức vụ.',
         { id: 'club-role-error' },
       );
+      throw error;
     }
   }
 
-  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey) {
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey, endedAt: string) {
     if (!activeClub) {
       return;
     }
 
     try {
-      await removeScopeRole('club', activeClub.id, userId, roleKey);
+      await removeScopeRole('club', activeClub.id, userId, roleKey, endedAt);
       toast.success('Đã gỡ chức vụ trong CLB/tổ.', { id: 'club-role-remove-success' });
-      void loadClubUsers(activeClub.id);
+      await loadClubUsers(activeClub.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
         id: 'club-role-remove-error',
       });
+      throw error;
+    }
+  }
+
+  async function handleRevokeMembership(userId: string) {
+    if (!activeClub) {
+      return;
+    }
+
+    const user = users.find((currentUser) => currentUser.uid === userId);
+    const userName = user ? getFullName(user) : 'thành viên này';
+
+    if (!window.confirm(`Thu hồi membership của ${userName} trong CLB/tổ này?`)) {
+      return;
+    }
+
+    try {
+      await revokeUsersFromClub(activeClub.id, [userId]);
+      toast.success('Đã thu hồi membership trong CLB/tổ.', {
+        id: 'club-revoke-membership-success',
+      });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể thu hồi membership trong CLB/tổ: ${message}`
+          : 'Không thể thu hồi membership trong CLB/tổ.',
+        { id: 'club-revoke-membership-error' },
+      );
     }
   }
 
@@ -267,7 +316,10 @@ export default function ClubsManagement({
             onEdit={() => setClubToEdit(activeClub)}
             onArchive={() => setClubToArchive(activeClub)}
             onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
-            onOpenRemoveUsersModal={() => setIsRemoveUsersModalOpen(true)}
+            onOpenRemoveUsersModal={() => {
+              setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
+              setIsRemoveUsersModalOpen(true);
+            }}
           />
         )
       }
@@ -294,6 +346,7 @@ export default function ClubsManagement({
             onToggleVisibleUsers={toggleVisibleUsersSelection}
             onAssignRole={handleAssignRole}
             onRemoveRole={handleRemoveRole}
+            onRevokeMembership={handleRevokeMembership}
           />
         </>
       )}
@@ -345,8 +398,10 @@ export default function ClubsManagement({
           contextType="club"
           selectedCount={selectedUserIds.length}
           isRemoving={isRemovingUsers}
+          endedAtValue={endedAtValue}
           onCancel={() => setIsRemoveUsersModalOpen(false)}
           onConfirm={handleRemoveSelectedUsers}
+          onEndedAtValueChange={setEndedAtValue}
         />
       )}
     </AdminContentPanel>
@@ -485,7 +540,7 @@ function ClubDetailActions({
         className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
       >
         <UsersRound className="h-4 w-4" />
-        Xóa {selectedUserCount > 0 ? selectedUserCount : ''}
+        Kết thúc {selectedUserCount > 0 ? selectedUserCount : ''}
       </button>
     </>
   );

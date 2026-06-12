@@ -5,6 +5,7 @@ import {
   addScopeMembers,
   listScopeMembers,
   removeScopeMembers,
+  revokeScopeMembers,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 
@@ -135,12 +136,24 @@ export async function listGroupMembers(groupId: string): Promise<OrganizationMem
   return listScopeMembers('group', groupId);
 }
 
-export async function addUsersToGroup(groupId: string, userIds: string[]): Promise<void> {
-  return addScopeMembers('group', groupId, userIds);
+export async function addUsersToGroup(
+  groupId: string,
+  userIds: string[],
+  startsAt?: string,
+): Promise<void> {
+  return addScopeMembers('group', groupId, userIds, startsAt);
 }
 
-export async function removeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
-  return removeScopeMembers('group', groupId, userIds);
+export async function removeUsersFromGroup(
+  groupId: string,
+  userIds: string[],
+  endedAt?: string,
+): Promise<void> {
+  return removeScopeMembers('group', groupId, userIds, endedAt);
+}
+
+export async function revokeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
+  return revokeScopeMembers('group', groupId, userIds);
 }
 
 function getUserSortName(user: AppUser) {

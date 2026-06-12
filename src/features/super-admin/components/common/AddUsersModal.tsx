@@ -21,12 +21,14 @@ interface AddUsersModalProps {
   searchError: string;
   searchValue: string;
   selectedUsers: AppUser[];
+  startsAtValue: string;
   onClose: () => void;
   onEmailListValueChange: (value: string) => void;
   onImportEmails: () => void;
   onRemoveSelectedUser: (userId: string) => void;
   onSearchValueChange: (value: string) => void;
   onSelectUser: (user: AppUser) => void;
+  onStartsAtValueChange: (value: string) => void;
   onSubmit: () => void;
 }
 
@@ -51,12 +53,14 @@ export default function AddUsersModal({
   searchError,
   searchValue,
   selectedUsers,
+  startsAtValue,
   onClose,
   onEmailListValueChange,
   onImportEmails,
   onRemoveSelectedUser,
   onSearchValueChange,
   onSelectUser,
+  onStartsAtValueChange,
   onSubmit,
 }: AddUsersModalProps) {
   const dialogTitleId = dialogTitleIdByEntityId[entityId];
@@ -111,6 +115,22 @@ export default function AddUsersModal({
                 label="Đang tìm kiếm thành viên"
               />
             )}
+          </label>
+
+          <label className="mt-4 block rounded-lg border border-slate-200 p-3">
+            <span className="block text-xs font-bold uppercase text-slate-600">
+              Bắt đầu membership
+            </span>
+            <input
+              type="datetime-local"
+              value={startsAtValue}
+              onChange={(event) => onStartsAtValueChange(event.target.value)}
+              required
+              className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500"
+            />
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Múi giờ Asia/Ho_Chi_Minh.
+            </span>
           </label>
 
           <div className="mt-4 rounded-lg border border-slate-200 p-3">
@@ -191,8 +211,13 @@ export default function AddUsersModal({
                   <button
                     key={user.uid}
                     type="button"
-                    onClick={() => onSelectUser(user)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                    onClick={() => {
+                      if (user.status !== 'disabled') {
+                        onSelectUser(user);
+                      }
+                    }}
+                    disabled={user.status === 'disabled'}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
                   >
                     <span className="flex min-w-0 items-center gap-3">
                       <Avatar src={user.avatarUrl} size="sm" />
@@ -203,6 +228,11 @@ export default function AddUsersModal({
                         <span className="block truncate text-xs font-medium text-slate-500">
                           @{user.username} · {user.email}
                         </span>
+                        {user.status === 'disabled' && (
+                          <span className="mt-1 inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                            Đã vô hiệu hóa
+                          </span>
+                        )}
                       </span>
                     </span>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500">
@@ -231,7 +261,7 @@ export default function AddUsersModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={selectedUsers.length === 0 || isAdding}
+            disabled={selectedUsers.length === 0 || isAdding || startsAtValue.trim().length === 0}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isAdding ? (

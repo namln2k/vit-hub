@@ -22,7 +22,7 @@ export default function AddGroupUsersModal({
     entityLabel: 'nhóm',
     successToastId: 'group-add-users-success',
     errorToastId: 'group-add-users-error',
-    onAddUsers: (userIds) => addUsersToGroup(groupId, userIds),
+    onAddUsers: (userIds, startsAt) => addUsersToGroup(groupId, userIds, startsAt),
     onAdded,
     onClose,
   });
@@ -43,12 +43,14 @@ export default function AddGroupUsersModal({
       searchError={modal.searchError}
       searchValue={modal.searchValue}
       selectedUsers={modal.selectedUsers}
+      startsAtValue={modal.startsAtValue}
       onClose={onClose}
       onEmailListValueChange={modal.updateEmailListValue}
       onImportEmails={modal.importEmails}
       onRemoveSelectedUser={modal.removeSelectedUser}
       onSearchValueChange={modal.setSearchValue}
       onSelectUser={modal.selectUser}
+      onStartsAtValueChange={modal.setStartsAtValue}
       onSubmit={modal.submit}
     />
   );

@@ -19,6 +19,12 @@ export interface OrganizationRoleAssignment {
   status: 'active' | 'ended' | 'revoked';
 }
 
+export interface LifecycleActor {
+  id: string;
+  name: string;
+  email: string;
+}
+
 export interface OrganizationMember {
   uid: string;
   email: string;
@@ -42,6 +48,9 @@ export interface OrganizationMember {
     endsAt: string | null;
     status: 'active' | 'ended' | 'revoked';
     source: 'manual' | 'role_assignment_auto';
+    addedBy: LifecycleActor | null;
+    endedBy: LifecycleActor | null;
+    revokedBy: LifecycleActor | null;
   };
   roleAssignments: OrganizationRoleAssignment[];
 }
@@ -75,10 +84,11 @@ export async function addScopeMembers(
   scopeType: ManageableScopeType,
   scopeId: string,
   userIds: string[],
+  startsAt?: string,
 ) {
   await apiFetch(SCOPE_MEMBERSHIPS_API, {
     method: 'POST',
-    body: { scopeType, scopeId, userIds },
+    body: { scopeType, scopeId, userIds, startsAt },
   });
 }
 
@@ -86,9 +96,21 @@ export async function removeScopeMembers(
   scopeType: ManageableScopeType,
   scopeId: string,
   userIds: string[],
+  endedAt?: string,
 ) {
   await apiFetch(SCOPE_MEMBERSHIPS_API, {
     method: 'DELETE',
+    body: { scopeType, scopeId, userIds, endedAt },
+  });
+}
+
+export async function revokeScopeMembers(
+  scopeType: ManageableScopeType,
+  scopeId: string,
+  userIds: string[],
+) {
+  await apiFetch(SCOPE_MEMBERSHIPS_API, {
+    method: 'PATCH',
     body: { scopeType, scopeId, userIds },
   });
 }
@@ -98,10 +120,12 @@ export async function assignScopeRole(
   scopeId: string,
   userId: string,
   roleKey: NonEventRoleKey,
+  startsAt?: string,
+  endsAt?: string | null,
 ) {
   await apiFetch(ROLE_ASSIGNMENTS_API, {
     method: 'POST',
-    body: { scopeType, scopeId, userId, roleKey },
+    body: { scopeType, scopeId, userId, roleKey, startsAt, endsAt },
   });
 }
 
@@ -110,10 +134,11 @@ export async function removeScopeRole(
   scopeId: string,
   userId: string,
   roleKey: NonEventRoleKey,
+  endedAt?: string,
 ) {
   await apiFetch(ROLE_ASSIGNMENTS_API, {
     method: 'DELETE',
-    body: { scopeType, scopeId, userId, roleKey },
+    body: { scopeType, scopeId, userId, roleKey, endedAt },
   });
 }
 
@@ -157,8 +182,17 @@ async function apiFetch<T = { ok: boolean }>(
   const result = (await response.json().catch(() => ({}))) as T & { error?: string };
 
   if (!response.ok) {
-    throw new Error(result.error ?? 'Không thể thực hiện thao tác.');
+    throw new ApiError(result.error ?? 'Không thể thực hiện thao tác.', response.status);
   }
 
   return result;
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
 }

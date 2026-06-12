@@ -16,6 +16,9 @@ interface MembershipRow {
   ends_at: string | null;
   status: 'active' | 'ended' | 'revoked';
   source: 'manual' | 'role_assignment_auto';
+  added_by: string | null;
+  ended_by: string | null;
+  revoked_by: string | null;
 }
 
 interface UserRow {
@@ -46,6 +49,12 @@ export interface RoleAssignmentSummary {
   startsAt: string;
   endsAt: string | null;
   status: 'active' | 'ended' | 'revoked';
+}
+
+export interface LifecycleActorSummary {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface RoleAssignmentRow {
@@ -117,6 +126,9 @@ export interface OrganizationMemberSummary {
     endsAt: string | null;
     status: 'active' | 'ended' | 'revoked';
     source: 'manual' | 'role_assignment_auto';
+    addedBy: LifecycleActorSummary | null;
+    endedBy: LifecycleActorSummary | null;
+    revokedBy: LifecycleActorSummary | null;
   };
   roleAssignments: RoleAssignmentSummary[];
 }
@@ -375,9 +387,8 @@ export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: 
   const table = getMembershipTable(scopeType);
   const scopeIdColumn = getScopeIdColumn(scopeType);
   const membershipQuery = new URLSearchParams({
-    select: 'id,user_id,starts_at,ends_at,status,source',
+    select: 'id,user_id,starts_at,ends_at,status,source,added_by,ended_by,revoked_by',
     [scopeIdColumn]: `eq.${scopeId}`,
-    status: 'eq.active',
     order: 'starts_at.desc',
   });
   const { response: membershipResponse, data: membershipData } = await supabaseFetch<
@@ -395,11 +406,20 @@ export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: 
     return [];
   }
 
-  const [users, roleAssignments] = await Promise.all([
+  const lifecycleActorIds = memberships.flatMap((membership) =>
+    [membership.added_by, membership.ended_by, membership.revoked_by].filter(
+      (userId): userId is string => Boolean(userId),
+    ),
+  );
+  const [users, lifecycleActors, roleAssignments] = await Promise.all([
     listUsersByIds(userIds),
+    listUsersByIds(lifecycleActorIds),
     listScopeRoleAssignments(scopeType, scopeId, userIds),
   ]);
   const usersById = new Map(users.map((user) => [user.id, user]));
+  const lifecycleActorsById = new Map(
+    lifecycleActors.map((user) => [user.id, mapLifecycleActorRow(user)]),
+  );
   const rolesByUserId = new Map<string, RoleAssignmentSummary[]>();
 
   for (const assignment of roleAssignments) {
@@ -424,6 +444,15 @@ export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: 
           endsAt: membership.ends_at,
           status: membership.status,
           source: membership.source,
+          addedBy: membership.added_by
+            ? (lifecycleActorsById.get(membership.added_by) ?? null)
+            : null,
+          endedBy: membership.ended_by
+            ? (lifecycleActorsById.get(membership.ended_by) ?? null)
+            : null,
+          revokedBy: membership.revoked_by
+            ? (lifecycleActorsById.get(membership.revoked_by) ?? null)
+            : null,
         },
         roleAssignments: rolesByUserId.get(user.id) ?? [],
       } satisfies OrganizationMemberSummary;
@@ -437,12 +466,14 @@ export async function addScopeMembers({
   scopeType,
   scopeId,
   userIds,
+  startsAt = new Date().toISOString(),
   source = 'manual',
 }: {
   actorId: string;
   scopeType: ManageableScopeType;
   scopeId: string;
   userIds: string[];
+  startsAt?: string;
   source?: 'manual' | 'role_assignment_auto';
 }) {
   const uniqueUserIds = Array.from(new Set(userIds));
@@ -458,15 +489,22 @@ export async function addScopeMembers({
     throw new Error(`Không thể thêm user đã bị vô hiệu hóa: ${disabledUser.email}.`);
   }
 
+  const startTime = new Date(startsAt).getTime();
   const existingIds = new Set(
-    (await listScopeMembers(scopeType, scopeId)).map((member) => member.uid),
+    (await listScopeMembers(scopeType, scopeId))
+      .filter(
+        (member) =>
+          member.membership.status === 'active' &&
+          (!member.membership.endsAt || new Date(member.membership.endsAt).getTime() > startTime),
+      )
+      .map((member) => member.uid),
   );
   const rows = uniqueUserIds
     .filter((userId) => !existingIds.has(userId))
     .map((userId) => ({
       [getScopeIdColumn(scopeType)]: scopeId,
       user_id: userId,
-      starts_at: new Date().toISOString(),
+      starts_at: startsAt,
       status: 'active',
       source,
       added_by: actorId,
@@ -492,11 +530,13 @@ export async function endScopeMembers({
   scopeType,
   scopeId,
   userIds,
+  endedAt = new Date().toISOString(),
 }: {
   actorId: string;
   scopeType: ManageableScopeType;
   scopeId: string;
   userIds: string[];
+  endedAt?: string;
 }) {
   const uniqueUserIds = Array.from(new Set(userIds));
 
@@ -504,7 +544,6 @@ export async function endScopeMembers({
     return;
   }
 
-  const endedAt = new Date().toISOString();
   const query = new URLSearchParams({
     [getScopeIdColumn(scopeType)]: `eq.${scopeId}`,
     user_id: `in.(${uniqueUserIds.join(',')})`,
@@ -538,44 +577,120 @@ export async function endScopeMembers({
   });
 }
 
+export async function revokeScopeMembers({
+  actorId,
+  scopeType,
+  scopeId,
+  userIds,
+  revokedAt = new Date().toISOString(),
+}: {
+  actorId: string;
+  scopeType: ManageableScopeType;
+  scopeId: string;
+  userIds: string[];
+  revokedAt?: string;
+}) {
+  const uniqueUserIds = Array.from(new Set(userIds));
+
+  if (uniqueUserIds.length === 0) {
+    return;
+  }
+
+  const query = new URLSearchParams({
+    [getScopeIdColumn(scopeType)]: `eq.${scopeId}`,
+    user_id: `in.(${uniqueUserIds.join(',')})`,
+    status: 'eq.active',
+    starts_at: `lte.${revokedAt}`,
+  });
+  const { response, data } = await supabaseFetch<MembershipRow[]>(
+    `/rest/v1/${getMembershipTable(scopeType)}?${query.toString()}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: {
+        status: 'revoked',
+        ends_at: revokedAt,
+        revoked_by: actorId,
+        updated_at: revokedAt,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể thu hồi membership.'));
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new Error('Không tìm thấy membership đang hiệu lực để thu hồi.');
+  }
+
+  await revokeScopeRoleAssignments({
+    actorId,
+    scopeType,
+    scopeId,
+    userIds: uniqueUserIds,
+    roleKeys: [getLeadRoleKey(scopeType), getDeputyRoleKey(scopeType)],
+    revokedAt,
+  });
+}
+
 export async function assignScopeRole({
   actorId,
   scopeType,
   scopeId,
   userId,
   roleKey,
+  startsAt = new Date().toISOString(),
+  endsAt = null,
 }: {
   actorId: string;
   scopeType: ManageableScopeType;
   scopeId: string;
   userId: string;
   roleKey: NonEventRoleKey;
+  startsAt?: string;
+  endsAt?: string | null;
 }) {
+  const activeAssignments = await listScopeRoleAssignments(scopeType, scopeId, [userId]);
+  const existingAssignment = activeAssignments.find(
+    (assignment) =>
+      assignment.roleKey === roleKey &&
+      doTimeRangesOverlap(
+        assignment.startsAt,
+        assignment.endsAt,
+        startsAt,
+        endsAt,
+      ),
+  );
+
+  if (existingAssignment) {
+    return;
+  }
+
+  if (roleKey === getLeadRoleKey(scopeType)) {
+    const hasConflictingLead = await hasConflictingLeadAssignment({
+      scopeType,
+      scopeId,
+      roleKey,
+      startsAt,
+      endsAt,
+    });
+
+    if (hasConflictingLead) {
+      throw new RepositoryConflictError(
+        'Scope này đã có cấp trưởng trong khoảng thời gian đó. Hãy dùng luồng chuyển giao trưởng.',
+      );
+    }
+  }
+
   await addScopeMembers({
     actorId,
     scopeType,
     scopeId,
     userIds: [userId],
+    startsAt,
     source: 'role_assignment_auto',
   });
-
-  if (roleKey === getLeadRoleKey(scopeType)) {
-    await endScopeRoleAssignments({
-      actorId,
-      scopeType,
-      scopeId,
-      userIds: [],
-      roleKeys: [roleKey],
-      endedAt: new Date().toISOString(),
-    });
-  }
-
-  const activeAssignments = await listScopeRoleAssignments(scopeType, scopeId, [userId]);
-  const existingAssignment = activeAssignments.find((assignment) => assignment.roleKey === roleKey);
-
-  if (existingAssignment) {
-    return;
-  }
 
   const { response, data } = await supabaseFetch('/rest/v1/role_assignments', {
     method: 'POST',
@@ -585,14 +700,15 @@ export async function assignScopeRole({
       role_key: roleKey,
       scope_type: scopeType,
       scope_id: scopeId,
-      starts_at: new Date().toISOString(),
+      starts_at: startsAt,
+      ends_at: endsAt,
       status: 'active',
       assigned_by: actorId,
     },
   });
 
   if (!response.ok) {
-    throw new Error(getRestErrorMessage(data, 'Không thể bổ nhiệm vai trò.'));
+    throwRoleAssignmentWriteError(data, roleKey);
   }
 }
 
@@ -635,6 +751,49 @@ export async function endScopeRoleAssignments({
 
   if (!response.ok) {
     throw new Error(getRestErrorMessage(data, 'Không thể gỡ vai trò.'));
+  }
+}
+
+export async function revokeScopeRoleAssignments({
+  actorId,
+  scopeType,
+  scopeId,
+  userIds,
+  roleKeys,
+  revokedAt = new Date().toISOString(),
+}: {
+  actorId: string;
+  scopeType: ManageableScopeType;
+  scopeId: string;
+  userIds: string[];
+  roleKeys: NonEventRoleKey[];
+  revokedAt?: string;
+}) {
+  const query = new URLSearchParams({
+    scope_type: `eq.${scopeType}`,
+    scope_id: `eq.${scopeId}`,
+    role_key: `in.(${roleKeys.join(',')})`,
+    status: 'eq.active',
+    starts_at: `lte.${revokedAt}`,
+  });
+
+  if (userIds.length > 0) {
+    query.set('user_id', `in.(${Array.from(new Set(userIds)).join(',')})`);
+  }
+
+  const { response, data } = await supabaseFetch(`/rest/v1/role_assignments?${query.toString()}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      status: 'revoked',
+      ends_at: revokedAt,
+      revoked_by: actorId,
+      updated_at: revokedAt,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể thu hồi vai trò.'));
   }
 }
 
@@ -911,6 +1070,39 @@ async function listScopeRoleAssignments(
   return (Array.isArray(data) ? data : []).map(mapRoleAssignmentRow);
 }
 
+async function hasConflictingLeadAssignment({
+  scopeType,
+  scopeId,
+  roleKey,
+  startsAt,
+  endsAt,
+}: {
+  scopeType: ManageableScopeType;
+  scopeId: string;
+  roleKey: NonEventRoleKey;
+  startsAt: string;
+  endsAt: string | null;
+}) {
+  const query = new URLSearchParams({
+    select: 'id,user_id,role_key,scope_type,scope_id,starts_at,ends_at,status',
+    scope_type: `eq.${scopeType}`,
+    scope_id: `eq.${scopeId}`,
+    role_key: `eq.${roleKey}`,
+    status: 'eq.active',
+  });
+  const { response, data } = await supabaseFetch<RoleAssignmentRow[]>(
+    `/rest/v1/role_assignments?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể kiểm tra cấp trưởng hiện tại.');
+  }
+
+  return (Array.isArray(data) ? data : []).some((assignment) =>
+    doTimeRangesOverlap(assignment.starts_at, assignment.ends_at, startsAt, endsAt),
+  );
+}
+
 function mapRoleAssignmentRow(row: RoleAssignmentRow): RoleAssignmentSummary {
   return {
     id: row.id,
@@ -921,6 +1113,14 @@ function mapRoleAssignmentRow(row: RoleAssignmentRow): RoleAssignmentSummary {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     status: row.status,
+  };
+}
+
+function mapLifecycleActorRow(row: UserRow): LifecycleActorSummary {
+  return {
+    id: row.id,
+    name: getUserSortName(mapUserRow(row)) || row.email,
+    email: row.email,
   };
 }
 
@@ -957,6 +1157,36 @@ function getRestErrorMessage(data: unknown, fallback: string) {
   }
 
   return fallback;
+}
+
+function doTimeRangesOverlap(
+  firstStartsAt: string,
+  firstEndsAt: string | null,
+  secondStartsAt: string,
+  secondEndsAt: string | null,
+) {
+  const firstStartTime = new Date(firstStartsAt).getTime();
+  const firstEndTime = firstEndsAt ? new Date(firstEndsAt).getTime() : Number.POSITIVE_INFINITY;
+  const secondStartTime = new Date(secondStartsAt).getTime();
+  const secondEndTime = secondEndsAt ? new Date(secondEndsAt).getTime() : Number.POSITIVE_INFINITY;
+
+  return firstStartTime < secondEndTime && secondStartTime < firstEndTime;
+}
+
+function throwRoleAssignmentWriteError(data: unknown, roleKey: NonEventRoleKey): never {
+  const errorCode =
+    data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
+      ? data.code
+      : '';
+  const isLeadRole = roleKey === 'division_lead' || roleKey === 'group_lead' || roleKey === 'club_lead';
+
+  if (isLeadRole && (errorCode === '23P01' || errorCode === '23505')) {
+    throw new RepositoryConflictError(
+      'Scope này đã có cấp trưởng trong khoảng thời gian đó. Hãy dùng luồng chuyển giao trưởng.',
+    );
+  }
+
+  throw new Error(getRestErrorMessage(data, 'Không thể bổ nhiệm vai trò.'));
 }
 
 function throwRestWriteError(data: unknown, fallback: string): never {

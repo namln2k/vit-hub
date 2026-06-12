@@ -6,8 +6,10 @@ interface ConfirmRemoveUsersModalProps {
   contextType: 'division' | 'group' | 'club';
   selectedCount: number;
   isRemoving: boolean;
+  endedAtValue: string;
   onCancel: () => void;
   onConfirm: () => void;
+  onEndedAtValueChange: (value: string) => void;
 }
 
 const CONTEXT_LABELS = {
@@ -21,8 +23,10 @@ export default function ConfirmRemoveUsersModal({
   contextType,
   selectedCount,
   isRemoving,
+  endedAtValue,
   onCancel,
   onConfirm,
+  onEndedAtValueChange,
 }: ConfirmRemoveUsersModalProps) {
   const contextLabel = CONTEXT_LABELS[contextType];
 
@@ -42,7 +46,7 @@ export default function ConfirmRemoveUsersModal({
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 id="remove-users-title" className="text-lg font-bold text-slate-950">
-              Xóa thành viên khỏi {contextLabel}
+              Kết thúc membership trong {contextLabel}
             </h2>
             <p className="mt-1 truncate text-sm font-medium text-slate-500">{contextName}</p>
           </div>
@@ -59,11 +63,27 @@ export default function ConfirmRemoveUsersModal({
 
         <div className="space-y-3 px-5 py-4">
           <p className="text-sm font-medium text-slate-700">
-            Bạn có chắc muốn xóa {selectedCount} thành viên đã chọn khỏi {contextLabel} này không?
+            Bạn có chắc muốn kết thúc membership của {selectedCount} thành viên đã chọn trong{' '}
+            {contextLabel} này không?
           </p>
           <p className="text-sm text-slate-500">
-            Thao tác này chỉ gỡ thành viên khỏi {contextLabel}, không xóa tài khoản người dùng.
+            Thao tác này giữ lịch sử membership và kết thúc các chức vụ liên quan trong cùng scope.
           </p>
+          <label className="block">
+            <span className="block text-xs font-bold uppercase text-slate-600">
+              Thời điểm kết thúc
+            </span>
+            <input
+              type="datetime-local"
+              value={endedAtValue}
+              onChange={(event) => onEndedAtValueChange(event.target.value)}
+              required
+              className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-red-500"
+            />
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Múi giờ Asia/Ho_Chi_Minh.
+            </span>
+          </label>
         </div>
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
@@ -78,15 +98,15 @@ export default function ConfirmRemoveUsersModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={isRemoving}
+            disabled={isRemoving || endedAtValue.trim().length === 0}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isRemoving ? (
-              <Sharingan size={16} label="Đang xóa thành viên" />
+              <Sharingan size={16} label="Đang kết thúc membership" />
             ) : (
               <Trash2 className="h-4 w-4" />
             )}
-            Xóa
+            Kết thúc
           </button>
         </div>
       </div>

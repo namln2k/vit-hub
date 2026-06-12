@@ -10,6 +10,7 @@ import {
   getDeputyRoleKey,
   getLeadRoleKey,
   isManageableScopeType,
+  RepositoryConflictError,
 } from '@/features/organization-structure/server/adminRepository';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 
@@ -20,10 +21,29 @@ interface RoleAssignmentBody {
   scopeId?: unknown;
   userId?: unknown;
   roleKey?: unknown;
+  startsAt?: unknown;
+  endsAt?: unknown;
+  endedAt?: unknown;
 }
 
 function readString(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function readOptionalIsoDate(value: unknown, fallback?: string) {
+  const rawValue = readString(value);
+
+  if (!rawValue) {
+    return fallback ?? null;
+  }
+
+  const date = new Date(rawValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return date.toISOString();
 }
 
 function readRoleKey(
@@ -77,17 +97,36 @@ export async function POST(request: Request) {
       return jsonResponse({ error: 'Vai trò không hợp lệ với scope.' }, 400);
     }
 
+    const startsAt = readOptionalIsoDate(body.startsAt, new Date().toISOString());
+    const endsAt = readOptionalIsoDate(body.endsAt);
+
+    if (!startsAt) {
+      return jsonResponse({ error: 'Thời điểm bắt đầu không hợp lệ.' }, 400);
+    }
+
+    if (body.endsAt && !endsAt) {
+      return jsonResponse({ error: 'Thời điểm kết thúc không hợp lệ.' }, 400);
+    }
+
+    if (endsAt && new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      return jsonResponse({ error: 'Thời điểm kết thúc phải sau thời điểm bắt đầu.' }, 400);
+    }
+
     if (!(await canChangeRole(actor, scopeType, scopeId, roleKey, 'assign'))) {
       return jsonResponse({ error: 'Bạn không có quyền bổ nhiệm vai trò này.' }, 403);
     }
 
-    await assignScopeRole({ actorId: actor.id, scopeType, scopeId, userId, roleKey });
+    await assignScopeRole({ actorId: actor.id, scopeType, scopeId, userId, roleKey, startsAt, endsAt });
     return jsonResponse({ ok: true }, 201);
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
 
     if (authResponse) {
       return authResponse;
+    }
+
+    if (error instanceof RepositoryConflictError) {
+      return jsonResponse({ error: error.message }, error.status);
     }
 
     return jsonResponse(
@@ -119,12 +158,19 @@ export async function DELETE(request: Request) {
       return jsonResponse({ error: 'Bạn không có quyền gỡ vai trò này.' }, 403);
     }
 
+    const endedAt = readOptionalIsoDate(body.endedAt, new Date().toISOString());
+
+    if (!endedAt) {
+      return jsonResponse({ error: 'Thời điểm kết thúc không hợp lệ.' }, 400);
+    }
+
     await endScopeRoleAssignments({
       actorId: actor.id,
       scopeType,
       scopeId,
       userIds: [userId],
       roleKeys: [roleKey],
+      endedAt,
     });
     return jsonResponse({ ok: true });
   } catch (error) {

@@ -22,7 +22,7 @@ export default function AddClubUsersModal({
     entityLabel: 'CLB/tổ',
     successToastId: 'club-add-users-success',
     errorToastId: 'club-add-users-error',
-    onAddUsers: (userIds) => addUsersToClub(clubId, userIds),
+    onAddUsers: (userIds, startsAt) => addUsersToClub(clubId, userIds, startsAt),
     onAdded,
     onClose,
   });
@@ -39,6 +39,7 @@ export default function AddClubUsersModal({
       onRemoveSelectedUser={modalState.removeSelectedUser}
       onSearchValueChange={modalState.setSearchValue}
       onSelectUser={modalState.selectUser}
+      onStartsAtValueChange={modalState.setStartsAtValue}
       onSubmit={modalState.submit}
     />
   );
