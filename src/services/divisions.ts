@@ -5,6 +5,7 @@ import {
   addScopeMembers,
   listScopeMembers,
   removeScopeMembers,
+  revokeScopeMembers,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 
@@ -70,15 +71,27 @@ export async function listDivisionMembers(divisionId: string): Promise<Organizat
   return listScopeMembers('division', divisionId);
 }
 
-export async function addUsersToDivision(divisionId: string, userIds: string[]): Promise<void> {
-  return addScopeMembers('division', divisionId, userIds);
+export async function addUsersToDivision(
+  divisionId: string,
+  userIds: string[],
+  startsAt?: string,
+): Promise<void> {
+  return addScopeMembers('division', divisionId, userIds, startsAt);
 }
 
 export async function removeUsersFromDivision(
   divisionId: string,
   userIds: string[],
+  endedAt?: string,
 ): Promise<void> {
-  return removeScopeMembers('division', divisionId, userIds);
+  return removeScopeMembers('division', divisionId, userIds, endedAt);
+}
+
+export async function revokeUsersFromDivision(
+  divisionId: string,
+  userIds: string[],
+): Promise<void> {
+  return revokeScopeMembers('division', divisionId, userIds);
 }
 
 function getUserSortName(user: AppUser) {

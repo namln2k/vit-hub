@@ -1,9 +1,19 @@
-import { listDivisionMembers, removeUsersFromDivision, type Division } from '@/services/divisions';
+import {
+  listDivisionMembers,
+  removeUsersFromDivision,
+  revokeUsersFromDivision,
+  type Division,
+} from '@/services/divisions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
 import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
+import {
+  getFullName,
   getSearchableUserValues,
   normalizeSearchValue,
 } from '@/features/super-admin/lib/userUtils';
@@ -40,6 +50,7 @@ export default function DivisionsManagement({
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [endedAtValue, setEndedAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
 
   const filteredDivisions = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -129,7 +140,9 @@ export default function DivisionsManagement({
   }
 
   function toggleVisibleUsersSelection() {
-    const visibleUserIds = filteredUsers.map((user) => user.uid);
+    const visibleUserIds = filteredUsers
+      .filter((user) => user.membership.status === 'active')
+      .map((user) => user.uid);
     const areAllVisibleUsersSelected =
       visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
 
@@ -150,36 +163,42 @@ export default function DivisionsManagement({
     setIsRemovingUsers(true);
 
     try {
-      await removeUsersFromDivision(activeDivision.id, selectedUserIds);
-      setUsers((currentUsers) =>
-        currentUsers.filter((user) => !selectedUserIds.includes(user.uid)),
+      await removeUsersFromDivision(
+        activeDivision.id,
+        selectedUserIds,
+        fromVietnamDateTimeLocalValue(endedAtValue),
       );
       setSelectedUserIds([]);
       setIsRemoveUsersModalOpen(false);
-      toast.success(`Đã xóa ${selectedUserIds.length} thành viên khỏi mảng.`, {
+      toast.success(`Đã kết thúc membership của ${selectedUserIds.length} thành viên trong mảng.`, {
         id: 'division-remove-users-success',
       });
-      void loadDivisionUsers(activeDivision.id);
+      await loadDivisionUsers(activeDivision.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       const errorMessage = message
-        ? `Không thể xóa thành viên khỏi mảng: ${message}`
-        : 'Không thể xóa thành viên khỏi mảng.';
+        ? `Không thể kết thúc membership trong mảng: ${message}`
+        : 'Không thể kết thúc membership trong mảng.';
       toast.error(errorMessage, { id: 'division-remove-users-error' });
     } finally {
       setIsRemovingUsers(false);
     }
   }
 
-  async function handleAssignRole(userId: string, roleKey: NonEventRoleKey) {
+  async function handleAssignRole(
+    userId: string,
+    roleKey: NonEventRoleKey,
+    startsAt: string,
+    endsAt: string | null,
+  ) {
     if (!activeDivision) {
       return;
     }
 
     try {
-      await assignScopeRole('division', activeDivision.id, userId, roleKey);
+      await assignScopeRole('division', activeDivision.id, userId, roleKey, startsAt, endsAt);
       toast.success('Đã cập nhật chức vụ trong mảng.', { id: 'division-role-success' });
-      void loadDivisionUsers(activeDivision.id);
+      await loadDivisionUsers(activeDivision.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       toast.error(
@@ -188,23 +207,54 @@ export default function DivisionsManagement({
           id: 'division-role-error',
         },
       );
+      throw error;
     }
   }
 
-  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey) {
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey, endedAt: string) {
     if (!activeDivision) {
       return;
     }
 
     try {
-      await removeScopeRole('division', activeDivision.id, userId, roleKey);
+      await removeScopeRole('division', activeDivision.id, userId, roleKey, endedAt);
       toast.success('Đã gỡ chức vụ trong mảng.', { id: 'division-role-remove-success' });
-      void loadDivisionUsers(activeDivision.id);
+      await loadDivisionUsers(activeDivision.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
         id: 'division-role-remove-error',
       });
+      throw error;
+    }
+  }
+
+  async function handleRevokeMembership(userId: string) {
+    if (!activeDivision) {
+      return;
+    }
+
+    const user = users.find((currentUser) => currentUser.uid === userId);
+    const userName = user ? getFullName(user) : 'thành viên này';
+
+    if (!window.confirm(`Thu hồi membership của ${userName} trong mảng này?`)) {
+      return;
+    }
+
+    try {
+      await revokeUsersFromDivision(activeDivision.id, [userId]);
+      toast.success('Đã thu hồi membership trong mảng.', {
+        id: 'division-revoke-membership-success',
+      });
+      await loadDivisionUsers(activeDivision.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể thu hồi membership trong mảng: ${message}`
+          : 'Không thể thu hồi membership trong mảng.',
+        { id: 'division-revoke-membership-error' },
+      );
     }
   }
 
@@ -227,7 +277,10 @@ export default function DivisionsManagement({
           selectedUserCount={selectedUserIds.length}
           onSearchChange={setSearch}
           onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
-          onOpenRemoveUsersModal={() => setIsRemoveUsersModalOpen(true)}
+          onOpenRemoveUsersModal={() => {
+            setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
+            setIsRemoveUsersModalOpen(true);
+          }}
         />
       }
     >
@@ -249,6 +302,7 @@ export default function DivisionsManagement({
           onToggleVisibleUsers={toggleVisibleUsersSelection}
           onAssignRole={handleAssignRole}
           onRemoveRole={handleRemoveRole}
+          onRevokeMembership={handleRevokeMembership}
         />
       )}
       {activeDivision && isAddUsersModalOpen && (
@@ -266,12 +320,14 @@ export default function DivisionsManagement({
           contextType="division"
           selectedCount={selectedUserIds.length}
           isRemoving={isRemovingUsers}
+          endedAtValue={endedAtValue}
           onCancel={() => {
             if (!isRemovingUsers) {
               setIsRemoveUsersModalOpen(false);
             }
           }}
           onConfirm={handleRemoveSelectedUsers}
+          onEndedAtValueChange={setEndedAtValue}
         />
       )}
     </AdminContentPanel>

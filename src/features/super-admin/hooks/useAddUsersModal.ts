@@ -1,4 +1,8 @@
 import type { AppUser } from '@/contexts/auth';
+import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
 import { normalizeSearchValue } from '@/features/super-admin/lib/userUtils';
 import { formatEmailList, parseEmailList } from '@/services/users/emailList';
 import { queryUsers } from '@/services/users';
@@ -10,7 +14,7 @@ interface UseAddUsersModalOptions {
   entityLabel: string;
   successToastId: string;
   errorToastId: string;
-  onAddUsers: (userIds: string[]) => Promise<void>;
+  onAddUsers: (userIds: string[], startsAt: string) => Promise<void>;
   onAdded: () => Promise<void>;
   onClose: () => void;
 }
@@ -31,6 +35,7 @@ export function useAddUsersModal({
   const [isAdding, setIsAdding] = useState(false);
   const [isImportingEmails, setIsImportingEmails] = useState(false);
   const [emailListValue, setEmailListValue] = useState('');
+  const [startsAtValue, setStartsAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
   const [searchError, setSearchError] = useState('');
   const [emailImportError, setEmailImportError] = useState('');
   const [emailImportMessage, setEmailImportMessage] = useState('');
@@ -192,7 +197,7 @@ export function useAddUsersModal({
     const selectedCount = selectedUsers.length;
 
     try {
-      await onAddUsers(selectedUsers.map((user) => user.uid));
+      await onAddUsers(selectedUsers.map((user) => user.uid), fromVietnamDateTimeLocalValue(startsAtValue));
       await onAdded();
       onClose();
       toast.success(`Đã thêm ${selectedCount} thành viên vào ${entityLabel}.`, {
@@ -224,7 +229,9 @@ export function useAddUsersModal({
     searchValue,
     selectUser,
     selectedUsers,
+    setStartsAtValue,
     setSearchValue,
+    startsAtValue,
     submit,
     updateEmailListValue,
   };

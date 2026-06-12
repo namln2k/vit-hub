@@ -2,6 +2,7 @@ import {
   addScopeMembers,
   listScopeMembers,
   removeScopeMembers,
+  revokeScopeMembers,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 import { supabase } from '@/services/supabase';
@@ -74,12 +75,24 @@ export async function listClubMembers(clubId: string): Promise<OrganizationMembe
   return listScopeMembers('club', clubId);
 }
 
-export async function addUsersToClub(clubId: string, userIds: string[]): Promise<void> {
-  return addScopeMembers('club', clubId, userIds);
+export async function addUsersToClub(
+  clubId: string,
+  userIds: string[],
+  startsAt?: string,
+): Promise<void> {
+  return addScopeMembers('club', clubId, userIds, startsAt);
 }
 
-export async function removeUsersFromClub(clubId: string, userIds: string[]): Promise<void> {
-  return removeScopeMembers('club', clubId, userIds);
+export async function removeUsersFromClub(
+  clubId: string,
+  userIds: string[],
+  endedAt?: string,
+): Promise<void> {
+  return removeScopeMembers('club', clubId, userIds, endedAt);
+}
+
+export async function revokeUsersFromClub(clubId: string, userIds: string[]): Promise<void> {
+  return revokeScopeMembers('club', clubId, userIds);
 }
 
 async function apiFetch<T>(
