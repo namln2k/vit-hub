@@ -85,11 +85,13 @@ export default function UsersManagement() {
 
   useEffect(() => {
     let isActive = true;
-
-    void loadUsers({ isMounted: () => isActive });
+    const timeoutId = window.setTimeout(() => {
+      void loadUsers({ isMounted: () => isActive });
+    }, 0);
 
     return () => {
       isActive = false;
+      window.clearTimeout(timeoutId);
     };
   }, [loadUsers]);
 

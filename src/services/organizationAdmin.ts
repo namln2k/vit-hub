@@ -6,7 +6,7 @@ import type {
   PermissionKey,
 } from '@/features/organization-structure/permissions';
 
-export type ManageableScopeType = 'division' | 'group';
+export type ManageableScopeType = 'division' | 'group' | 'club';
 
 export interface OrganizationRoleAssignment {
   id: string;

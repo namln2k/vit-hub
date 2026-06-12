@@ -4,7 +4,7 @@ import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 
-type AddUsersModalEntityId = 'group' | 'division';
+type AddUsersModalEntityId = 'group' | 'division' | 'club';
 
 interface AddUsersModalProps {
   availableUsers: AppUser[];
@@ -33,6 +33,7 @@ interface AddUsersModalProps {
 const dialogTitleIdByEntityId = {
   division: 'add-division-users-title',
   group: 'add-group-users-title',
+  club: 'add-club-users-title',
 } satisfies Record<AddUsersModalEntityId, string>;
 
 export default function AddUsersModal({
