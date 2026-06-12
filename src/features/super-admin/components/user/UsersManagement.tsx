@@ -1,4 +1,4 @@
-import { importUsers, queryUsers } from '@/services/users';
+import { importUsers, queryUsers, updateUserStatus } from '@/services/users';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
@@ -7,6 +7,7 @@ import {
 } from '@/features/super-admin/lib/userUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
+import type { UserStatus } from '@/features/organization-structure/permissions';
 import {
   parseUserImportFile,
   USER_IMPORT_MAX_FILE_BYTES,
@@ -22,12 +23,14 @@ import { toast } from 'sonner';
 const USERS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'users') ?? ADMIN_SECTIONS[0];
 
 type UsersView = 'list' | 'import';
+type UserStatusFilter = 'all' | UserStatus;
 
 export default function UsersManagement() {
   const searchParams = useSearchParams();
   const activeView: UsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
   const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [userError, setUserError] = useState('');
@@ -37,16 +40,24 @@ export default function UsersManagement() {
   const filteredUsers = useMemo(() => {
     const queryText = normalizeSearchValue(search);
 
-    if (!queryText) {
-      return users;
-    }
+    return users.filter((user) => {
+      const userStatus = user.status ?? 'active';
 
-    return users.filter((user) =>
-      [...getSearchableUserValues(user), USER_ROLE_LABELS[user.role]].some((value) =>
-        normalizeSearchValue(value).includes(queryText),
-      ),
-    );
-  }, [search, users]);
+      if (statusFilter !== 'all' && userStatus !== statusFilter) {
+        return false;
+      }
+
+      if (!queryText) {
+        return true;
+      }
+
+      return [
+        ...getSearchableUserValues(user),
+        USER_ROLE_LABELS[user.role],
+        getUserStatusLabel(userStatus),
+      ].some((value) => normalizeSearchValue(value).includes(queryText));
+    });
+  }, [search, statusFilter, users]);
 
   const loadUsers = useCallback(
     async (options: { showLoading?: boolean; isMounted?: () => boolean } = {}) => {
@@ -140,6 +151,33 @@ export default function UsersManagement() {
     }
   }
 
+  async function handleUpdateUserStatus(user: AppUser, status: UserStatus) {
+    const statusLabel = getUserStatusLabel(status);
+
+    if (!window.confirm(`Chuyển trạng thái ${user.email} sang ${statusLabel}?`)) {
+      return;
+    }
+
+    try {
+      await updateUserStatus(user.uid, status);
+      setUsers((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.uid === user.uid ? { ...currentUser, status } : currentUser,
+        ),
+      );
+      toast.success(`Đã cập nhật trạng thái nhân sự sang ${statusLabel}.`, {
+        id: 'users-status-update-success',
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `Không thể cập nhật trạng thái nhân sự: ${error.message}`
+          : 'Không thể cập nhật trạng thái nhân sự.',
+        { id: 'users-status-update-error' },
+      );
+    }
+  }
+
   return (
     <AdminContentPanel
       section={USERS_SECTION}
@@ -151,16 +189,19 @@ export default function UsersManagement() {
       }
       actions={
         activeView === 'list' ? (
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm kiếm"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 sm:w-64"
-            />
-          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm kiếm"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 sm:w-64"
+              />
+            </label>
+          </div>
         ) : null
       }
     >
@@ -173,8 +214,48 @@ export default function UsersManagement() {
           onImport={handleImportValidatedUsers}
         />
       ) : (
-        <UsersTable users={filteredUsers} isLoading={isLoadingUsers} error={userError} />
+        <UsersTable
+          users={filteredUsers}
+          isLoading={isLoadingUsers}
+          error={userError}
+          onUpdateUserStatus={handleUpdateUserStatus}
+        />
       )}
     </AdminContentPanel>
   );
+}
+
+function StatusFilter({
+  value,
+  onChange,
+}: {
+  value: UserStatusFilter;
+  onChange: (value: UserStatusFilter) => void;
+}) {
+  const options: Array<{ value: UserStatusFilter; label: string }> = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'active', label: 'Active' },
+    { value: 'disabled', label: 'Disabled' },
+  ];
+
+  return (
+    <div className="inline-flex h-10 rounded-lg border border-slate-300 bg-white p-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`rounded-md px-3 text-sm font-semibold transition-colors ${
+            value === option.value ? 'bg-sky-100 text-sky-700' : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getUserStatusLabel(status: UserStatus) {
+  return status === 'active' ? 'Active' : 'Disabled';
 }

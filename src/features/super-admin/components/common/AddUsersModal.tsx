@@ -228,11 +228,7 @@ export default function AddUsersModal({
                         <span className="block truncate text-xs font-medium text-slate-500">
                           @{user.username} · {user.email}
                         </span>
-                        {user.status === 'disabled' && (
-                          <span className="mt-1 inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
-                            Đã vô hiệu hóa
-                          </span>
-                        )}
+                        <UserStatusBadge status={user.status ?? 'active'} />
                       </span>
                     </span>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500">
@@ -274,5 +270,18 @@ export default function AddUsersModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function UserStatusBadge({ status }: { status: AppUser['status'] }) {
+  const className =
+    status === 'disabled'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+  return (
+    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}>
+      {status === 'disabled' ? 'Disabled' : 'Active'}
+    </span>
   );
 }

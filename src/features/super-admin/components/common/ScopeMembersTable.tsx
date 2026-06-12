@@ -153,8 +153,11 @@ export default function ScopeMembersTable({
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <Avatar src={user.avatarUrl} size="sm" />
-                        <span className="font-semibold whitespace-nowrap text-slate-950">
-                          {getFullName(user)}
+                        <span className="min-w-0">
+                          <span className="block font-semibold whitespace-nowrap text-slate-950">
+                            {getFullName(user)}
+                          </span>
+                          <PickerUserStatusBadge status={user.status ?? 'active'} />
                         </span>
                       </div>
                     </td>
@@ -616,11 +619,7 @@ function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLea
                         <span className="block truncate text-xs font-medium text-slate-500">
                           @{user.username} · {user.email}
                         </span>
-                        {user.status !== 'active' && (
-                          <span className="mt-1 inline-flex rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
-                            Đã vô hiệu hóa
-                          </span>
-                        )}
+                        <PickerUserStatusBadge status={user.status ?? 'active'} />
                       </span>
                     </span>
                     <span className="rounded-full border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600">
@@ -690,6 +689,19 @@ function TransferUserCard({
         <div className="mt-4 text-sm font-medium text-slate-400">Chưa chọn</div>
       )}
     </div>
+  );
+}
+
+function PickerUserStatusBadge({ status }: { status: AppUser['status'] }) {
+  const className =
+    status === 'disabled'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+  return (
+    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}>
+      {status === 'disabled' ? 'Disabled' : 'Active'}
+    </span>
   );
 }
 

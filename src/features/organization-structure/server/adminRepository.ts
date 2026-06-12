@@ -3,6 +3,8 @@ import type { UserRole } from '@/constants/userRoles';
 import type {
   DomainRoleKey,
   EffectScope,
+  EventOwnerScopeType,
+  EventVisibility,
   NonEventRoleKey,
   PermissionKey,
 } from '@/features/organization-structure/permissions';
@@ -83,6 +85,11 @@ interface DivisionRow {
   name: string;
 }
 
+interface GroupRow {
+  id: string;
+  name: string;
+}
+
 interface RoleRow {
   key: DomainRoleKey;
   scope_type: string;
@@ -100,6 +107,24 @@ interface PermissionGrantRow {
   permission_key: PermissionKey;
   effect_scope: EffectScope;
   is_enabled: boolean;
+  updated_at: string;
+}
+
+interface EventRow {
+  id: string;
+  name: string;
+  owner_scope_type: EventOwnerScopeType;
+  owner_scope_id: string | null;
+  visibility: EventVisibility;
+  show_participants_publicly: boolean;
+  starts_at: string;
+  ends_at: string | null;
+  public_location: string | null;
+  public_description: string | null;
+  internal_notes: string | null;
+  created_by: string;
+  updated_by: string | null;
+  created_at: string;
   updated_at: string;
 }
 
@@ -157,6 +182,61 @@ export interface ClubSummary {
   memberCount: number;
   leads: Array<{ userId: string; name: string; email: string }>;
   deputies: Array<{ userId: string; name: string; email: string }>;
+}
+
+export interface EventSummary {
+  id: string;
+  name: string;
+  ownerScopeType: EventOwnerScopeType;
+  ownerScopeId: string | null;
+  ownerScopeName: string;
+  visibility: EventVisibility;
+  showParticipantsPublicly: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  publicLocation: string;
+  publicDescription: string;
+  internalNotes: string;
+  createdBy: string;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventWriteInput {
+  name: string;
+  visibility: EventVisibility;
+  showParticipantsPublicly: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  publicLocation: string;
+  publicDescription: string;
+  internalNotes: string;
+}
+
+export type OrganizationRoleKey = 'captain' | 'vice_captain';
+
+export interface OrganizationRoleAssignmentSummary extends RoleAssignmentSummary {
+  roleKey: OrganizationRoleKey;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    username: string;
+    avatarUrl: string;
+    appRole: UserRole;
+    status: 'active' | 'disabled';
+  };
+}
+
+export interface OrganizationTechnicalAdminSummary {
+  id: string;
+  email: string;
+  name: string;
+  username: string;
+  avatarUrl: string;
+  hasCaptainAssignment: boolean;
+  hasViceCaptainAssignment: boolean;
 }
 
 export class RepositoryConflictError extends Error {
@@ -220,6 +300,364 @@ export function getDeputyRoleKey(scopeType: ManageableScopeType): NonEventRoleKe
 
 export function isManageableScopeType(value: unknown): value is ManageableScopeType {
   return value === 'division' || value === 'group' || value === 'club';
+}
+
+export function isOrganizationRoleKey(value: unknown): value is OrganizationRoleKey {
+  return value === 'captain' || value === 'vice_captain';
+}
+
+export function isEventOwnerScopeType(value: unknown): value is EventOwnerScopeType {
+  return value === 'organization' || value === 'division' || value === 'group' || value === 'club';
+}
+
+export function isEventVisibility(value: unknown): value is EventVisibility {
+  return value === 'organization' || value === 'scope' || value === 'managers';
+}
+
+export async function listEvents(): Promise<EventSummary[]> {
+  const { response, data } = await supabaseFetch<EventRow[]>(
+    '/rest/v1/events?select=id,name,owner_scope_type,owner_scope_id,visibility,show_participants_publicly,starts_at,ends_at,public_location,public_description,internal_notes,created_by,updated_by,created_at,updated_at&order=starts_at.desc',
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách sự kiện.');
+  }
+
+  return mapEventRows(Array.isArray(data) ? data : []);
+}
+
+export async function getEventSummary(eventId: string) {
+  const query = new URLSearchParams({
+    select:
+      'id,name,owner_scope_type,owner_scope_id,visibility,show_participants_publicly,starts_at,ends_at,public_location,public_description,internal_notes,created_by,updated_by,created_at,updated_at',
+    id: `eq.${eventId}`,
+    limit: '1',
+  });
+  const { response, data } = await supabaseFetch<EventRow[]>(`/rest/v1/events?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể tải sự kiện.');
+  }
+
+  const event = Array.isArray(data) ? data[0] : null;
+
+  if (!event) {
+    return null;
+  }
+
+  const events = await mapEventRows([event]);
+  return events[0] ?? null;
+}
+
+export async function createEvent({
+  actorId,
+  ownerScopeType,
+  ownerScopeId,
+  input,
+}: {
+  actorId: string;
+  ownerScopeType: EventOwnerScopeType;
+  ownerScopeId: string | null;
+  input: EventWriteInput;
+}) {
+  const { response, data } = await supabaseFetch<EventRow[]>('/rest/v1/events', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: {
+      name: input.name,
+      owner_scope_type: ownerScopeType,
+      owner_scope_id: ownerScopeId,
+      visibility: input.visibility,
+      show_participants_publicly: input.showParticipantsPublicly,
+      starts_at: input.startsAt,
+      ends_at: input.endsAt,
+      public_location: input.publicLocation || null,
+      public_description: input.publicDescription || null,
+      internal_notes: input.internalNotes || null,
+      created_by: actorId,
+      updated_by: actorId,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể tạo sự kiện.'));
+  }
+
+  const event = Array.isArray(data) ? data[0] : null;
+
+  if (!event) {
+    throw new Error('Không thể tạo sự kiện.');
+  }
+
+  const events = await mapEventRows([event]);
+  return events[0];
+}
+
+export async function updateEvent({
+  actorId,
+  eventId,
+  input,
+}: {
+  actorId: string;
+  eventId: string;
+  input: EventWriteInput;
+}) {
+  const updatedAt = new Date().toISOString();
+  const query = new URLSearchParams({ id: `eq.${eventId}` });
+  const { response, data } = await supabaseFetch<EventRow[]>(
+    `/rest/v1/events?${query.toString()}`,
+    {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: {
+        name: input.name,
+        visibility: input.visibility,
+        show_participants_publicly: input.showParticipantsPublicly,
+        starts_at: input.startsAt,
+        ends_at: input.endsAt,
+        public_location: input.publicLocation || null,
+        public_description: input.publicDescription || null,
+        internal_notes: input.internalNotes || null,
+        updated_by: actorId,
+        updated_at: updatedAt,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể cập nhật sự kiện.'));
+  }
+
+  const event = Array.isArray(data) ? data[0] : null;
+
+  if (!event) {
+    throw new Error('Không tìm thấy sự kiện.');
+  }
+
+  const events = await mapEventRows([event]);
+  return events[0];
+}
+
+export async function deleteEvent(eventId: string) {
+  const query = new URLSearchParams({ id: `eq.${eventId}` });
+  const { response, data } = await supabaseFetch(`/rest/v1/events?${query.toString()}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể xóa sự kiện.'));
+  }
+}
+
+export async function listOrganizationRoleAssignments() {
+  const now = new Date().toISOString();
+  const query = new URLSearchParams({
+    select: 'id,user_id,role_key,scope_type,scope_id,starts_at,ends_at,status',
+    scope_type: 'eq.organization',
+    scope_id: 'is.null',
+    role_key: 'in.(captain,vice_captain)',
+    status: 'eq.active',
+    or: `(ends_at.is.null,ends_at.gt.${now})`,
+    order: 'starts_at.asc',
+  });
+  const { response, data } = await supabaseFetch<RoleAssignmentRow[]>(
+    `/rest/v1/role_assignments?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải chức vụ Đội.');
+  }
+
+  const assignments = (Array.isArray(data) ? data : []).filter(
+    (assignment): assignment is RoleAssignmentRow & { role_key: OrganizationRoleKey } =>
+      assignment.role_key === 'captain' || assignment.role_key === 'vice_captain',
+  );
+  const users = await listUsersByIds(assignments.map((assignment) => assignment.user_id));
+  const usersById = new Map(users.map((user) => [user.id, user]));
+
+  return assignments
+    .map((assignment) => {
+      const user = usersById.get(assignment.user_id);
+
+      if (!user) {
+        return null;
+      }
+
+      return {
+        ...mapRoleAssignmentRow(assignment),
+        roleKey: assignment.role_key,
+        user: mapOrganizationRoleUser(user),
+      } satisfies OrganizationRoleAssignmentSummary;
+    })
+    .filter((assignment): assignment is OrganizationRoleAssignmentSummary => Boolean(assignment));
+}
+
+export async function listTechnicalSuperAdmins(
+  roleAssignments: OrganizationRoleAssignmentSummary[],
+) {
+  const query = new URLSearchParams({
+    select: USER_SELECT,
+    role: 'eq.super_admin',
+    order: 'username.asc',
+  });
+  const { response, data } = await supabaseFetch<UserRow[]>(`/rest/v1/user?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách super admin.');
+  }
+
+  const captainUserIds = new Set(
+    roleAssignments
+      .filter((assignment) => assignment.roleKey === 'captain')
+      .map((assignment) => assignment.userId),
+  );
+  const viceCaptainUserIds = new Set(
+    roleAssignments
+      .filter((assignment) => assignment.roleKey === 'vice_captain')
+      .map((assignment) => assignment.userId),
+  );
+
+  return (Array.isArray(data) ? data : []).map((user) => ({
+    ...mapOrganizationRoleUser(user),
+    hasCaptainAssignment: captainUserIds.has(user.id),
+    hasViceCaptainAssignment: viceCaptainUserIds.has(user.id),
+  })) satisfies OrganizationTechnicalAdminSummary[];
+}
+
+export async function assignOrganizationRole({
+  actorId,
+  userId,
+  roleKey,
+  startsAt = new Date().toISOString(),
+  endsAt = null,
+}: {
+  actorId: string;
+  userId: string;
+  roleKey: OrganizationRoleKey;
+  startsAt?: string;
+  endsAt?: string | null;
+}) {
+  const targetUsers = await listUsersByIds([userId]);
+  const targetUser = targetUsers[0] ?? null;
+
+  if (!targetUser) {
+    throw new RepositoryConflictError('Không tìm thấy người nhận chức vụ.');
+  }
+
+  if (targetUser.status !== 'active') {
+    throw new RepositoryForbiddenError('Người nhận chức vụ phải là tài khoản đang hoạt động.');
+  }
+
+  const existingAssignments = await listOrganizationRoleAssignments();
+  const existingAssignment = existingAssignments.find(
+    (assignment) =>
+      assignment.userId === userId &&
+      assignment.roleKey === roleKey &&
+      doTimeRangesOverlap(assignment.startsAt, assignment.endsAt, startsAt, endsAt),
+  );
+
+  if (existingAssignment) {
+    return;
+  }
+
+  if (
+    roleKey === 'captain' &&
+    existingAssignments.some(
+      (assignment) =>
+        assignment.roleKey === 'captain' &&
+        doTimeRangesOverlap(assignment.startsAt, assignment.endsAt, startsAt, endsAt),
+    )
+  ) {
+    throw new RepositoryConflictError(
+      'Đội đã có Đội trưởng trong khoảng thời gian đó. Hãy dùng luồng chuyển giao Đội trưởng.',
+    );
+  }
+
+  const { response, data } = await supabaseFetch('/rest/v1/role_assignments', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      user_id: userId,
+      role_key: roleKey,
+      scope_type: 'organization',
+      scope_id: null,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status: 'active',
+      assigned_by: actorId,
+    },
+  });
+
+  if (!response.ok) {
+    throwRoleAssignmentWriteError(data, roleKey);
+  }
+}
+
+export async function endOrganizationRoleAssignments({
+  actorId,
+  userId,
+  roleKey,
+  endedAt = new Date().toISOString(),
+}: {
+  actorId: string;
+  userId: string;
+  roleKey: OrganizationRoleKey;
+  endedAt?: string;
+}) {
+  const query = new URLSearchParams({
+    scope_type: 'eq.organization',
+    scope_id: 'is.null',
+    user_id: `eq.${userId}`,
+    role_key: `eq.${roleKey}`,
+    status: 'eq.active',
+  });
+  const { response, data } = await supabaseFetch(`/rest/v1/role_assignments?${query.toString()}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      status: 'ended',
+      ends_at: endedAt,
+      ended_by: actorId,
+      updated_at: endedAt,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể kết thúc chức vụ Đội.'));
+  }
+}
+
+export async function transferOrganizationCaptain({
+  actorId,
+  targetUserId,
+}: {
+  actorId: string;
+  targetUserId: string;
+}) {
+  const targetUsers = await listUsersByIds([targetUserId]);
+  const targetUser = targetUsers[0] ?? null;
+
+  if (!targetUser) {
+    throw new RepositoryConflictError('Không tìm thấy người nhận chuyển giao.');
+  }
+
+  if (targetUser.status !== 'active') {
+    throw new RepositoryForbiddenError('Người nhận chuyển giao phải là tài khoản đang hoạt động.');
+  }
+
+  const { response, data } = await supabaseFetch('/rest/v1/rpc/transfer_organization_captain', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      p_actor_id: actorId,
+      p_target_user_id: targetUserId,
+    },
+  });
+
+  if (!response.ok) {
+    throwTransferLeadError(data);
+  }
 }
 
 export async function listClubs(): Promise<ClubSummary[]> {
@@ -354,13 +792,7 @@ export async function updateClub({
   return getCreatedOrUpdatedClub(club.id);
 }
 
-export async function archiveClub({
-  actorId,
-  clubId,
-}: {
-  actorId: string;
-  clubId: string;
-}) {
+export async function archiveClub({ actorId, clubId }: { actorId: string; clubId: string }) {
   const archivedAt = new Date().toISOString();
   const query = new URLSearchParams({ id: `eq.${clubId}` });
   const { response, data } = await supabaseFetch<ClubRow[]>(`/rest/v1/clubs?${query.toString()}`, {
@@ -659,12 +1091,7 @@ export async function assignScopeRole({
   const existingAssignment = activeAssignments.find(
     (assignment) =>
       assignment.roleKey === roleKey &&
-      doTimeRangesOverlap(
-        assignment.startsAt,
-        assignment.endsAt,
-        startsAt,
-        endsAt,
-      ),
+      doTimeRangesOverlap(assignment.startsAt, assignment.endsAt, startsAt, endsAt),
   );
 
   if (existingAssignment) {
@@ -955,6 +1382,46 @@ async function listDivisionsByIds(divisionIds: string[]) {
   return Array.isArray(data) ? data : [];
 }
 
+async function listGroupsByIds(groupIds: string[]) {
+  const uniqueGroupIds = Array.from(new Set(groupIds));
+
+  if (uniqueGroupIds.length === 0) {
+    return [];
+  }
+
+  const query = new URLSearchParams({
+    select: 'id,name',
+    id: `in.(${uniqueGroupIds.join(',')})`,
+  });
+  const { response, data } = await supabaseFetch<GroupRow[]>(`/rest/v1/groups?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể tải nhóm.');
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
+async function listClubRowsByIds(clubIds: string[]) {
+  const uniqueClubIds = Array.from(new Set(clubIds));
+
+  if (uniqueClubIds.length === 0) {
+    return [];
+  }
+
+  const query = new URLSearchParams({
+    select: 'id,division_id,name,description,archived_at,created_at,updated_at',
+    id: `in.(${uniqueClubIds.join(',')})`,
+  });
+  const { response, data } = await supabaseFetch<ClubRow[]>(`/rest/v1/clubs?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể tải CLB/tổ.');
+  }
+
+  return Array.isArray(data) ? data : [];
+}
+
 async function countClubMembers(clubIds: string[]) {
   const uniqueClubIds = Array.from(new Set(clubIds));
   const counts = new Map<string, number>();
@@ -981,6 +1448,70 @@ async function countClubMembers(clubIds: string[]) {
   }
 
   return counts;
+}
+
+async function mapEventRows(rows: EventRow[]) {
+  const divisionIds = rows
+    .filter((row) => row.owner_scope_type === 'division' && row.owner_scope_id)
+    .map((row) => String(row.owner_scope_id));
+  const groupIds = rows
+    .filter((row) => row.owner_scope_type === 'group' && row.owner_scope_id)
+    .map((row) => String(row.owner_scope_id));
+  const clubIds = rows
+    .filter((row) => row.owner_scope_type === 'club' && row.owner_scope_id)
+    .map((row) => String(row.owner_scope_id));
+  const [divisions, groups, clubs] = await Promise.all([
+    listDivisionsByIds(divisionIds),
+    listGroupsByIds(groupIds),
+    listClubRowsByIds(clubIds),
+  ]);
+  const divisionsById = new Map(divisions.map((division) => [division.id, division.name]));
+  const groupsById = new Map(groups.map((group) => [group.id, group.name]));
+  const clubsById = new Map(clubs.map((club) => [club.id, club.name]));
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    ownerScopeType: row.owner_scope_type,
+    ownerScopeId: row.owner_scope_id,
+    ownerScopeName: getEventOwnerScopeName(row, divisionsById, groupsById, clubsById),
+    visibility: row.visibility,
+    showParticipantsPublicly: row.show_participants_publicly,
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    publicLocation: row.public_location ?? '',
+    publicDescription: row.public_description ?? '',
+    internalNotes: row.internal_notes ?? '',
+    createdBy: row.created_by,
+    updatedBy: row.updated_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  })) satisfies EventSummary[];
+}
+
+function getEventOwnerScopeName(
+  row: EventRow,
+  divisionsById: Map<string, string>,
+  groupsById: Map<string, string>,
+  clubsById: Map<string, string>,
+) {
+  if (row.owner_scope_type === 'organization') {
+    return 'Toàn Đội';
+  }
+
+  if (!row.owner_scope_id) {
+    return 'Không rõ scope';
+  }
+
+  if (row.owner_scope_type === 'division') {
+    return divisionsById.get(row.owner_scope_id) ?? row.owner_scope_id;
+  }
+
+  if (row.owner_scope_type === 'group') {
+    return groupsById.get(row.owner_scope_id) ?? row.owner_scope_id;
+  }
+
+  return clubsById.get(row.owner_scope_id) ?? row.owner_scope_id;
 }
 
 async function listClubRoleSummaries(clubIds: string[]) {
@@ -1166,6 +1697,20 @@ function mapLifecycleActorRow(row: UserRow): LifecycleActorSummary {
   };
 }
 
+function mapOrganizationRoleUser(row: UserRow): OrganizationRoleAssignmentSummary['user'] {
+  const user = mapUserRow(row);
+
+  return {
+    id: user.uid,
+    email: user.email,
+    name: getUserSortName(user) || user.email,
+    username: user.username,
+    avatarUrl: user.avatarUrl,
+    appRole: user.role,
+    status: user.status,
+  };
+}
+
 function mapUserRow(row: UserRow) {
   return {
     uid: row.id,
@@ -1220,7 +1765,8 @@ function throwRoleAssignmentWriteError(data: unknown, roleKey: NonEventRoleKey):
     data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
       ? data.code
       : '';
-  const isLeadRole = roleKey === 'division_lead' || roleKey === 'group_lead' || roleKey === 'club_lead';
+  const isLeadRole =
+    roleKey === 'division_lead' || roleKey === 'group_lead' || roleKey === 'club_lead';
 
   if (isLeadRole && (errorCode === '23P01' || errorCode === '23505')) {
     throw new RepositoryConflictError(
@@ -1238,7 +1784,9 @@ function throwTransferLeadError(data: unknown): never {
       : '';
 
   if (errorCode === '42501') {
-    throw new RepositoryForbiddenError(getRestErrorMessage(data, 'Không có quyền chuyển giao trưởng.'));
+    throw new RepositoryForbiddenError(
+      getRestErrorMessage(data, 'Không có quyền chuyển giao trưởng.'),
+    );
   }
 
   if (errorCode === '23505' || errorCode === '23P01' || errorCode === 'P0002') {
