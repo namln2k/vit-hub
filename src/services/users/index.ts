@@ -209,6 +209,30 @@ export async function importUsers(users: ImportUserInput[]): Promise<number> {
   return Number(result.importedCount) || 0;
 }
 
+export async function updateUserStatus(userId: string, status: UserStatus) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Bạn cần đăng nhập để cập nhật trạng thái nhân sự.');
+  }
+
+  const response = await fetch(`/api/users/${userId}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+  const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+  if (!response.ok) {
+    throw new Error(result.error ?? 'Không thể cập nhật trạng thái nhân sự.');
+  }
+}
+
 function createUserQuery(params: QueryUsersParams) {
   const search = params.search?.trim();
   let query = supabase.from('user').select(USER_SELECT).order('username', { ascending: true });

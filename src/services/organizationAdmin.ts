@@ -2,11 +2,14 @@ import { supabase } from '@/services/supabase';
 import type {
   DomainRoleKey,
   EffectScope,
+  EventOwnerScopeType,
+  EventVisibility,
   NonEventRoleKey,
   PermissionKey,
 } from '@/features/organization-structure/permissions';
 
 export type ManageableScopeType = 'division' | 'group' | 'club';
+export type OrganizationRoleKey = 'captain' | 'vice_captain';
 
 export interface OrganizationRoleAssignment {
   id: string;
@@ -17,6 +20,29 @@ export interface OrganizationRoleAssignment {
   startsAt: string;
   endsAt: string | null;
   status: 'active' | 'ended' | 'revoked';
+}
+
+export interface OrganizationRoleAssignmentDetail extends OrganizationRoleAssignment {
+  roleKey: OrganizationRoleKey;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    username: string;
+    avatarUrl: string;
+    appRole: 'member' | 'super_admin';
+    status: 'active' | 'disabled';
+  };
+}
+
+export interface OrganizationTechnicalAdmin {
+  id: string;
+  email: string;
+  name: string;
+  username: string;
+  avatarUrl: string;
+  hasCaptainAssignment: boolean;
+  hasViceCaptainAssignment: boolean;
 }
 
 export interface LifecycleActor {
@@ -67,9 +93,46 @@ export interface PermissionMatrix {
   }>;
 }
 
+export interface OrganizationEvent {
+  id: string;
+  name: string;
+  ownerScopeType: EventOwnerScopeType;
+  ownerScopeId: string | null;
+  ownerScopeName: string;
+  visibility: EventVisibility;
+  showParticipantsPublicly: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  publicLocation: string;
+  publicDescription: string;
+  internalNotes: string;
+  createdBy: string;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrganizationEventWriteInput {
+  name: string;
+  visibility: EventVisibility;
+  showParticipantsPublicly: boolean;
+  startsAt: string;
+  endsAt: string | null;
+  publicLocation: string;
+  publicDescription: string;
+  internalNotes: string;
+}
+
+export interface OrganizationEventCreateInput extends OrganizationEventWriteInput {
+  ownerScopeType: EventOwnerScopeType;
+  ownerScopeId: string | null;
+}
+
 const SCOPE_MEMBERSHIPS_API = '/api/organization/scope-memberships';
 const ROLE_ASSIGNMENTS_API = '/api/organization/role-assignments';
+const ORGANIZATION_ROLES_API = '/api/organization/organization-roles';
 const PERMISSIONS_API = '/api/organization/permissions';
+const EVENTS_API = '/api/organization/events';
 
 export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: string) {
   const params = new URLSearchParams({ scopeType, scopeId });
@@ -153,6 +216,43 @@ export async function transferScopeLead(
   });
 }
 
+export async function listOrganizationRoles() {
+  return apiFetch<{
+    assignments: OrganizationRoleAssignmentDetail[];
+    technicalAdmins: OrganizationTechnicalAdmin[];
+  }>(ORGANIZATION_ROLES_API);
+}
+
+export async function assignOrganizationRole(
+  userId: string,
+  roleKey: OrganizationRoleKey,
+  startsAt?: string,
+  endsAt?: string | null,
+) {
+  await apiFetch(ORGANIZATION_ROLES_API, {
+    method: 'POST',
+    body: { userId, roleKey, startsAt, endsAt },
+  });
+}
+
+export async function endOrganizationRole(
+  userId: string,
+  roleKey: OrganizationRoleKey,
+  endedAt?: string,
+) {
+  await apiFetch(ORGANIZATION_ROLES_API, {
+    method: 'DELETE',
+    body: { userId, roleKey, endedAt },
+  });
+}
+
+export async function transferOrganizationCaptain(targetUserId: string) {
+  await apiFetch(ORGANIZATION_ROLES_API, {
+    method: 'PATCH',
+    body: { targetUserId },
+  });
+}
+
 export async function listPermissionMatrix() {
   return apiFetch<PermissionMatrix>(PERMISSIONS_API);
 }
@@ -166,6 +266,37 @@ export async function updatePermissionGrant(
   await apiFetch(PERMISSIONS_API, {
     method: 'PATCH',
     body: { roleKey, permissionKey, effectScope, isEnabled },
+  });
+}
+
+export async function listOrganizationEvents() {
+  const result = await apiFetch<{ events: OrganizationEvent[] }>(EVENTS_API);
+
+  return result.events;
+}
+
+export async function createOrganizationEvent(input: OrganizationEventCreateInput) {
+  const result = await apiFetch<{ event: OrganizationEvent }>(EVENTS_API, {
+    method: 'POST',
+    body: input,
+  });
+
+  return result.event;
+}
+
+export async function updateOrganizationEvent(eventId: string, input: OrganizationEventWriteInput) {
+  const result = await apiFetch<{ event: OrganizationEvent }>(EVENTS_API, {
+    method: 'PATCH',
+    body: { id: eventId, ...input },
+  });
+
+  return result.event;
+}
+
+export async function deleteOrganizationEvent(eventId: string) {
+  await apiFetch(EVENTS_API, {
+    method: 'DELETE',
+    body: { id: eventId },
   });
 }
 
