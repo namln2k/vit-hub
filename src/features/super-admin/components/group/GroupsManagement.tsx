@@ -26,6 +26,7 @@ import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMem
 import {
   assignScopeRole,
   removeScopeRole,
+  transferScopeLead,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
@@ -229,6 +230,25 @@ export default function GroupsManagement({
     }
   }
 
+  async function handleTransferLead(targetUserId: string) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await transferScopeLead('group', activeGroup.id, targetUserId);
+      toast.success('Đã chuyển giao trưởng nhóm.', { id: 'group-transfer-lead-success' });
+      await loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể chuyển giao trưởng nhóm: ${message}` : 'Không thể chuyển giao trưởng nhóm.',
+        { id: 'group-transfer-lead-error' },
+      );
+      throw error;
+    }
+  }
+
   async function handleRevokeMembership(userId: string) {
     if (!activeGroup) {
       return;
@@ -382,6 +402,7 @@ export default function GroupsManagement({
         onAssignRole={handleAssignRole}
         onRemoveRole={handleRemoveRole}
         onRevokeMembership={handleRevokeMembership}
+        onTransferLead={handleTransferLead}
       />
       {isEditModalOpen && (
         <GroupFormModal

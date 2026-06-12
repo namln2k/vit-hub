@@ -26,6 +26,7 @@ import {
 import {
   assignScopeRole,
   removeScopeRole,
+  transferScopeLead,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
@@ -255,6 +256,27 @@ export default function ClubsManagement({
     }
   }
 
+  async function handleTransferLead(targetUserId: string) {
+    if (!activeClub) {
+      return;
+    }
+
+    try {
+      await transferScopeLead('club', activeClub.id, targetUserId);
+      toast.success('Đã chuyển giao chủ nhiệm CLB/tổ.', { id: 'club-transfer-lead-success' });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể chuyển giao chủ nhiệm CLB/tổ: ${message}`
+          : 'Không thể chuyển giao chủ nhiệm CLB/tổ.',
+        { id: 'club-transfer-lead-error' },
+      );
+      throw error;
+    }
+  }
+
   async function handleRevokeMembership(userId: string) {
     if (!activeClub) {
       return;
@@ -347,6 +369,7 @@ export default function ClubsManagement({
             onAssignRole={handleAssignRole}
             onRemoveRole={handleRemoveRole}
             onRevokeMembership={handleRevokeMembership}
+            onTransferLead={handleTransferLead}
           />
         </>
       )}

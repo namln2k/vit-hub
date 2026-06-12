@@ -142,6 +142,17 @@ export async function removeScopeRole(
   });
 }
 
+export async function transferScopeLead(
+  scopeType: ManageableScopeType,
+  scopeId: string,
+  targetUserId: string,
+) {
+  await apiFetch(ROLE_ASSIGNMENTS_API, {
+    method: 'PATCH',
+    body: { scopeType, scopeId, targetUserId },
+  });
+}
+
 export async function listPermissionMatrix() {
   return apiFetch<PermissionMatrix>(PERMISSIONS_API);
 }
