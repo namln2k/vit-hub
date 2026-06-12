@@ -48,8 +48,8 @@ interface SportCostItemRow {
   game_id: string;
   label: string;
   amount: string | number;
-  created_by: string;
-  updated_by: string;
+  created_by: string | null;
+  updated_by: string | null;
   updated_at: string;
 }
 
@@ -60,7 +60,7 @@ interface SportPaymentRow {
   amount_override: string | number | null;
   payment_status: SportPaymentStatus;
   payment_note: string | null;
-  updated_by: string;
+  updated_by: string | null;
   updated_at: string;
 }
 
@@ -219,8 +219,8 @@ function mapSummary(
   } satisfies SportGameSummary;
 }
 
-async function fetchUsersByIds(userIds: string[]) {
-  const uniqueUserIds = [...new Set(userIds.filter(Boolean))];
+async function fetchUsersByIds(userIds: Array<string | null | undefined>) {
+  const uniqueUserIds = [...new Set(userIds.filter((userId): userId is string => Boolean(userId)))];
 
   if (uniqueUserIds.length === 0) {
     return new Map<string, UserNameRow>();
@@ -366,10 +366,10 @@ function mapCostItem(row: SportCostItemRow, usersById: Map<string, UserNameRow>)
     id: row.id,
     label: row.label,
     amount: toNumber(row.amount),
-    createdBy: row.created_by,
-    createdByName: getUserDisplayName(usersById.get(row.created_by)),
-    updatedBy: row.updated_by,
-    updatedByName: getUserDisplayName(usersById.get(row.updated_by)),
+    createdBy: row.created_by ?? '',
+    createdByName: getUserDisplayName(row.created_by ? usersById.get(row.created_by) : null),
+    updatedBy: row.updated_by ?? '',
+    updatedByName: getUserDisplayName(row.updated_by ? usersById.get(row.updated_by) : null),
     updatedAt: row.updated_at,
   } satisfies SportCostItem;
 }
@@ -397,7 +397,9 @@ function mapPayment(
     paymentStatus: payment?.payment_status ?? 'unpaid',
     paymentNote: payment?.payment_note ?? '',
     updatedBy: payment?.updated_by ?? '',
-    updatedByName: payment ? getUserDisplayName(usersById.get(payment.updated_by)) : '',
+    updatedByName: payment
+      ? getUserDisplayName(payment.updated_by ? usersById.get(payment.updated_by) : null)
+      : '',
     updatedAt: payment?.updated_at ?? '',
   } satisfies SportPayment;
 }
