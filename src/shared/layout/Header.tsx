@@ -59,9 +59,13 @@ export default function Header() {
           <button
             type="button"
             onClick={() => router.push(APP_ROUTES.home)}
-            className="flex cursor-pointer items-center gap-2 text-xl font-bold text-indigo-600"
+            className="flex cursor-pointer items-center gap-2"
           >
-            VIT Hub
+            <img
+              src="/image/logo-text.webp"
+              alt="VIT Hub"
+              className="h-8 w-auto object-contain"
+            />
           </button>
 
           <div className="mx-auto w-full max-w-md">
