@@ -13,7 +13,11 @@ import {
   ROLE_LABELS,
   type NonEventRoleKey,
 } from '@/features/organization-structure/permissions';
-import type { ManageableScopeType, OrganizationMember } from '@/services/organizationAdmin';
+import {
+  formatTransferLeadApiError,
+  type ManageableScopeType,
+  type OrganizationMember,
+} from '@/services/organizationAdmin';
 import { queryUsers } from '@/services/users';
 import { ArrowRightLeft, Ban, Search, ShieldCheck, ShieldMinus, ShieldPlus, X } from 'lucide-react';
 
@@ -69,6 +73,7 @@ export default function ScopeMembersTable({
       (assignment) => assignment.roleKey === leadRoleKey && isActiveNowAssignment(assignment),
     ),
   );
+  const leadRoleLabel = ROLE_LABELS[leadRoleKey];
   const checkboxClassName =
     accent === 'indigo'
       ? 'h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500'
@@ -87,7 +92,7 @@ export default function ScopeMembersTable({
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
         >
           <ArrowRightLeft className="h-4 w-4" />
-          Chuyển giao trưởng
+          Chuyển giao {leadRoleLabel}
         </button>
       </div>
       <div className="overflow-x-auto">
@@ -126,13 +131,9 @@ export default function ScopeMembersTable({
                 const visibleRoleAssignments = user.roleAssignments.filter((assignment) =>
                   isCurrentOrUpcomingAssignment(assignment),
                 );
-                const hasLeadRole = visibleRoleAssignments.some(
-                  (assignment) => assignment.roleKey === leadRoleKey,
-                );
                 const hasDeputyRole = visibleRoleAssignments.some(
                   (assignment) => assignment.roleKey === deputyRoleKey,
                 );
-                const isCurrentLead = currentLead?.uid === user.uid;
                 const isSelectable = canEndMembership(user);
                 const canRevoke = canRevokeMembership(user);
                 const isRoleActionDisabled =
@@ -204,24 +205,20 @@ export default function ScopeMembersTable({
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex flex-wrap gap-2">
-                        {(isCurrentLead || !currentLead) && (
+                        {!currentLead && (
                           <ActionButton
-                            label={hasLeadRole ? 'Gỡ trưởng' : 'Gán trưởng'}
-                            tone={hasLeadRole ? 'danger' : 'neutral'}
+                            label="Gán trưởng"
+                            tone="neutral"
                             onClick={() =>
                               setRoleActionDialog({
-                                mode: hasLeadRole ? 'end' : 'assign',
+                                mode: 'assign',
                                 user,
                                 roleKey: leadRoleKey,
                               })
                             }
                             disabled={isRoleActionDisabled}
                           >
-                            {hasLeadRole ? (
-                              <ShieldMinus className="h-4 w-4" />
-                            ) : (
-                              <ShieldCheck className="h-4 w-4" />
-                            )}
+                            <ShieldCheck className="h-4 w-4" />
                           </ActionButton>
                         )}
                         <ActionButton
@@ -272,6 +269,7 @@ export default function ScopeMembersTable({
       {isTransferLeadModalOpen && currentLead && (
         <TransferLeadModal
           currentLead={currentLead}
+          leadRoleLabel={leadRoleLabel}
           onClose={() => setIsTransferLeadModalOpen(false)}
           onTransferLead={onTransferLead}
         />
@@ -471,11 +469,17 @@ function RoleActionModal({ action, onClose, onAssignRole, onRemoveRole }: RoleAc
 
 interface TransferLeadModalProps {
   currentLead: OrganizationMember;
+  leadRoleLabel: string;
   onClose: () => void;
   onTransferLead: ScopeMembersTableProps['onTransferLead'];
 }
 
-function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLeadModalProps) {
+function TransferLeadModal({
+  currentLead,
+  leadRoleLabel,
+  onClose,
+  onTransferLead,
+}: TransferLeadModalProps) {
   const [searchValue, setSearchValue] = useState('');
   const [users, setUsers] = useState<AppUser[]>([]);
   const [targetUser, setTargetUser] = useState<AppUser | null>(null);
@@ -536,7 +540,7 @@ function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLea
       onClose();
     } catch (transferError) {
       setError(
-        transferError instanceof Error ? transferError.message : 'Không thể chuyển giao trưởng.',
+        formatTransferLeadApiError(transferError, `Không thể chuyển giao ${leadRoleLabel}.`),
       );
     } finally {
       setIsSaving(false);
@@ -548,7 +552,7 @@ function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLea
       <div className="flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
           <div>
-            <h2 className="text-base font-bold text-slate-950">Chuyển giao trưởng</h2>
+            <h2 className="text-base font-bold text-slate-950">Chuyển giao {leadRoleLabel}</h2>
             <p className="mt-1 text-sm font-medium text-slate-500">
               Chuyển giao có hiệu lực ngay sau khi xác nhận.
             </p>
@@ -567,11 +571,11 @@ function TransferLeadModal({ currentLead, onClose, onTransferLead }: TransferLea
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <div className="grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
-            <TransferUserCard label="Trưởng hiện tại" user={currentLead} />
+            <TransferUserCard label={`${leadRoleLabel} hiện tại`} user={currentLead} />
             <div className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 sm:flex">
               <ArrowRightLeft className="h-4 w-4" />
             </div>
-            <TransferUserCard label="Trưởng mới" user={targetUser} />
+            <TransferUserCard label={`${leadRoleLabel} mới`} user={targetUser} />
           </div>
 
           <label className="relative mt-4 block">
@@ -699,7 +703,9 @@ function PickerUserStatusBadge({ status }: { status: AppUser['status'] }) {
       : 'border-emerald-200 bg-emerald-50 text-emerald-700';
 
   return (
-    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}>
+    <span
+      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
+    >
       {status === 'disabled' ? 'Disabled' : 'Active'}
     </span>
   );
@@ -755,9 +761,7 @@ function isActiveNowAssignment(assignment: RoleAssignment) {
   return startsAt <= now && (endsAt === null || endsAt > now);
 }
 
-function getRoleAssignmentLifecycleState(
-  assignment: RoleAssignment,
-): RoleAssignmentLifecycleState {
+function getRoleAssignmentLifecycleState(assignment: RoleAssignment): RoleAssignmentLifecycleState {
   return new Date(assignment.startsAt).getTime() > Date.now() ? 'upcoming' : 'active';
 }
 
@@ -791,7 +795,8 @@ function canEndMembership(user: OrganizationMember) {
 
 function canRevokeMembership(user: OrganizationMember) {
   return (
-    user.membership.status === 'active' && new Date(user.membership.startsAt).getTime() <= Date.now()
+    user.membership.status === 'active' &&
+    new Date(user.membership.startsAt).getTime() <= Date.now()
   );
 }
 

@@ -25,6 +25,7 @@ import GroupsTable from './GroupsTable';
 import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
 import {
   assignScopeRole,
+  formatTransferLeadApiError,
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
@@ -240,12 +241,11 @@ export default function GroupsManagement({
       toast.success('Đã chuyển giao trưởng nhóm.', { id: 'group-transfer-lead-success' });
       await loadGroupUsers(activeGroup.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(
-        message ? `Không thể chuyển giao trưởng nhóm: ${message}` : 'Không thể chuyển giao trưởng nhóm.',
-        { id: 'group-transfer-lead-error' },
-      );
-      throw error;
+      const message = formatTransferLeadApiError(error, 'Không thể chuyển giao trưởng nhóm.');
+      toast.error(`Không thể chuyển giao trưởng nhóm: ${message}`, {
+        id: 'group-transfer-lead-error',
+      });
+      throw new Error(message);
     }
   }
 

@@ -338,3 +338,19 @@ export class ApiError extends Error {
     super(message);
   }
 }
+
+export function formatTransferLeadApiError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : fallback;
+
+  if (error instanceof ApiError) {
+    if (error.status === 403) {
+      return `403 Forbidden: ${message}`;
+    }
+
+    if (error.status === 409) {
+      return `409 Conflict: ${message}`;
+    }
+  }
+
+  return message;
+}
