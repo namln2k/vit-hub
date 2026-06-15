@@ -107,6 +107,10 @@ export function useAddUsersModal({
   }, [queryText]);
 
   function selectUser(user: AppUser) {
+    if (user.status !== 'active') {
+      return;
+    }
+
     setSelectedUsers((currentUsers) => [...currentUsers, user]);
   }
 
@@ -153,8 +157,12 @@ export function useAddUsersModal({
       const matchedEmailSet = new Set(matchedUsers.map((user) => user.email.toLowerCase()));
       const missingEmails = parsedEmails.emails.filter((email) => !matchedEmailSet.has(email));
       const importableUsers = matchedUsers.filter(
-        (user) => !existingUserIdSet.has(user.uid) && !selectedUserIdSet.has(user.uid),
+        (user) =>
+          user.status === 'active' &&
+          !existingUserIdSet.has(user.uid) &&
+          !selectedUserIdSet.has(user.uid),
       );
+      const disabledUsers = matchedUsers.filter((user) => user.status !== 'active');
       const skippedUsers = matchedUsers.filter(
         (user) => existingUserIdSet.has(user.uid) || selectedUserIdSet.has(user.uid),
       );
@@ -165,9 +173,11 @@ export function useAddUsersModal({
       }
 
       if (importableUsers.length === 0) {
-        setEmailImportError(
-          `Tất cả email trong danh sách đã thuộc ${entityLabel} hoặc đã được chọn.`,
-        );
+        const reason =
+          disabledUsers.length > 0
+            ? `Tất cả email trong danh sách đã thuộc ${entityLabel}, đã được chọn hoặc đang Disabled.`
+            : `Tất cả email trong danh sách đã thuộc ${entityLabel} hoặc đã được chọn.`;
+        setEmailImportError(reason);
         return;
       }
 
@@ -175,7 +185,7 @@ export function useAddUsersModal({
       setEmailImportMessage(
         `Đã thêm ${importableUsers.length} user vào danh sách chọn${
           skippedUsers.length > 0 ? `, bỏ qua ${skippedUsers.length} user đã có` : ''
-        }.`,
+        }${disabledUsers.length > 0 ? `, bỏ qua ${disabledUsers.length} user Disabled` : ''}.`,
       );
       setEmailListValue('');
     } catch (error) {
@@ -197,7 +207,10 @@ export function useAddUsersModal({
     const selectedCount = selectedUsers.length;
 
     try {
-      await onAddUsers(selectedUsers.map((user) => user.uid), fromVietnamDateTimeLocalValue(startsAtValue));
+      await onAddUsers(
+        selectedUsers.map((user) => user.uid),
+        fromVietnamDateTimeLocalValue(startsAtValue),
+      );
       await onAdded();
       onClose();
       toast.success(`Đã thêm ${selectedCount} thành viên vào ${entityLabel}.`, {
