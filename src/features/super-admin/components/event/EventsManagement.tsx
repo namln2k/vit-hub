@@ -14,6 +14,7 @@ import type { Group } from '@/services/groups';
 import {
   createOrganizationEvent,
   deleteOrganizationEvent,
+  formatOrganizationEventApiError,
   listOrganizationEvents,
   updateOrganizationEvent,
   type OrganizationEvent,
@@ -129,7 +130,7 @@ export default function EventsManagement({ divisions, groups, clubs }: EventsMan
       }
     } catch (error) {
       if (isMounted()) {
-        const message = error instanceof Error ? error.message : '';
+        const message = formatOrganizationEventApiError(error, 'Không thể tải danh sách sự kiện.');
         setLoadError(
           message
             ? `Không thể tải danh sách sự kiện: ${message}`
@@ -456,7 +457,8 @@ function EventFormModal({ mode, event, scopeOptions, onClose, onSaved }: EventFo
   const selectedScope = scopeOptions.find(
     (option) => getScopeKey(option) === formState.ownerScopeKey,
   );
-  const selectedScopeType = selectedScope?.type ?? 'organization';
+  const selectedScopeType =
+    isEditing && event ? event.ownerScopeType : (selectedScope?.type ?? 'organization');
 
   function setField<Key extends keyof typeof formState>(key: Key, value: (typeof formState)[Key]) {
     setFormState((currentState) => ({ ...currentState, [key]: value }));
@@ -487,7 +489,7 @@ function EventFormModal({ mode, event, scopeOptions, onClose, onSaved }: EventFo
       return;
     }
 
-    if (!selectedScope) {
+    if (!isEditing && !selectedScope) {
       setError('Owner scope không hợp lệ.');
       return;
     }
@@ -515,19 +517,29 @@ function EventFormModal({ mode, event, scopeOptions, onClose, onSaved }: EventFo
       const savedEvent =
         isEditing && event
           ? await updateOrganizationEvent(event.id, input)
-          : await createOrganizationEvent({
-              ...input,
-              ownerScopeType: selectedScope.type,
-              ownerScopeId: selectedScope.id,
-            } satisfies OrganizationEventCreateInput);
+          : selectedScope
+            ? await createOrganizationEvent({
+                ...input,
+                ownerScopeType: selectedScope.type,
+                ownerScopeId: selectedScope.id,
+              } satisfies OrganizationEventCreateInput)
+            : null;
+
+      if (!savedEvent) {
+        setError('Owner scope không hợp lệ.');
+        return;
+      }
 
       onSaved(savedEvent);
       toast.success(isEditing ? 'Đã cập nhật sự kiện.' : 'Đã tạo sự kiện.', {
         id: isEditing ? 'event-update-success' : 'event-create-success',
       });
     } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : '';
       const actionText = isEditing ? 'cập nhật' : 'tạo';
+      const message = formatOrganizationEventApiError(
+        saveError,
+        `Không thể ${actionText} sự kiện.`,
+      );
       toast.error(
         message
           ? `Không thể ${actionText} sự kiện: ${message}`
@@ -762,7 +774,7 @@ function DeleteEventModal({ event, onClose, onDeleted }: DeleteEventModalProps) 
       onDeleted(event.id);
       toast.success('Đã xóa sự kiện.', { id: 'event-delete-success' });
     } catch (deleteError) {
-      const message = deleteError instanceof Error ? deleteError.message : '';
+      const message = formatOrganizationEventApiError(deleteError, 'Không thể xóa sự kiện.');
       toast.error(message ? `Không thể xóa sự kiện: ${message}` : 'Không thể xóa sự kiện.', {
         id: 'event-delete-error',
       });

@@ -347,6 +347,10 @@ export function formatOrganizationRoleApiError(error: unknown, fallback: string)
   return formatApiError(error, fallback, [403, 409]);
 }
 
+export function formatOrganizationEventApiError(error: unknown, fallback: string) {
+  return formatApiError(error, fallback, [403, 404, 409]);
+}
+
 function formatApiError(error: unknown, fallback: string, visibleStatuses: number[]) {
   const message = error instanceof Error ? error.message : fallback;
 
@@ -364,6 +368,10 @@ function getHttpStatusLabel(status: number) {
 
   if (status === 409) {
     return 'Conflict';
+  }
+
+  if (status === 404) {
+    return 'Not Found';
   }
 
   return 'Error';
