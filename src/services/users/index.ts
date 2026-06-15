@@ -229,8 +229,21 @@ export async function updateUserStatus(userId: string, status: UserStatus) {
   const result = (await response.json().catch(() => ({}))) as { error?: string };
 
   if (!response.ok) {
-    throw new Error(result.error ?? 'Không thể cập nhật trạng thái nhân sự.');
+    const message = result.error ?? 'Không thể cập nhật trạng thái nhân sự.';
+    throw new Error(`${response.status} ${getHttpStatusLabel(response.status)}: ${message}`);
   }
+}
+
+function getHttpStatusLabel(status: number) {
+  if (status === 403) {
+    return 'Forbidden';
+  }
+
+  if (status === 409) {
+    return 'Conflict';
+  }
+
+  return 'Error';
 }
 
 function createUserQuery(params: QueryUsersParams) {
