@@ -234,6 +234,14 @@ export async function canManageEventMembers(
   return hasEventPermission(actor, eventId, 'event.member.manage', context);
 }
 
+export async function canUpdateEventAttendance(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, 'event.attendance.update', context);
+}
+
 export async function canAssignEventRole(
   actor: OrganizationActor,
   eventId: string,

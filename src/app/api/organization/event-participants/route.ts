@@ -6,6 +6,7 @@ import {
   canManageEventLeadWithoutEventRoles,
   canManageEventMembers,
   canRevokeEventRole,
+  canUpdateEventAttendance,
   canViewEventPrivate,
   requireOrganizationActor,
 } from '@/features/organization-structure/server/authorization';
@@ -68,16 +69,37 @@ export async function GET(request: Request) {
       return jsonResponse({ error: 'Sự kiện không hợp lệ.' }, 400);
     }
 
-    if (
-      !(await canManageEvent(actor, eventId)) &&
-      !(await canManageEventMembers(actor, eventId)) &&
-      !(await canViewEventPrivate(actor, eventId))
-    ) {
+    const [
+      canManage,
+      canManageMembers,
+      canViewPrivate,
+      canAssignRoles,
+      canRevokeRoles,
+      canUpdateAttendance,
+    ] = await Promise.all([
+      canManageEvent(actor, eventId),
+      canManageEventMembers(actor, eventId),
+      canViewEventPrivate(actor, eventId),
+      canAssignEventRole(actor, eventId),
+      canRevokeEventRole(actor, eventId),
+      canUpdateEventAttendance(actor, eventId),
+    ]);
+
+    if (!canManage && !canManageMembers && !canViewPrivate && !canUpdateAttendance) {
       return jsonResponse({ error: 'Bạn không có quyền xem participants của event này.' }, 403);
     }
 
     const participants = await listEventParticipants(eventId);
-    return jsonResponse({ participants });
+    return jsonResponse({
+      participants,
+      capabilities: {
+        canManage,
+        canManageMembers,
+        canAssignRoles,
+        canRevokeRoles,
+        canUpdateAttendance,
+      },
+    });
   } catch (error) {
     return knownErrorResponse(error, 'Không thể tải participants.');
   }
@@ -169,8 +191,8 @@ export async function PATCH(request: Request) {
         return jsonResponse({ error: 'Trạng thái participant không hợp lệ.' }, 400);
       }
 
-      if (!(await canManageEventMembers(actor, eventId))) {
-        return jsonResponse({ error: 'Bạn không có quyền cập nhật participant.' }, 403);
+      if (!(await canUpdateEventAttendance(actor, eventId))) {
+        return jsonResponse({ error: 'Bạn không có quyền cập nhật attendance event này.' }, 403);
       }
 
       await updateEventParticipantStatus({ eventId, userId, status });
