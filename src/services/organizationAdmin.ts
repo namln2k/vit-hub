@@ -340,17 +340,31 @@ export class ApiError extends Error {
 }
 
 export function formatTransferLeadApiError(error: unknown, fallback: string) {
+  return formatApiError(error, fallback, [403, 409]);
+}
+
+export function formatOrganizationRoleApiError(error: unknown, fallback: string) {
+  return formatApiError(error, fallback, [403, 409]);
+}
+
+function formatApiError(error: unknown, fallback: string, visibleStatuses: number[]) {
   const message = error instanceof Error ? error.message : fallback;
 
-  if (error instanceof ApiError) {
-    if (error.status === 403) {
-      return `403 Forbidden: ${message}`;
-    }
-
-    if (error.status === 409) {
-      return `409 Conflict: ${message}`;
-    }
+  if (error instanceof ApiError && visibleStatuses.includes(error.status)) {
+    return `${error.status} ${getHttpStatusLabel(error.status)}: ${message}`;
   }
 
   return message;
+}
+
+function getHttpStatusLabel(status: number) {
+  if (status === 403) {
+    return 'Forbidden';
+  }
+
+  if (status === 409) {
+    return 'Conflict';
+  }
+
+  return 'Error';
 }

@@ -9,6 +9,7 @@ import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
   assignOrganizationRole,
   endOrganizationRole,
+  formatOrganizationRoleApiError,
   formatTransferLeadApiError,
   listOrganizationRoles,
   transferOrganizationCaptain,
@@ -112,14 +113,11 @@ export default function OrganizationRolesManagement() {
       toast.success('Đã bổ nhiệm Đội phó.', { id: 'organization-assign-vice-success' });
       await loadOrganizationRoles({ showLoading: false });
     } catch (assignError) {
-      const message = assignError instanceof Error ? assignError.message : '';
-      toast.error(
-        message ? `Không thể bổ nhiệm Đội phó: ${message}` : 'Không thể bổ nhiệm Đội phó.',
-        {
-          id: 'organization-assign-vice-error',
-        },
-      );
-      throw assignError;
+      const message = formatOrganizationRoleApiError(assignError, 'Không thể bổ nhiệm Đội phó.');
+      toast.error(`Không thể bổ nhiệm Đội phó: ${message}`, {
+        id: 'organization-assign-vice-error',
+      });
+      throw new Error(message);
     }
   }
 
@@ -132,14 +130,14 @@ export default function OrganizationRolesManagement() {
       toast.success('Đã kết thúc nhiệm kỳ Đội phó.', { id: 'organization-end-vice-success' });
       await loadOrganizationRoles({ showLoading: false });
     } catch (endError) {
-      const message = endError instanceof Error ? endError.message : '';
-      toast.error(
-        message
-          ? `Không thể kết thúc nhiệm kỳ Đội phó: ${message}`
-          : 'Không thể kết thúc nhiệm kỳ Đội phó.',
-        { id: 'organization-end-vice-error' },
+      const message = formatOrganizationRoleApiError(
+        endError,
+        'Không thể kết thúc nhiệm kỳ Đội phó.',
       );
-      throw endError;
+      toast.error(`Không thể kết thúc nhiệm kỳ Đội phó: ${message}`, {
+        id: 'organization-end-vice-error',
+      });
+      throw new Error(message);
     }
   }
 
@@ -287,8 +285,8 @@ function RoleAssignmentGroup({
                   Kết thúc:{' '}
                   {assignment.endsAt ? formatVietnamDateTime(assignment.endsAt) : 'Chưa đặt'}
                 </div>
-                <div>Status DB: {assignment.status}</div>
-                <div>Role: {ROLE_LABELS[assignment.roleKey]}</div>
+                <div>Trạng thái DB: {getAssignmentStatusLabel(assignment.status)}</div>
+                <div>Domain role: {ROLE_LABELS[assignment.roleKey]}</div>
               </div>
               {onEndAssignment && getRoleLifecycleState(assignment) === 'current' && (
                 <button
@@ -392,7 +390,7 @@ function AssignViceCaptainModal({
       await onAssign(targetUser.uid, startsAt, endsAt);
       onClose();
     } catch (assignError) {
-      setError(assignError instanceof Error ? assignError.message : 'Không thể bổ nhiệm Đội phó.');
+      setError(formatOrganizationRoleApiError(assignError, 'Không thể bổ nhiệm Đội phó.'));
     } finally {
       setIsSaving(false);
     }
@@ -493,9 +491,7 @@ function EndViceCaptainModal({
       await onEnd(assignment, fromVietnamDateTimeLocalValue(endedAtValue));
       onClose();
     } catch (endError) {
-      setError(
-        endError instanceof Error ? endError.message : 'Không thể kết thúc nhiệm kỳ Đội phó.',
-      );
+      setError(formatOrganizationRoleApiError(endError, 'Không thể kết thúc nhiệm kỳ Đội phó.'));
     } finally {
       setIsSaving(false);
     }
@@ -893,6 +889,18 @@ function getDisplayName(
   }
 
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim() || user.email;
+}
+
+function getAssignmentStatusLabel(status: OrganizationRoleAssignmentDetail['status']) {
+  if (status === 'active') {
+    return 'active';
+  }
+
+  if (status === 'ended') {
+    return 'ended';
+  }
+
+  return 'revoked';
 }
 
 function formatVietnamDateTime(value: string) {
