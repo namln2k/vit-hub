@@ -9,6 +9,7 @@ import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
   assignOrganizationRole,
   endOrganizationRole,
+  formatTransferLeadApiError,
   listOrganizationRoles,
   transferOrganizationCaptain,
   type OrganizationRoleAssignmentDetail,
@@ -36,8 +37,9 @@ export default function OrganizationRolesManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAssignViceModalOpen, setIsAssignViceModalOpen] = useState(false);
-  const [endingAssignment, setEndingAssignment] =
-    useState<OrganizationRoleAssignmentDetail | null>(null);
+  const [endingAssignment, setEndingAssignment] = useState<OrganizationRoleAssignmentDetail | null>(
+    null,
+  );
   const [isTransferCaptainModalOpen, setIsTransferCaptainModalOpen] = useState(false);
 
   const loadOrganizationRoles = useCallback(
@@ -60,7 +62,9 @@ export default function OrganizationRolesManagement() {
       } catch (loadError) {
         if (isMounted()) {
           const message = loadError instanceof Error ? loadError.message : '';
-          setError(message ? `Không thể tải chức vụ Đội: ${message}` : 'Không thể tải chức vụ Đội.');
+          setError(
+            message ? `Không thể tải chức vụ Đội: ${message}` : 'Không thể tải chức vụ Đội.',
+          );
           setAssignments([]);
           setTechnicalAdmins([]);
         }
@@ -109,9 +113,12 @@ export default function OrganizationRolesManagement() {
       await loadOrganizationRoles({ showLoading: false });
     } catch (assignError) {
       const message = assignError instanceof Error ? assignError.message : '';
-      toast.error(message ? `Không thể bổ nhiệm Đội phó: ${message}` : 'Không thể bổ nhiệm Đội phó.', {
-        id: 'organization-assign-vice-error',
-      });
+      toast.error(
+        message ? `Không thể bổ nhiệm Đội phó: ${message}` : 'Không thể bổ nhiệm Đội phó.',
+        {
+          id: 'organization-assign-vice-error',
+        },
+      );
       throw assignError;
     }
   }
@@ -127,7 +134,9 @@ export default function OrganizationRolesManagement() {
     } catch (endError) {
       const message = endError instanceof Error ? endError.message : '';
       toast.error(
-        message ? `Không thể kết thúc nhiệm kỳ Đội phó: ${message}` : 'Không thể kết thúc nhiệm kỳ Đội phó.',
+        message
+          ? `Không thể kết thúc nhiệm kỳ Đội phó: ${message}`
+          : 'Không thể kết thúc nhiệm kỳ Đội phó.',
         { id: 'organization-end-vice-error' },
       );
       throw endError;
@@ -140,12 +149,14 @@ export default function OrganizationRolesManagement() {
       toast.success('Đã chuyển giao Đội trưởng.', { id: 'organization-transfer-captain-success' });
       await loadOrganizationRoles({ showLoading: false });
     } catch (transferError) {
-      const message = transferError instanceof Error ? transferError.message : '';
-      toast.error(
-        message ? `Không thể chuyển giao Đội trưởng: ${message}` : 'Không thể chuyển giao Đội trưởng.',
-        { id: 'organization-transfer-captain-error' },
+      const message = formatTransferLeadApiError(
+        transferError,
+        'Không thể chuyển giao Đội trưởng.',
       );
-      throw transferError;
+      toast.error(`Không thể chuyển giao Đội trưởng: ${message}`, {
+        id: 'organization-transfer-captain-error',
+      });
+      throw new Error(message);
     }
   }
 
@@ -440,9 +451,7 @@ function TransferCaptainModal({
       await onTransfer(targetUser.uid);
       onClose();
     } catch (transferError) {
-      setError(
-        transferError instanceof Error ? transferError.message : 'Không thể chuyển giao Đội trưởng.',
-      );
+      setError(formatTransferLeadApiError(transferError, 'Không thể chuyển giao Đội trưởng.'));
     } finally {
       setIsSaving(false);
     }
@@ -484,7 +493,9 @@ function EndViceCaptainModal({
       await onEnd(assignment, fromVietnamDateTimeLocalValue(endedAtValue));
       onClose();
     } catch (endError) {
-      setError(endError instanceof Error ? endError.message : 'Không thể kết thúc nhiệm kỳ Đội phó.');
+      setError(
+        endError instanceof Error ? endError.message : 'Không thể kết thúc nhiệm kỳ Đội phó.',
+      );
     } finally {
       setIsSaving(false);
     }
@@ -768,7 +779,9 @@ function PickerUserStatusBadge({ status }: { status: AppUser['status'] }) {
       : 'border-emerald-200 bg-emerald-50 text-emerald-700';
 
   return (
-    <span className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}>
+    <span
+      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
+    >
       {status === 'disabled' ? 'Disabled' : 'Active'}
     </span>
   );

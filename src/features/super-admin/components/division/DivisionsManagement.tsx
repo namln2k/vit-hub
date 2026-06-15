@@ -23,6 +23,7 @@ import DivisionsTable from './DivisionsTable';
 import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
 import {
   assignScopeRole,
+  formatTransferLeadApiError,
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
@@ -240,12 +241,11 @@ export default function DivisionsManagement({
       toast.success('Đã chuyển giao trưởng mảng.', { id: 'division-transfer-lead-success' });
       await loadDivisionUsers(activeDivision.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(
-        message ? `Không thể chuyển giao trưởng mảng: ${message}` : 'Không thể chuyển giao trưởng mảng.',
-        { id: 'division-transfer-lead-error' },
-      );
-      throw error;
+      const message = formatTransferLeadApiError(error, 'Không thể chuyển giao trưởng mảng.');
+      toast.error(`Không thể chuyển giao trưởng mảng: ${message}`, {
+        id: 'division-transfer-lead-error',
+      });
+      throw new Error(message);
     }
   }
 

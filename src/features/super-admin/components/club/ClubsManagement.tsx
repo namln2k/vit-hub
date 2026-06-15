@@ -25,6 +25,7 @@ import {
 } from '@/features/super-admin/lib/userUtils';
 import {
   assignScopeRole,
+  formatTransferLeadApiError,
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
@@ -266,14 +267,11 @@ export default function ClubsManagement({
       toast.success('Đã chuyển giao chủ nhiệm CLB/tổ.', { id: 'club-transfer-lead-success' });
       await loadClubUsers(activeClub.id);
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(
-        message
-          ? `Không thể chuyển giao chủ nhiệm CLB/tổ: ${message}`
-          : 'Không thể chuyển giao chủ nhiệm CLB/tổ.',
-        { id: 'club-transfer-lead-error' },
-      );
-      throw error;
+      const message = formatTransferLeadApiError(error, 'Không thể chuyển giao chủ nhiệm CLB/tổ.');
+      toast.error(`Không thể chuyển giao chủ nhiệm CLB/tổ: ${message}`, {
+        id: 'club-transfer-lead-error',
+      });
+      throw new Error(message);
     }
   }
 
