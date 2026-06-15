@@ -215,6 +215,57 @@ export async function canManageEvent(
   eventId: string,
   context: AuthorizationContext = {},
 ) {
+  return hasEventPermission(actor, eventId, 'event.manage', context);
+}
+
+export async function canViewEventPrivate(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, 'event.view_private', context);
+}
+
+export async function canManageEventMembers(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, 'event.member.manage', context);
+}
+
+export async function canAssignEventRole(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, 'event.role.assign', context);
+}
+
+export async function canRevokeEventRole(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, 'event.role.revoke', context);
+}
+
+export async function canManageEventLeadWithoutEventRoles(
+  actor: OrganizationActor,
+  eventId: string,
+  permissionKey: 'event.role.assign' | 'event.role.revoke',
+  context: AuthorizationContext = {},
+) {
+  return hasEventPermission(actor, eventId, permissionKey, context, { ignoreEventRoles: true });
+}
+
+async function hasEventPermission(
+  actor: OrganizationActor,
+  eventId: string,
+  permissionKey: PermissionKey,
+  context: AuthorizationContext = {},
+  options: { ignoreEventRoles?: boolean } = {},
+) {
   if (isSuperAdmin(actor)) {
     return true;
   }
@@ -225,25 +276,25 @@ export async function canManageEvent(
     throw new AuthorizationError('Không tìm thấy event.', 404);
   }
 
-  const eventRoles = await listEventRoles(eventId, actor.id);
+  const eventRoles = options.ignoreEventRoles ? [] : await listEventRoles(eventId, actor.id);
   const grants = await listPermissionGrants(eventRoles.map((assignment) => assignment.role_key));
-  const hasEventManagerRole = eventRoles.some((assignment) =>
+  const hasOwnedEventGrant = eventRoles.some((assignment) =>
     grants.some(
       (grant) =>
         grant.role_key === assignment.role_key &&
-        grant.permission_key === 'event.manage' &&
+        grant.permission_key === permissionKey &&
         grant.effect_scope === 'owned_event' &&
         grant.is_enabled,
     ),
   );
 
-  if (hasEventManagerRole) {
+  if (hasOwnedEventGrant) {
     return true;
   }
 
   return hasDomainPermission(
     actor,
-    'event.manage',
+    permissionKey,
     {
       type: event.owner_scope_type,
       id: event.owner_scope_id,

@@ -2,7 +2,9 @@ import { supabase } from '@/services/supabase';
 import type {
   DomainRoleKey,
   EffectScope,
+  EventMembershipStatus,
   EventOwnerScopeType,
+  EventRoleKey,
   EventVisibility,
   NonEventRoleKey,
   PermissionKey,
@@ -128,11 +130,48 @@ export interface OrganizationEventCreateInput extends OrganizationEventWriteInpu
   ownerScopeId: string | null;
 }
 
+export interface OrganizationEventRoleAssignment {
+  id: string;
+  eventId: string;
+  userId: string;
+  roleKey: EventRoleKey;
+  assignedBy: string | null;
+  assignedAt: string;
+}
+
+export interface OrganizationEventParticipant {
+  uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  nickname: string;
+  username: string;
+  phoneNumber: string;
+  schoolName: string;
+  enterYear: string;
+  cohort: string;
+  gender: 0 | 1 | null;
+  avatarUrl: string;
+  avatarKey: string;
+  role: 'member' | 'super_admin';
+  status: 'active' | 'disabled';
+  membership: {
+    id: string;
+    eventId: string;
+    status: EventMembershipStatus;
+    createdAt: string;
+    updatedAt: string;
+  };
+  roleAssignments: OrganizationEventRoleAssignment[];
+}
+
 const SCOPE_MEMBERSHIPS_API = '/api/organization/scope-memberships';
 const ROLE_ASSIGNMENTS_API = '/api/organization/role-assignments';
 const ORGANIZATION_ROLES_API = '/api/organization/organization-roles';
 const PERMISSIONS_API = '/api/organization/permissions';
 const EVENTS_API = '/api/organization/events';
+const EVENT_PARTICIPANTS_API = '/api/organization/event-participants';
 
 export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: string) {
   const params = new URLSearchParams({ scopeType, scopeId });
@@ -300,6 +339,62 @@ export async function deleteOrganizationEvent(eventId: string) {
   });
 }
 
+export async function listOrganizationEventParticipants(eventId: string) {
+  const params = new URLSearchParams({ eventId });
+  const result = await apiFetch<{ participants: OrganizationEventParticipant[] }>(
+    `${EVENT_PARTICIPANTS_API}?${params.toString()}`,
+  );
+
+  return result.participants;
+}
+
+export async function addOrganizationEventParticipants(eventId: string, userIds: string[]) {
+  await apiFetch(EVENT_PARTICIPANTS_API, {
+    method: 'POST',
+    body: { eventId, userIds },
+  });
+}
+
+export async function updateOrganizationEventParticipantStatus(
+  eventId: string,
+  userId: string,
+  status: EventMembershipStatus,
+) {
+  await apiFetch(EVENT_PARTICIPANTS_API, {
+    method: 'PATCH',
+    body: { action: 'update_status', eventId, userId, status },
+  });
+}
+
+export async function assignOrganizationEventRole(
+  eventId: string,
+  userId: string,
+  roleKey: EventRoleKey,
+) {
+  await apiFetch(EVENT_PARTICIPANTS_API, {
+    method: 'PATCH',
+    body: { action: 'assign_role', eventId, userId, roleKey },
+  });
+}
+
+export async function revokeOrganizationEventRole(
+  eventId: string,
+  userId: string,
+  roleKey: EventRoleKey,
+) {
+  await apiFetch(EVENT_PARTICIPANTS_API, {
+    method: 'DELETE',
+    body: { eventId, userId, roleKey },
+  });
+}
+
+export async function transferOrganizationEventLead(eventId: string, targetUserId: string) {
+  await apiFetch(EVENT_PARTICIPANTS_API, {
+    method: 'PATCH',
+    body: { action: 'transfer_lead', eventId, targetUserId },
+  });
+}
+
 async function apiFetch<T = { ok: boolean }>(
   input: RequestInfo | URL,
   init: Omit<RequestInit, 'body'> & { body?: unknown } = {},
@@ -348,6 +443,10 @@ export function formatOrganizationRoleApiError(error: unknown, fallback: string)
 }
 
 export function formatOrganizationEventApiError(error: unknown, fallback: string) {
+  return formatApiError(error, fallback, [403, 404, 409]);
+}
+
+export function formatOrganizationEventParticipantApiError(error: unknown, fallback: string) {
   return formatApiError(error, fallback, [403, 404, 409]);
 }
 

@@ -3,7 +3,9 @@ import type { UserRole } from '@/constants/userRoles';
 import type {
   DomainRoleKey,
   EffectScope,
+  EventMembershipStatus,
   EventOwnerScopeType,
+  EventRoleKey,
   EventVisibility,
   NonEventRoleKey,
   PermissionKey,
@@ -128,6 +130,24 @@ interface EventRow {
   updated_at: string;
 }
 
+interface EventMembershipRow {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: EventMembershipStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+interface EventRoleAssignmentRow {
+  id: string;
+  event_id: string;
+  user_id: string;
+  role_key: EventRoleKey;
+  assigned_by: string | null;
+  assigned_at: string;
+}
+
 export interface OrganizationMemberSummary {
   uid: string;
   email: string;
@@ -201,6 +221,42 @@ export interface EventSummary {
   updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface EventRoleAssignmentSummary {
+  id: string;
+  eventId: string;
+  userId: string;
+  roleKey: EventRoleKey;
+  assignedBy: string | null;
+  assignedAt: string;
+}
+
+export interface EventParticipantSummary {
+  uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  nickname: string;
+  username: string;
+  phoneNumber: string;
+  schoolName: string;
+  enterYear: string;
+  cohort: string;
+  gender: 0 | 1 | null;
+  avatarUrl: string;
+  avatarKey: string;
+  role: UserRole;
+  status: 'active' | 'disabled';
+  membership: {
+    id: string;
+    eventId: string;
+    status: EventMembershipStatus;
+    createdAt: string;
+    updatedAt: string;
+  };
+  roleAssignments: EventRoleAssignmentSummary[];
 }
 
 export interface EventWriteInput {
@@ -312,6 +368,19 @@ export function isEventOwnerScopeType(value: unknown): value is EventOwnerScopeT
 
 export function isEventVisibility(value: unknown): value is EventVisibility {
   return value === 'organization' || value === 'scope' || value === 'managers';
+}
+
+export function isEventMembershipStatus(value: unknown): value is EventMembershipStatus {
+  return value === 'going' || value === 'checked_in' || value === 'absent';
+}
+
+export function isEventRoleKey(value: unknown): value is EventRoleKey {
+  return (
+    value === 'event_lead' ||
+    value === 'event_deputy' ||
+    value === 'event_staff_lead' ||
+    value === 'event_volunteer'
+  );
 }
 
 export async function listEvents(): Promise<EventSummary[]> {
@@ -447,6 +516,260 @@ export async function deleteEvent(eventId: string) {
 
   if (!response.ok) {
     throw new Error(getRestErrorMessage(data, 'Không thể xóa sự kiện.'));
+  }
+}
+
+export async function listEventParticipants(eventId: string): Promise<EventParticipantSummary[]> {
+  const membershipQuery = new URLSearchParams({
+    select: 'id,event_id,user_id,status,created_at,updated_at',
+    event_id: `eq.${eventId}`,
+    order: 'created_at.asc',
+  });
+  const { response: membershipResponse, data: membershipData } = await supabaseFetch<
+    EventMembershipRow[]
+  >(`/rest/v1/event_memberships?${membershipQuery.toString()}`);
+
+  if (!membershipResponse.ok) {
+    throw new Error('Không thể tải danh sách participants.');
+  }
+
+  const memberships = Array.isArray(membershipData) ? membershipData : [];
+
+  if (memberships.length === 0) {
+    return [];
+  }
+
+  const userIds = memberships.map((membership) => membership.user_id);
+  const [users, roleAssignments] = await Promise.all([
+    listUsersByIds(userIds),
+    listEventRoleAssignments(eventId),
+  ]);
+  const usersById = new Map(users.map((user) => [user.id, user]));
+  const rolesByUserId = new Map<string, EventRoleAssignmentSummary[]>();
+
+  for (const assignment of roleAssignments) {
+    const userRoles = rolesByUserId.get(assignment.userId) ?? [];
+    userRoles.push(assignment);
+    rolesByUserId.set(assignment.userId, userRoles);
+  }
+
+  return memberships
+    .map((membership) => {
+      const user = usersById.get(membership.user_id);
+
+      if (!user) {
+        return null;
+      }
+
+      return {
+        ...mapUserRow(user),
+        membership: {
+          id: membership.id,
+          eventId: membership.event_id,
+          status: membership.status,
+          createdAt: membership.created_at,
+          updatedAt: membership.updated_at,
+        },
+        roleAssignments: rolesByUserId.get(user.id) ?? [],
+      } satisfies EventParticipantSummary;
+    })
+    .filter((participant): participant is EventParticipantSummary => Boolean(participant))
+    .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
+}
+
+export async function addEventParticipants({
+  eventId,
+  userIds,
+}: {
+  eventId: string;
+  userIds: string[];
+}) {
+  const uniqueUserIds = Array.from(new Set(userIds));
+
+  if (uniqueUserIds.length === 0) {
+    return;
+  }
+
+  const users = await listUsersByIds(uniqueUserIds);
+
+  if (users.length !== uniqueUserIds.length) {
+    throw new RepositoryConflictError('Một hoặc nhiều tài khoản không tồn tại.');
+  }
+
+  const disabledUser = users.find((user) => user.status !== 'active');
+
+  if (disabledUser) {
+    throw new RepositoryForbiddenError(
+      `Không thể thêm user đã bị vô hiệu hóa: ${disabledUser.email}.`,
+    );
+  }
+
+  const existingParticipantIds = new Set(
+    (await listEventParticipants(eventId)).map((participant) => participant.uid),
+  );
+  const rows = uniqueUserIds
+    .filter((userId) => !existingParticipantIds.has(userId))
+    .map((userId) => ({
+      event_id: eventId,
+      user_id: userId,
+      status: 'going' satisfies EventMembershipStatus,
+    }));
+
+  if (rows.length === 0) {
+    return;
+  }
+
+  const { response, data } = await supabaseFetch('/rest/v1/event_memberships', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: rows,
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể thêm participant.'));
+  }
+}
+
+export async function updateEventParticipantStatus({
+  eventId,
+  userId,
+  status,
+}: {
+  eventId: string;
+  userId: string;
+  status: EventMembershipStatus;
+}) {
+  const query = new URLSearchParams({
+    event_id: `eq.${eventId}`,
+    user_id: `eq.${userId}`,
+  });
+  const { response, data } = await supabaseFetch(`/rest/v1/event_memberships?${query.toString()}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      status,
+      updated_at: new Date().toISOString(),
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể cập nhật participant.'));
+  }
+}
+
+export async function assignEventRole({
+  actorId,
+  eventId,
+  userId,
+  roleKey,
+}: {
+  actorId: string;
+  eventId: string;
+  userId: string;
+  roleKey: EventRoleKey;
+}) {
+  await ensureActiveEventParticipant(
+    eventId,
+    userId,
+    'Người nhận vai trò phải là participant đang hoạt động.',
+  );
+
+  const existingAssignments = await listEventRoleAssignments(eventId);
+
+  if (
+    existingAssignments.some(
+      (assignment) => assignment.userId === userId && assignment.roleKey === roleKey,
+    )
+  ) {
+    return;
+  }
+
+  if (
+    roleKey === 'event_lead' &&
+    existingAssignments.some((assignment) => assignment.roleKey === 'event_lead')
+  ) {
+    throw new RepositoryConflictError(
+      'Event đã có event lead. Hãy dùng luồng chuyển giao event lead.',
+    );
+  }
+
+  const { response, data } = await supabaseFetch('/rest/v1/event_role_assignments', {
+    method: 'POST',
+    headers: { Prefer: 'return=minimal' },
+    body: {
+      event_id: eventId,
+      user_id: userId,
+      role_key: roleKey,
+      assigned_by: actorId,
+    },
+  });
+
+  if (!response.ok) {
+    throwEventRoleWriteError(data, roleKey);
+  }
+}
+
+export async function revokeEventRole({
+  eventId,
+  userId,
+  roleKey,
+}: {
+  eventId: string;
+  userId: string;
+  roleKey: EventRoleKey;
+}) {
+  const query = new URLSearchParams({
+    event_id: `eq.${eventId}`,
+    user_id: `eq.${userId}`,
+    role_key: `eq.${roleKey}`,
+  });
+  const { response, data } = await supabaseFetch(
+    `/rest/v1/event_role_assignments?${query.toString()}`,
+    {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(getRestErrorMessage(data, 'Không thể thu hồi event role.'));
+  }
+}
+
+export async function transferEventLead({
+  actorId,
+  eventId,
+  targetUserId,
+}: {
+  actorId: string;
+  eventId: string;
+  targetUserId: string;
+}) {
+  await ensureActiveEventParticipant(
+    eventId,
+    targetUserId,
+    'Người nhận chuyển giao phải là participant đang hoạt động.',
+  );
+
+  const existingAssignments = await listEventRoleAssignments(eventId);
+  const currentLead = existingAssignments.find((assignment) => assignment.roleKey === 'event_lead');
+
+  if (!currentLead) {
+    await assignEventRole({ actorId, eventId, userId: targetUserId, roleKey: 'event_lead' });
+    return;
+  }
+
+  if (currentLead.userId === targetUserId) {
+    return;
+  }
+
+  await revokeEventRole({ eventId, userId: currentLead.userId, roleKey: 'event_lead' });
+
+  try {
+    await assignEventRole({ actorId, eventId, userId: targetUserId, roleKey: 'event_lead' });
+  } catch (error) {
+    await assignEventRole({ actorId, eventId, userId: currentLead.userId, roleKey: 'event_lead' });
+    throw error;
   }
 }
 
@@ -1360,6 +1683,61 @@ async function listUsersByIds(userIds: string[]) {
   return Array.isArray(data) ? data : [];
 }
 
+async function listEventRoleAssignments(eventId: string) {
+  const query = new URLSearchParams({
+    select: 'id,event_id,user_id,role_key,assigned_by,assigned_at',
+    event_id: `eq.${eventId}`,
+    order: 'assigned_at.asc',
+  });
+  const { response, data } = await supabaseFetch<EventRoleAssignmentRow[]>(
+    `/rest/v1/event_role_assignments?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải event roles.');
+  }
+
+  return (Array.isArray(data) ? data : []).map((assignment) => ({
+    id: assignment.id,
+    eventId: assignment.event_id,
+    userId: assignment.user_id,
+    roleKey: assignment.role_key,
+    assignedBy: assignment.assigned_by,
+    assignedAt: assignment.assigned_at,
+  })) satisfies EventRoleAssignmentSummary[];
+}
+
+async function ensureActiveEventParticipant(eventId: string, userId: string, message: string) {
+  const users = await listUsersByIds([userId]);
+  const user = users[0] ?? null;
+
+  if (!user) {
+    throw new RepositoryConflictError('Không tìm thấy tài khoản.');
+  }
+
+  if (user.status !== 'active') {
+    throw new RepositoryForbiddenError(message);
+  }
+
+  const query = new URLSearchParams({
+    select: 'id',
+    event_id: `eq.${eventId}`,
+    user_id: `eq.${userId}`,
+    limit: '1',
+  });
+  const { response, data } = await supabaseFetch<Array<{ id: string }>>(
+    `/rest/v1/event_memberships?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể kiểm tra participant.');
+  }
+
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new RepositoryConflictError('User phải là participant của event trước khi nhận vai trò.');
+  }
+}
+
 async function listDivisionsByIds(divisionIds: string[]) {
   const uniqueDivisionIds = Array.from(new Set(divisionIds));
 
@@ -1775,6 +2153,21 @@ function throwRoleAssignmentWriteError(data: unknown, roleKey: NonEventRoleKey):
   }
 
   throw new Error(getRestErrorMessage(data, 'Không thể bổ nhiệm vai trò.'));
+}
+
+function throwEventRoleWriteError(data: unknown, roleKey: EventRoleKey): never {
+  const errorCode =
+    data && typeof data === 'object' && 'code' in data && typeof data.code === 'string'
+      ? data.code
+      : '';
+
+  if (roleKey === 'event_lead' && errorCode === '23505') {
+    throw new RepositoryConflictError(
+      'Event đã có event lead. Hãy dùng luồng chuyển giao event lead.',
+    );
+  }
+
+  throw new Error(getRestErrorMessage(data, 'Không thể bổ nhiệm event role.'));
 }
 
 function throwTransferLeadError(data: unknown): never {
