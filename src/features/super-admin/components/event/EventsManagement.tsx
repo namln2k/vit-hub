@@ -31,6 +31,7 @@ import {
   type OrganizationEvent,
   type OrganizationEventCreateInput,
   type OrganizationEventParticipant,
+  type OrganizationEventParticipantCapabilities,
   type OrganizationEventWriteInput,
 } from '@/services/organizationAdmin';
 import { queryUsers } from '@/services/users';
@@ -86,6 +87,14 @@ const EVENT_MEMBERSHIP_STATUS_STYLES = {
   checked_in: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   absent: 'border-amber-200 bg-amber-50 text-amber-700',
 } as const;
+
+const DEFAULT_EVENT_PARTICIPANT_CAPABILITIES: OrganizationEventParticipantCapabilities = {
+  canManage: false,
+  canManageMembers: false,
+  canAssignRoles: false,
+  canRevokeRoles: false,
+  canUpdateAttendance: false,
+};
 
 const OWNER_SCOPE_LABELS: Record<EventOwnerScopeType, string> = {
   organization: 'Toàn Đội',
@@ -808,6 +817,10 @@ interface EventParticipantsModalProps {
 
 function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps) {
   const [participants, setParticipants] = useState<OrganizationEventParticipant[]>([]);
+  const [capabilities, setCapabilities] = useState<OrganizationEventParticipantCapabilities>(
+    DEFAULT_EVENT_PARTICIPANT_CAPABILITIES,
+  );
+  const [activeMode, setActiveMode] = useState<'participants' | 'attendance'>('participants');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -829,7 +842,9 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
     setLoadError('');
 
     try {
-      setParticipants(await listOrganizationEventParticipants(event.id));
+      const result = await listOrganizationEventParticipants(event.id);
+      setParticipants(result.participants);
+      setCapabilities(result.capabilities);
     } catch (error) {
       const message = formatOrganizationEventParticipantApiError(
         error,
@@ -837,6 +852,7 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
       );
       setLoadError(message);
       setParticipants([]);
+      setCapabilities(DEFAULT_EVENT_PARTICIPANT_CAPABILITIES);
     } finally {
       setIsLoading(false);
     }
@@ -853,6 +869,10 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
   }, [loadParticipants]);
 
   useEffect(() => {
+    if (!capabilities.canManageMembers) {
+      return;
+    }
+
     let isMounted = true;
     const timeoutId = window.setTimeout(async () => {
       setIsSearchingUsers(true);
@@ -883,7 +903,7 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
       isMounted = false;
       window.clearTimeout(timeoutId);
     };
-  }, [participantIds, userSearch]);
+  }, [capabilities.canManageMembers, participantIds, userSearch]);
 
   async function runParticipantAction(
     actionId: string,
@@ -908,6 +928,10 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
   }
 
   async function handleAddUser(user: AppUser) {
+    if (!capabilities.canManageMembers) {
+      return;
+    }
+
     await runParticipantAction(
       `add-${user.uid}`,
       () => addOrganizationEventParticipants(event.id, [user.uid]),
@@ -920,6 +944,10 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
     const hasRole = participant.roleAssignments.some(
       (assignment) => assignment.roleKey === roleKey,
     );
+
+    if ((hasRole && !capabilities.canRevokeRoles) || (!hasRole && !capabilities.canAssignRoles)) {
+      return;
+    }
 
     if (roleKey === 'event_lead' && !hasRole && currentLead) {
       setTransferTarget(participant);
@@ -940,6 +968,10 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
     participant: OrganizationEventParticipant,
     status: OrganizationEventParticipant['membership']['status'],
   ) {
+    if (!capabilities.canUpdateAttendance) {
+      return;
+    }
+
     await runParticipantAction(
       `status-${participant.uid}`,
       () => updateOrganizationEventParticipantStatus(event.id, participant.uid, status),
@@ -948,7 +980,7 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
   }
 
   async function handleTransferLead() {
-    if (!transferTarget) {
+    if (!transferTarget || !capabilities.canAssignRoles || !capabilities.canRevokeRoles) {
       return;
     }
 
@@ -974,9 +1006,9 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
     >
       <div className="flex max-h-[calc(100vh-3rem)] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
-          <div>
+          <div className="min-w-0">
             <h2 id="event-participants-title" className="text-lg font-bold text-slate-950">
-              Participants
+              Event detail
             </h2>
             <p className="mt-1 text-sm font-medium text-slate-500">{event.name}</p>
           </div>
@@ -991,56 +1023,95 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
           </button>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-0 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)]">
-          <aside className="border-b border-slate-200 p-4 lg:border-b-0 lg:border-r">
-            <label className="relative block">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={userSearch}
-                onChange={(changeEvent) => setUserSearch(changeEvent.target.value)}
-                disabled={Boolean(pendingAction)}
-                className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                placeholder="Tìm account user đang active"
-              />
-            </label>
+        <div className="border-b border-slate-200 px-5 py-3">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setActiveMode('participants')}
+              className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
+                activeMode === 'participants'
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <UsersRound className="h-4 w-4" />
+              Participants
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveMode('attendance')}
+              className={`inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
+                activeMode === 'attendance'
+                  ? 'bg-white text-slate-950 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-950'
+              }`}
+            >
+              <Check className="h-4 w-4" />
+              Attendance
+            </button>
+          </div>
+        </div>
 
-            <div className="mt-3 max-h-[24rem] space-y-2 overflow-y-auto">
-              {isSearchingUsers ? (
-                <div className="flex h-20 items-center justify-center">
-                  <Sharingan size={24} label="Đang tìm user" />
-                </div>
-              ) : userResults.length === 0 ? (
-                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
-                  Không có account user phù hợp.
-                </p>
-              ) : (
-                userResults.map((user) => (
-                  <button
-                    key={user.uid}
-                    type="button"
-                    onClick={() => void handleAddUser(user)}
-                    disabled={Boolean(pendingAction)}
-                    className="flex w-full items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left transition-colors hover:border-emerald-200 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Avatar src={user.avatarUrl} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-slate-950">
-                        {getPersonName(user)}
+        <div
+          className={`grid min-h-0 flex-1 gap-0 overflow-hidden ${
+            activeMode === 'participants' ? 'lg:grid-cols-[320px_minmax(0,1fr)]' : ''
+          }`}
+        >
+          {activeMode === 'participants' ? (
+            <aside className="border-b border-slate-200 p-4 lg:border-b-0 lg:border-r">
+              <label className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={userSearch}
+                  onChange={(changeEvent) => setUserSearch(changeEvent.target.value)}
+                  disabled={Boolean(pendingAction) || !capabilities.canManageMembers}
+                  className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  placeholder="Tìm account user đang active"
+                />
+              </label>
+
+              <div className="mt-3 max-h-[24rem] space-y-2 overflow-y-auto">
+                {isSearchingUsers ? (
+                  <div className="flex h-20 items-center justify-center">
+                    <Sharingan size={24} label="Đang tìm user" />
+                  </div>
+                ) : !capabilities.canManageMembers ? (
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
+                    Bạn không có quyền thêm participant.
+                  </p>
+                ) : userResults.length === 0 ? (
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-500">
+                    Không có account user phù hợp.
+                  </p>
+                ) : (
+                  userResults.map((user) => (
+                    <button
+                      key={user.uid}
+                      type="button"
+                      onClick={() => void handleAddUser(user)}
+                      disabled={Boolean(pendingAction)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-slate-200 px-3 py-2 text-left transition-colors hover:border-emerald-200 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Avatar src={user.avatarUrl} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-slate-950">
+                          {getPersonName(user)}
+                        </span>
+                        <span className="block truncate text-xs font-medium text-slate-500">
+                          {user.email}
+                        </span>
                       </span>
-                      <span className="block truncate text-xs font-medium text-slate-500">
-                        {user.email}
-                      </span>
-                    </span>
-                    {pendingAction === `add-${user.uid}` ? (
-                      <Sharingan size={16} label="Đang thêm participant" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 text-emerald-600" />
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </aside>
+                      {pendingAction === `add-${user.uid}` ? (
+                        <Sharingan size={16} label="Đang thêm participant" />
+                      ) : (
+                        <UserPlus className="h-4 w-4 text-emerald-600" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </aside>
+          ) : null}
 
           <section className="min-h-0 overflow-y-auto">
             {isLoading ? (
@@ -1061,115 +1132,144 @@ function EventParticipantsModal({ event, onClose }: EventParticipantsModalProps)
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    <tr>
-                      <TableHeader>Participant</TableHeader>
-                      <TableHeader>Status</TableHeader>
-                      <TableHeader>Roles</TableHeader>
-                      <TableHeader align="right">Assign/Revoke</TableHeader>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 bg-white">
-                    {participants.map((participant) => (
-                      <tr key={participant.uid} className="align-top">
-                        <TableCell>
-                          <div className="flex min-w-60 items-center gap-3">
-                            <Avatar src={participant.avatarUrl} size="sm" />
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-950">
-                                {getPersonName(participant)}
-                              </p>
-                              <p className="truncate text-xs font-medium text-slate-500">
-                                {participant.email}
-                              </p>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <select
-                            value={participant.membership.status}
-                            onChange={(changeEvent) =>
-                              void handleStatusChange(
-                                participant,
-                                changeEvent.target
-                                  .value as OrganizationEventParticipant['membership']['status'],
-                              )
-                            }
-                            disabled={Boolean(pendingAction)}
-                            className={`h-9 rounded-lg border px-2 text-xs font-semibold outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                              EVENT_MEMBERSHIP_STATUS_STYLES[participant.membership.status]
-                            }`}
-                          >
-                            {Object.entries(EVENT_MEMBERSHIP_STATUS_LABELS).map(
-                              ([status, label]) => (
-                                <option key={status} value={status}>
-                                  {label}
-                                </option>
-                              ),
-                            )}
-                          </select>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex min-w-52 flex-wrap gap-1.5">
-                            {participant.roleAssignments.length === 0 ? (
-                              <span className="text-sm font-medium text-slate-400">
-                                Không có role
-                              </span>
-                            ) : (
-                              participant.roleAssignments.map((assignment) => (
-                                <span
-                                  key={assignment.id}
-                                  className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700"
-                                >
-                                  {ROLE_LABELS[assignment.roleKey]}
-                                </span>
-                              ))
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell align="right">
-                          <div className="flex min-w-[28rem] flex-wrap justify-end gap-2">
-                            {EVENT_ROLE_KEYS.map((roleKey) => {
-                              const hasRole = participant.roleAssignments.some(
-                                (assignment) => assignment.roleKey === roleKey,
-                              );
-                              const actionId = `${hasRole ? 'revoke' : 'assign'}-${participant.uid}-${roleKey}`;
-                              const isTransfer =
-                                roleKey === 'event_lead' && !hasRole && Boolean(currentLead);
-
-                              return (
-                                <button
-                                  key={roleKey}
-                                  type="button"
-                                  onClick={() => void handleRoleClick(participant, roleKey)}
-                                  disabled={
-                                    Boolean(pendingAction) || participant.status !== 'active'
-                                  }
-                                  className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    hasRole
-                                      ? 'border-red-200 text-red-600 hover:bg-red-50'
-                                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-                                  }`}
-                                >
-                                  {pendingAction === actionId ? (
-                                    <Sharingan size={14} label="Đang cập nhật role" />
-                                  ) : hasRole ? (
-                                    <X className="h-3.5 w-3.5" />
-                                  ) : (
-                                    <Check className="h-3.5 w-3.5" />
-                                  )}
-                                  {isTransfer ? 'Transfer lead' : ROLE_LABELS[roleKey]}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </TableCell>
+              <div>
+                {activeMode === 'attendance' && !capabilities.canUpdateAttendance ? (
+                  <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-800">
+                    Bạn đang xem attendance ở chế độ read-only.
+                  </div>
+                ) : null}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <TableHeader>Participant</TableHeader>
+                        <TableHeader>
+                          {activeMode === 'attendance' ? 'Attendance' : 'Status'}
+                        </TableHeader>
+                        <TableHeader>Roles</TableHeader>
+                        {activeMode === 'participants' ? (
+                          <TableHeader align="right">Assign/Revoke</TableHeader>
+                        ) : null}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 bg-white">
+                      {participants.map((participant) => (
+                        <tr key={participant.uid} className="align-top">
+                          <TableCell>
+                            <div className="flex min-w-60 items-center gap-3">
+                              <Avatar src={participant.avatarUrl} size="sm" />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-slate-950">
+                                  {getPersonName(participant)}
+                                </p>
+                                <p className="truncate text-xs font-medium text-slate-500">
+                                  {participant.email}
+                                </p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {activeMode === 'attendance' ? (
+                              <select
+                                value={participant.membership.status}
+                                onChange={(changeEvent) =>
+                                  void handleStatusChange(
+                                    participant,
+                                    changeEvent.target
+                                      .value as OrganizationEventParticipant['membership']['status'],
+                                  )
+                                }
+                                disabled={
+                                  Boolean(pendingAction) || !capabilities.canUpdateAttendance
+                                }
+                                className={`h-9 rounded-lg border px-2 text-xs font-semibold outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                                  EVENT_MEMBERSHIP_STATUS_STYLES[participant.membership.status]
+                                }`}
+                              >
+                                {Object.entries(EVENT_MEMBERSHIP_STATUS_LABELS).map(
+                                  ([status, label]) => (
+                                    <option key={status} value={status}>
+                                      {label}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            ) : (
+                              <span
+                                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                  EVENT_MEMBERSHIP_STATUS_STYLES[participant.membership.status]
+                                }`}
+                              >
+                                {EVENT_MEMBERSHIP_STATUS_LABELS[participant.membership.status]}
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex min-w-52 flex-wrap gap-1.5">
+                              {participant.roleAssignments.length === 0 ? (
+                                <span className="text-sm font-medium text-slate-400">
+                                  Không có role
+                                </span>
+                              ) : (
+                                participant.roleAssignments.map((assignment) => (
+                                  <span
+                                    key={assignment.id}
+                                    className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700"
+                                  >
+                                    {ROLE_LABELS[assignment.roleKey]}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </TableCell>
+                          {activeMode === 'participants' ? (
+                            <TableCell align="right">
+                              <div className="flex min-w-[28rem] flex-wrap justify-end gap-2">
+                                {EVENT_ROLE_KEYS.map((roleKey) => {
+                                  const hasRole = participant.roleAssignments.some(
+                                    (assignment) => assignment.roleKey === roleKey,
+                                  );
+                                  const actionId = `${hasRole ? 'revoke' : 'assign'}-${participant.uid}-${roleKey}`;
+                                  const isTransfer =
+                                    roleKey === 'event_lead' && !hasRole && Boolean(currentLead);
+
+                                  return (
+                                    <button
+                                      key={roleKey}
+                                      type="button"
+                                      onClick={() => void handleRoleClick(participant, roleKey)}
+                                      disabled={
+                                        Boolean(pendingAction) ||
+                                        participant.status !== 'active' ||
+                                        (hasRole
+                                          ? !capabilities.canRevokeRoles
+                                          : !capabilities.canAssignRoles)
+                                      }
+                                      className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                                        hasRole
+                                          ? 'border-red-200 text-red-600 hover:bg-red-50'
+                                          : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                                      }`}
+                                    >
+                                      {pendingAction === actionId ? (
+                                        <Sharingan size={14} label="Đang cập nhật role" />
+                                      ) : hasRole ? (
+                                        <X className="h-3.5 w-3.5" />
+                                      ) : (
+                                        <Check className="h-3.5 w-3.5" />
+                                      )}
+                                      {isTransfer ? 'Transfer lead' : ROLE_LABELS[roleKey]}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </TableCell>
+                          ) : null}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </section>

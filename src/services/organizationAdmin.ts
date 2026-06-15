@@ -166,6 +166,14 @@ export interface OrganizationEventParticipant {
   roleAssignments: OrganizationEventRoleAssignment[];
 }
 
+export interface OrganizationEventParticipantCapabilities {
+  canManage: boolean;
+  canManageMembers: boolean;
+  canAssignRoles: boolean;
+  canRevokeRoles: boolean;
+  canUpdateAttendance: boolean;
+}
+
 const SCOPE_MEMBERSHIPS_API = '/api/organization/scope-memberships';
 const ROLE_ASSIGNMENTS_API = '/api/organization/role-assignments';
 const ORGANIZATION_ROLES_API = '/api/organization/organization-roles';
@@ -341,11 +349,12 @@ export async function deleteOrganizationEvent(eventId: string) {
 
 export async function listOrganizationEventParticipants(eventId: string) {
   const params = new URLSearchParams({ eventId });
-  const result = await apiFetch<{ participants: OrganizationEventParticipant[] }>(
-    `${EVENT_PARTICIPANTS_API}?${params.toString()}`,
-  );
+  const result = await apiFetch<{
+    participants: OrganizationEventParticipant[];
+    capabilities: OrganizationEventParticipantCapabilities;
+  }>(`${EVENT_PARTICIPANTS_API}?${params.toString()}`);
 
-  return result.participants;
+  return result;
 }
 
 export async function addOrganizationEventParticipants(eventId: string, userIds: string[]) {
