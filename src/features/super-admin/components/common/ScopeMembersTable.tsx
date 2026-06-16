@@ -67,7 +67,15 @@ export default function ScopeMembersTable({
 }: ScopeMembersTableProps) {
   const [roleActionDialog, setRoleActionDialog] = useState<RoleActionDialogState>(null);
   const [isTransferLeadModalOpen, setIsTransferLeadModalOpen] = useState(false);
-  const selectableUsers = canManage ? users.filter((user) => canEndMembership(user)) : [];
+  const [viewMode, setViewMode] = useState<'current' | 'history'>('current');
+  const visibleUsers =
+    viewMode === 'history'
+      ? users
+      : users.filter((user) => {
+          const state = getMembershipLifecycleState(user);
+          return state === 'active' || state === 'upcoming';
+        });
+  const selectableUsers = canManage ? visibleUsers.filter((user) => canEndMembership(user)) : [];
   const areAllVisibleUsersSelected =
     selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIdSet.has(user.uid));
   const leadRoleKey = getLeadRoleForScope(scopeType);
@@ -96,15 +104,37 @@ export default function ScopeMembersTable({
         ) : (
           <span />
         )}
-        <button
-          type="button"
-          onClick={() => setIsTransferLeadModalOpen(true)}
-          disabled={!canManage || !currentLead || isLoading}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
-        >
-          <ArrowRightLeft className="h-4 w-4" />
-          Chuyển giao {leadRoleLabel}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('current')}
+              className={`h-8 rounded-md px-3 text-sm font-semibold ${
+                viewMode === 'current' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              Hiện tại
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('history')}
+              className={`h-8 rounded-md px-3 text-sm font-semibold ${
+                viewMode === 'history' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-600'
+              }`}
+            >
+              Lịch sử
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsTransferLeadModalOpen(true)}
+            disabled={!canManage || !currentLead || isLoading || viewMode === 'history'}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            Chuyển giao {leadRoleLabel}
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
@@ -136,12 +166,15 @@ export default function ScopeMembersTable({
               <EmptyTableRow className="text-red-600" colSpan={10}>
                 {error}
               </EmptyTableRow>
-            ) : users.length > 0 ? (
-              users.map((user) => {
+            ) : visibleUsers.length > 0 ? (
+              visibleUsers.map((user) => {
                 const lifecycleState = getMembershipLifecycleState(user);
-                const visibleRoleAssignments = user.roleAssignments.filter((assignment) =>
-                  isCurrentOrUpcomingAssignment(assignment),
-                );
+                const visibleRoleAssignments =
+                  viewMode === 'history'
+                    ? user.roleAssignments
+                    : user.roleAssignments.filter((assignment) =>
+                        isCurrentOrUpcomingAssignment(assignment),
+                      );
                 const hasDeputyRole = visibleRoleAssignments.some(
                   (assignment) => assignment.roleKey === deputyRoleKey,
                 );
@@ -203,6 +236,8 @@ export default function ScopeMembersTable({
                         <LifecycleActorLine label="Thêm" actor={user.membership.addedBy} />
                         <LifecycleActorLine label="Kết thúc" actor={user.membership.endedBy} />
                         <LifecycleActorLine label="Thu hồi" actor={user.membership.revokedBy} />
+                        <div>Tạo: {formatVietnamDateTime(user.membership.createdAt)}</div>
+                        <div>Cập nhật: {formatVietnamDateTime(user.membership.updatedAt)}</div>
                       </div>
                     </td>
                     <td className="px-5 py-4">
@@ -266,7 +301,11 @@ export default function ScopeMembersTable({
                 );
               })
             ) : (
-              <EmptyTableRow colSpan={10}>Chưa có thành viên trong scope này.</EmptyTableRow>
+              <EmptyTableRow colSpan={10}>
+                {viewMode === 'history'
+                  ? 'Chưa có lịch sử thành viên trong scope này.'
+                  : 'Chưa có thành viên đang hiệu lực trong scope này.'}
+              </EmptyTableRow>
             )}
           </tbody>
         </table>
@@ -325,23 +364,29 @@ function ActionButton({ children, label, tone, onClick, disabled = false }: Acti
 }
 
 type RoleAssignment = OrganizationMember['roleAssignments'][number];
-type RoleAssignmentLifecycleState = 'active' | 'upcoming';
+type RoleAssignmentLifecycleState = 'active' | 'upcoming' | 'expired' | 'ended' | 'revoked';
 
 function RoleAssignmentBadge({ assignment }: { assignment: RoleAssignment }) {
   const state = getRoleAssignmentLifecycleState(assignment);
-  const stateClassName =
-    state === 'upcoming'
-      ? 'border-blue-200 bg-blue-50 text-blue-700'
-      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  const config = roleAssignmentStatusConfig[state];
+  const metadata = [
+    `Bắt đầu: ${formatVietnamDateTime(assignment.startsAt)}`,
+    assignment.endsAt ? `Kết thúc: ${formatVietnamDateTime(assignment.endsAt)}` : '',
+    assignment.assignedBy ? `Gán bởi: ${assignment.assignedBy.name}` : '',
+    assignment.endedBy ? `Kết thúc bởi: ${assignment.endedBy.name}` : '',
+    assignment.revokedBy ? `Thu hồi bởi: ${assignment.revokedBy.name}` : '',
+    `Tạo: ${formatVietnamDateTime(assignment.createdAt)}`,
+    `Cập nhật: ${formatVietnamDateTime(assignment.updatedAt)}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return (
     <span
-      className={`rounded-full border px-2 py-1 text-xs font-semibold ${stateClassName}`}
-      title={`Bắt đầu: ${formatVietnamDateTime(assignment.startsAt)}${
-        assignment.endsAt ? ` - Kết thúc: ${formatVietnamDateTime(assignment.endsAt)}` : ''
-      }`}
+      className={`rounded-full border px-2 py-1 text-xs font-semibold ${config.className}`}
+      title={metadata}
     >
-      {ROLE_LABELS[assignment.roleKey]} · {state === 'upcoming' ? 'Sắp hiệu lực' : 'Đang hiệu lực'}
+      {ROLE_LABELS[assignment.roleKey]} · {config.label}
     </span>
   );
 }
@@ -775,7 +820,25 @@ function isActiveNowAssignment(assignment: RoleAssignment) {
 }
 
 function getRoleAssignmentLifecycleState(assignment: RoleAssignment): RoleAssignmentLifecycleState {
-  return new Date(assignment.startsAt).getTime() > Date.now() ? 'upcoming' : 'active';
+  if (assignment.status === 'ended') {
+    return 'ended';
+  }
+
+  if (assignment.status === 'revoked') {
+    return 'revoked';
+  }
+
+  const now = Date.now();
+
+  if (new Date(assignment.startsAt).getTime() > now) {
+    return 'upcoming';
+  }
+
+  if (assignment.endsAt && new Date(assignment.endsAt).getTime() <= now) {
+    return 'expired';
+  }
+
+  return 'active';
 }
 
 function getMembershipLifecycleState(user: OrganizationMember): MembershipLifecycleState {
@@ -835,6 +898,29 @@ const lifecycleStatusConfig = {
     className: 'border-red-200 bg-red-50 text-red-700',
   },
 } satisfies Record<MembershipLifecycleState, { label: string; className: string }>;
+
+const roleAssignmentStatusConfig = {
+  active: {
+    label: 'Đang hiệu lực',
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  },
+  upcoming: {
+    label: 'Sắp hiệu lực',
+    className: 'border-blue-200 bg-blue-50 text-blue-700',
+  },
+  expired: {
+    label: 'Hết hạn',
+    className: 'border-amber-200 bg-amber-50 text-amber-700',
+  },
+  ended: {
+    label: 'Đã kết thúc',
+    className: 'border-slate-200 bg-slate-50 text-slate-600',
+  },
+  revoked: {
+    label: 'Đã thu hồi',
+    className: 'border-red-200 bg-red-50 text-red-700',
+  },
+} satisfies Record<RoleAssignmentLifecycleState, { label: string; className: string }>;
 
 function LifecycleStatusBadge({ state }: { state: MembershipLifecycleState }) {
   const config = lifecycleStatusConfig[state];

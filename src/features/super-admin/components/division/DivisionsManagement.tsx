@@ -1,4 +1,5 @@
 import {
+  archiveDivision,
   listDivisionMembersWithCapabilities,
   removeUsersFromDivision,
   revokeUsersFromDivision,
@@ -6,6 +7,7 @@ import {
 } from '@/services/divisions';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
+import ArchiveScopeModal from '@/features/super-admin/components/common/ArchiveScopeModal';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
 import {
@@ -54,6 +56,7 @@ export default function DivisionsManagement({
     canViewContact: false,
   });
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
+  const [divisionToArchive, setDivisionToArchive] = useState<Division | null>(null);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
@@ -302,12 +305,18 @@ export default function DivisionsManagement({
           isMemberView={Boolean(activeDivision)}
           isLoadingUsers={isLoadingUsers}
           canManageMembers={memberCapabilities.canManage}
+          isArchived={Boolean(activeDivision?.archivedAt)}
           selectedUserCount={selectedUserIds.length}
           onSearchChange={setSearch}
           onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
           onOpenRemoveUsersModal={() => {
             setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
             setIsRemoveUsersModalOpen(true);
+          }}
+          onOpenArchiveModal={() => {
+            if (activeDivision) {
+              setDivisionToArchive(activeDivision);
+            }
           }}
         />
       }
@@ -359,6 +368,18 @@ export default function DivisionsManagement({
           }}
           onConfirm={handleRemoveSelectedUsers}
           onEndedAtValueChange={setEndedAtValue}
+        />
+      )}
+      {divisionToArchive && (
+        <ArchiveScopeModal
+          scopeName={divisionToArchive.name}
+          scopeLabel="mảng"
+          onClose={() => setDivisionToArchive(null)}
+          onArchive={(archivedAt) => archiveDivision(divisionToArchive.id, archivedAt)}
+          onArchived={(archivedAt) => {
+            Object.assign(divisionToArchive, { archivedAt });
+            setDivisionToArchive(null);
+          }}
         />
       )}
     </AdminContentPanel>

@@ -1,4 +1,5 @@
 import {
+  archiveClub,
   listClubMembersWithCapabilities,
   removeUsersFromClub,
   revokeUsersFromClub,
@@ -9,7 +10,7 @@ import { Archive, Pencil, Plus, Search, UserPlus, UsersRound } from 'lucide-reac
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddClubUsersModal from './AddClubUsersModal';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
-import ArchiveClubModal from './ArchiveClubModal';
+import ArchiveScopeModal from '@/features/super-admin/components/common/ArchiveScopeModal';
 import ClubFormModal from './ClubFormModal';
 import ClubsTable from './ClubsTable';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
@@ -405,11 +406,13 @@ export default function ClubsManagement({
         />
       )}
       {clubToArchive && (
-        <ArchiveClubModal
-          club={clubToArchive}
+        <ArchiveScopeModal
+          scopeName={clubToArchive.name}
+          scopeLabel="CLB/tổ"
           onClose={() => setClubToArchive(null)}
-          onArchived={(club) => {
-            onClubUpdated(club);
+          onArchive={(archivedAt) => archiveClub(clubToArchive.id, archivedAt)}
+          onArchived={(archivedAt) => {
+            onClubUpdated({ ...clubToArchive, archivedAt });
             setClubToArchive(null);
           }}
         />

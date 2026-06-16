@@ -3,6 +3,7 @@ import { mapUserRow, type UserRow } from '@/services/users';
 import type { AppUser } from '@/contexts/auth';
 import {
   addScopeMembers,
+  archiveOrganizationScope,
   listScopeMembers,
   listScopeMembersWithCapabilities,
   removeScopeMembers,
@@ -15,12 +16,14 @@ export interface Group {
   id: string;
   name: string;
   description: string;
+  archivedAt: string | null;
 }
 
 interface GroupRow {
   id: string | number;
   name: string;
   description?: string | null;
+  archived_at?: string | null;
 }
 
 interface UserGroupRow {
@@ -37,13 +40,14 @@ function mapGroupRow(row: GroupRow): Group {
     id: String(row.id),
     name: row.name,
     description: row.description ?? '',
+    archivedAt: row.archived_at ?? null,
   };
 }
 
 export async function listGroups(): Promise<Group[]> {
   const { data, error } = await supabase
     .from('groups')
-    .select('id, name, description')
+    .select('id, name, description, archived_at')
     .order('name', { ascending: true })
     .returns<GroupRow[]>();
 
@@ -63,7 +67,7 @@ export async function createGroup(name: string, description: string): Promise<Gr
   const { data, error } = await supabase
     .from('groups')
     .insert(row)
-    .select('id, name, description')
+    .select('id, name, description, archived_at')
     .single<GroupRow>();
 
   if (error) {
@@ -87,7 +91,7 @@ export async function updateGroup(
     .from('groups')
     .update(row)
     .eq('id', groupId)
-    .select('id, name, description')
+    .select('id, name, description, archived_at')
     .single<GroupRow>();
 
   if (error) {
@@ -162,6 +166,10 @@ export async function removeUsersFromGroup(
 
 export async function revokeUsersFromGroup(groupId: string, userIds: string[]): Promise<void> {
   return revokeScopeMembers('group', groupId, userIds);
+}
+
+export async function archiveGroup(groupId: string, archivedAt: string): Promise<void> {
+  return archiveOrganizationScope('group', groupId, archivedAt);
 }
 
 function getUserSortName(user: AppUser) {
