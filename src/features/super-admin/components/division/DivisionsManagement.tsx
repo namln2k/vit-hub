@@ -1,5 +1,5 @@
 import {
-  listDivisionMembers,
+  listDivisionMembersWithCapabilities,
   removeUsersFromDivision,
   revokeUsersFromDivision,
   type Division,
@@ -27,6 +27,7 @@ import {
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
+  type ScopeMemberCapabilities,
 } from '@/services/organizationAdmin';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 import { toast } from 'sonner';
@@ -48,6 +49,10 @@ export default function DivisionsManagement({
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
+  const [memberCapabilities, setMemberCapabilities] = useState<ScopeMemberCapabilities>({
+    canManage: false,
+    canViewContact: false,
+  });
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
@@ -92,10 +97,11 @@ export default function DivisionsManagement({
       setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listDivisionMembers(divisionId);
+        const result = await listDivisionMembersWithCapabilities(divisionId);
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.members);
+          setMemberCapabilities(result.capabilities);
         }
       } catch (error) {
         if (isMounted()) {
@@ -106,6 +112,7 @@ export default function DivisionsManagement({
               : 'Không thể tải danh sách thành viên của mảng.',
           );
           setUsers([]);
+          setMemberCapabilities({ canManage: false, canViewContact: false });
         }
       } finally {
         if (isMounted()) {
@@ -294,6 +301,7 @@ export default function DivisionsManagement({
           search={search}
           isMemberView={Boolean(activeDivision)}
           isLoadingUsers={isLoadingUsers}
+          canManageMembers={memberCapabilities.canManage}
           selectedUserCount={selectedUserIds.length}
           onSearchChange={setSearch}
           onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
@@ -316,6 +324,8 @@ export default function DivisionsManagement({
           users={filteredUsers}
           isLoading={isLoadingUsers}
           error={userError}
+          canManage={memberCapabilities.canManage}
+          canViewContact={memberCapabilities.canViewContact}
           accent="indigo"
           selectedUserIdSet={selectedUserIdSet}
           onToggleUser={toggleUserSelection}

@@ -3,6 +3,8 @@ import {
   authorizationErrorResponse,
   canCreateEventForOwner,
   canManageEvent,
+  canViewEventBasic,
+  canViewEventPrivate,
   requireOrganizationActor,
 } from '@/features/organization-structure/server/authorization';
 import {
@@ -11,9 +13,11 @@ import {
   getEventSummary,
   isEventOwnerScopeType,
   isEventVisibility,
+  listEventParticipants,
   listEvents,
   updateEvent,
   type EventSummary,
+  type EventParticipantSummary,
   type EventWriteInput,
 } from '@/features/organization-structure/server/adminRepository';
 
@@ -124,6 +128,53 @@ function knownErrorResponse(error: unknown, fallback: string) {
 export async function GET(request: Request) {
   try {
     const actor = await requireOrganizationActor(request);
+    const url = new URL(request.url);
+    const view = url.searchParams.get('view');
+    const eventId = readString(url.searchParams.get('id'));
+
+    if (view === 'basic') {
+      if (eventId) {
+        const event = await getEventSummary(eventId);
+
+        if (!event) {
+          return jsonResponse({ error: 'Không tìm thấy sự kiện.' }, 404);
+        }
+
+        if (!(await canViewEventBasic(actor, event.id))) {
+          return jsonResponse({ error: 'Bạn không có quyền xem sự kiện này.' }, 403);
+        }
+
+        const canViewPrivate = await canViewEventPrivate(actor, event.id);
+        const includeParticipants = url.searchParams.get('includeParticipants') === 'true';
+        const canShowParticipants = event.showParticipantsPublicly || canViewPrivate;
+        const participants =
+          includeParticipants && canShowParticipants ? await listEventParticipants(event.id) : [];
+
+        return jsonResponse({
+          event: canViewPrivate ? event : toBasicEvent(event),
+          participants: canViewPrivate
+            ? participants
+            : participants.map(toPublicEventParticipant),
+          capabilities: {
+            canViewPrivate,
+            canShowParticipants,
+          },
+        });
+      }
+
+      const events = await listEvents();
+      const visibleEvents: EventSummary[] = [];
+
+      for (const event of events) {
+        if (await canViewEventBasic(actor, event.id)) {
+          const canViewPrivate = await canViewEventPrivate(actor, event.id);
+          visibleEvents.push(canViewPrivate ? event : toBasicEvent(event));
+        }
+      }
+
+      return jsonResponse({ events: visibleEvents });
+    }
+
     const events = await listEvents();
     const manageableEvents: EventSummary[] = [];
 
@@ -137,6 +188,31 @@ export async function GET(request: Request) {
   } catch (error) {
     return knownErrorResponse(error, 'Không thể tải danh sách sự kiện.');
   }
+}
+
+function toBasicEvent(event: EventSummary): EventSummary {
+  return {
+    ...event,
+    internalNotes: '',
+  };
+}
+
+function toPublicEventParticipant(participant: EventParticipantSummary) {
+  return {
+    uid: participant.uid,
+    firstName: participant.firstName,
+    lastName: participant.lastName,
+    middleName: participant.middleName,
+    nickname: participant.nickname,
+    username: participant.username,
+    avatarUrl: participant.avatarUrl,
+    roleAssignments: participant.roleAssignments.map((assignment) => ({
+      id: assignment.id,
+      eventId: assignment.eventId,
+      userId: assignment.userId,
+      roleKey: assignment.roleKey,
+    })),
+  };
 }
 
 export async function POST(request: Request) {

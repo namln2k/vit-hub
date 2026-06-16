@@ -50,18 +50,18 @@ export interface OrganizationTechnicalAdmin {
 export interface LifecycleActor {
   id: string;
   name: string;
-  email: string;
+  email?: string | null;
 }
 
 export interface OrganizationMember {
   uid: string;
-  email: string;
+  email?: string | null;
   firstName: string;
   lastName: string;
   middleName: string;
   nickname: string;
   username: string;
-  phoneNumber: string;
+  phoneNumber?: string | null;
   schoolName: string;
   enterYear: string;
   cohort: string;
@@ -81,6 +81,11 @@ export interface OrganizationMember {
     revokedBy: LifecycleActor | null;
   };
   roleAssignments: OrganizationRoleAssignment[];
+}
+
+export interface ScopeMemberCapabilities {
+  canManage: boolean;
+  canViewContact: boolean;
 }
 
 export interface PermissionMatrix {
@@ -174,6 +179,26 @@ export interface OrganizationEventParticipantCapabilities {
   canUpdateAttendance: boolean;
 }
 
+export interface OrganizationEventPublicParticipant {
+  uid: string;
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  nickname: string;
+  username: string;
+  avatarUrl: string;
+  roleAssignments: Array<Pick<OrganizationEventRoleAssignment, 'id' | 'eventId' | 'userId' | 'roleKey'>>;
+}
+
+export interface OrganizationEventBasicDetail {
+  event: OrganizationEvent;
+  participants: Array<OrganizationEventParticipant | OrganizationEventPublicParticipant>;
+  capabilities: {
+    canViewPrivate: boolean;
+    canShowParticipants: boolean;
+  };
+}
+
 const SCOPE_MEMBERSHIPS_API = '/api/organization/scope-memberships';
 const ROLE_ASSIGNMENTS_API = '/api/organization/role-assignments';
 const ORGANIZATION_ROLES_API = '/api/organization/organization-roles';
@@ -183,11 +208,25 @@ const EVENT_PARTICIPANTS_API = '/api/organization/event-participants';
 
 export async function listScopeMembers(scopeType: ManageableScopeType, scopeId: string) {
   const params = new URLSearchParams({ scopeType, scopeId });
-  const result = await apiFetch<{ members: OrganizationMember[] }>(
+  const result = await apiFetch<{
+    members: OrganizationMember[];
+    capabilities?: ScopeMemberCapabilities;
+  }>(
     `${SCOPE_MEMBERSHIPS_API}?${params.toString()}`,
   );
 
   return result.members;
+}
+
+export async function listScopeMembersWithCapabilities(
+  scopeType: ManageableScopeType,
+  scopeId: string,
+) {
+  const params = new URLSearchParams({ scopeType, scopeId });
+  return apiFetch<{
+    members: OrganizationMember[];
+    capabilities: ScopeMemberCapabilities;
+  }>(`${SCOPE_MEMBERSHIPS_API}?${params.toString()}`);
 }
 
 export async function addScopeMembers(
@@ -345,6 +384,16 @@ export async function deleteOrganizationEvent(eventId: string) {
     method: 'DELETE',
     body: { id: eventId },
   });
+}
+
+export async function getOrganizationEventBasicDetail(eventId: string, includeParticipants = true) {
+  const params = new URLSearchParams({
+    view: 'basic',
+    id: eventId,
+    includeParticipants: includeParticipants ? 'true' : 'false',
+  });
+
+  return apiFetch<OrganizationEventBasicDetail>(`${EVENTS_API}?${params.toString()}`);
 }
 
 export async function listOrganizationEventParticipants(eventId: string) {

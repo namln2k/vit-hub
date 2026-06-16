@@ -1,8 +1,10 @@
 import {
   addScopeMembers,
   listScopeMembers,
+  listScopeMembersWithCapabilities,
   removeScopeMembers,
   revokeScopeMembers,
+  type ScopeMemberCapabilities,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 import { supabase } from '@/services/supabase';
@@ -73,6 +75,12 @@ export async function archiveClub(clubId: string): Promise<Club> {
 
 export async function listClubMembers(clubId: string): Promise<OrganizationMember[]> {
   return listScopeMembers('club', clubId);
+}
+
+export async function listClubMembersWithCapabilities(
+  clubId: string,
+): Promise<{ members: OrganizationMember[]; capabilities: ScopeMemberCapabilities }> {
+  return listScopeMembersWithCapabilities('club', clubId);
 }
 
 export async function addUsersToClub(

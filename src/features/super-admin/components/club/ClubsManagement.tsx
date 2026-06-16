@@ -1,5 +1,5 @@
 import {
-  listClubMembers,
+  listClubMembersWithCapabilities,
   removeUsersFromClub,
   revokeUsersFromClub,
   type Club,
@@ -29,6 +29,7 @@ import {
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
+  type ScopeMemberCapabilities,
 } from '@/services/organizationAdmin';
 import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
@@ -59,6 +60,10 @@ export default function ClubsManagement({
   const [includeArchived, setIncludeArchived] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
+  const [memberCapabilities, setMemberCapabilities] = useState<ScopeMemberCapabilities>({
+    canManage: false,
+    canViewContact: false,
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [clubToEdit, setClubToEdit] = useState<Club | null>(null);
   const [clubToArchive, setClubToArchive] = useState<Club | null>(null);
@@ -115,10 +120,11 @@ export default function ClubsManagement({
       setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listClubMembers(clubId);
+        const result = await listClubMembersWithCapabilities(clubId);
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.members);
+          setMemberCapabilities(result.capabilities);
         }
       } catch (error) {
         if (isMounted()) {
@@ -129,6 +135,7 @@ export default function ClubsManagement({
               : 'Không thể tải danh sách thành viên của CLB/tổ.',
           );
           setUsers([]);
+          setMemberCapabilities({ canManage: false, canViewContact: false });
         }
       } finally {
         if (isMounted()) {
@@ -332,6 +339,7 @@ export default function ClubsManagement({
             search={search}
             selectedUserCount={selectedUserIds.length}
             isArchived={Boolean(activeClub.archivedAt)}
+            canManageMembers={memberCapabilities.canManage}
             onSearchChange={setSearch}
             onEdit={() => setClubToEdit(activeClub)}
             onArchive={() => setClubToArchive(activeClub)}
@@ -360,6 +368,8 @@ export default function ClubsManagement({
             users={filteredUsers}
             isLoading={isLoadingUsers}
             error={userError}
+            canManage={memberCapabilities.canManage}
+            canViewContact={memberCapabilities.canViewContact}
             accent="cyan"
             selectedUserIdSet={selectedUserIdSet}
             onToggleUser={toggleUserSelection}
@@ -499,6 +509,7 @@ interface ClubDetailActionsProps {
   search: string;
   selectedUserCount: number;
   isArchived: boolean;
+  canManageMembers: boolean;
   onSearchChange: (value: string) => void;
   onEdit: () => void;
   onArchive: () => void;
@@ -510,6 +521,7 @@ function ClubDetailActions({
   search,
   selectedUserCount,
   isArchived,
+  canManageMembers,
   onSearchChange,
   onEdit,
   onArchive,
@@ -539,7 +551,7 @@ function ClubDetailActions({
       <button
         type="button"
         onClick={onArchive}
-        disabled={isArchived}
+        disabled={!canManageMembers || isArchived}
         className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
       >
         <Archive className="h-4 w-4" />
@@ -557,7 +569,7 @@ function ClubDetailActions({
       <button
         type="button"
         onClick={onOpenRemoveUsersModal}
-        disabled={selectedUserCount === 0 || isArchived}
+        disabled={!canManageMembers || selectedUserCount === 0 || isArchived}
         className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
       >
         <UsersRound className="h-4 w-4" />

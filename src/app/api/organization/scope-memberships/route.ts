@@ -2,6 +2,7 @@ import { jsonResponse, readJsonBody } from '@/server/api';
 import {
   authorizationErrorResponse,
   canManageScope,
+  canViewScopeContact,
   requireOrganizationActor,
 } from '@/features/organization-structure/server/authorization';
 import {
@@ -57,11 +58,20 @@ export async function GET(request: Request) {
       return jsonResponse({ error: 'Scope không hợp lệ.' }, 400);
     }
 
-    if (!(await canManageScope(actor, { type: scopeType, id: scopeId }))) {
-      return jsonResponse({ error: 'Bạn không có quyền xem scope này.' }, 403);
-    }
+    const targetScope = { type: scopeType, id: scopeId };
+    const [canManage, canViewContact] = await Promise.all([
+      canManageScope(actor, targetScope),
+      canViewScopeContact(actor, targetScope),
+    ]);
+    const members = await listScopeMembers(scopeType, scopeId);
 
-    return jsonResponse({ members: await listScopeMembers(scopeType, scopeId) });
+    return jsonResponse({
+      members: canViewContact ? members : members.map(toBasicMember),
+      capabilities: {
+        canManage,
+        canViewContact,
+      },
+    });
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
 
@@ -74,6 +84,32 @@ export async function GET(request: Request) {
       500,
     );
   }
+}
+
+function toBasicMember(member: Awaited<ReturnType<typeof listScopeMembers>>[number]) {
+  const basicMember = { ...member };
+  (basicMember as unknown as { email?: undefined; phoneNumber?: undefined }).email = undefined;
+  (basicMember as unknown as { email?: undefined; phoneNumber?: undefined }).phoneNumber =
+    undefined;
+
+  return {
+    ...basicMember,
+    membership: {
+      ...member.membership,
+      addedBy: member.membership.addedBy ? toBasicLifecycleActor(member.membership.addedBy) : null,
+      endedBy: member.membership.endedBy ? toBasicLifecycleActor(member.membership.endedBy) : null,
+      revokedBy: member.membership.revokedBy
+        ? toBasicLifecycleActor(member.membership.revokedBy)
+        : null,
+    },
+  };
+}
+
+function toBasicLifecycleActor(actor: { id: string; name: string; email: string }) {
+  return {
+    id: actor.id,
+    name: actor.name,
+  };
 }
 
 export async function POST(request: Request) {

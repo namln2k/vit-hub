@@ -4,8 +4,10 @@ import type { AppUser } from '@/contexts/auth';
 import {
   addScopeMembers,
   listScopeMembers,
+  listScopeMembersWithCapabilities,
   removeScopeMembers,
   revokeScopeMembers,
+  type ScopeMemberCapabilities,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
 
@@ -69,6 +71,12 @@ export async function listUsersByDivision(divisionId: string): Promise<AppUser[]
 
 export async function listDivisionMembers(divisionId: string): Promise<OrganizationMember[]> {
   return listScopeMembers('division', divisionId);
+}
+
+export async function listDivisionMembersWithCapabilities(
+  divisionId: string,
+): Promise<{ members: OrganizationMember[]; capabilities: ScopeMemberCapabilities }> {
+  return listScopeMembersWithCapabilities('division', divisionId);
 }
 
 export async function addUsersToDivision(
