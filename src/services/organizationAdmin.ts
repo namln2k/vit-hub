@@ -103,8 +103,15 @@ export interface PermissionMatrix {
     permissionKey: PermissionKey;
     effectScope: EffectScope;
     isEnabled: boolean;
+    updatedBy: string | null;
     updatedAt: string;
   }>;
+  capabilities: {
+    canManage: boolean;
+  };
+  technicalOverrides: {
+    superAdminBypassesMatrix: boolean;
+  };
 }
 
 export interface OrganizationEvent {

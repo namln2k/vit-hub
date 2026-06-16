@@ -9,6 +9,7 @@ import {
 import {
   ROLE_LABELS,
   type DomainRoleKey,
+  type EffectScope,
   type PermissionKey,
 } from '@/features/organization-structure/permissions';
 import Sharingan from '@/shared/loading/Sharingan';
@@ -50,6 +51,11 @@ export default function PermissionsManagement() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [roleScopeFilter, setRoleScopeFilter] = useState<'all' | string>('all');
+  const [permissionGroupFilter, setPermissionGroupFilter] = useState<
+    'all' | keyof typeof PERMISSION_GROUP_LABELS
+  >('all');
+  const [effectScopeFilter, setEffectScopeFilter] = useState<'all' | EffectScope>('all');
   const [selectedRoleKey, setSelectedRoleKey] = useState<DomainRoleKey | null>(null);
   const [collapsedRoleScopeTypes, setCollapsedRoleScopeTypes] = useState<Set<string>>(new Set());
   const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState<
@@ -101,6 +107,10 @@ export default function PermissionsManagement() {
     const groups = new Map<string, PermissionMatrix['roles']>();
 
     for (const role of matrix?.roles ?? []) {
+      if (roleScopeFilter !== 'all' && role.scopeType !== roleScopeFilter) {
+        continue;
+      }
+
       const roles = groups.get(role.scopeType) ?? [];
       roles.push(role);
       groups.set(role.scopeType, roles);
@@ -114,7 +124,7 @@ export default function PermissionsManagement() {
       ([firstScopeType], [secondScopeType]) =>
         getScopeTypeOrder(firstScopeType) - getScopeTypeOrder(secondScopeType),
     );
-  }, [matrix]);
+  }, [matrix, roleScopeFilter]);
   const orderedRoles = useMemo(
     () => rolesByScopeType.flatMap(([, roles]) => roles),
     [rolesByScopeType],
@@ -134,6 +144,10 @@ export default function PermissionsManagement() {
     >();
 
     for (const grant of selectedRoleGrants) {
+      if (effectScopeFilter !== 'all' && grant.effectScope !== effectScopeFilter) {
+        continue;
+      }
+
       const permission = permissionLabelsByKey.get(grant.permissionKey);
 
       if (!permission) {
@@ -154,6 +168,11 @@ export default function PermissionsManagement() {
       }
 
       const groupKey = getPermissionGroupKey(permission.key);
+
+      if (permissionGroupFilter !== 'all' && groupKey !== permissionGroupFilter) {
+        continue;
+      }
+
       const permissions = permissionsByGroup.get(groupKey) ?? [];
 
       if (!permissions.some((currentPermission) => currentPermission.key === permission.key)) {
@@ -167,7 +186,14 @@ export default function PermissionsManagement() {
       groupKey,
       permissions: permissions.sort((first, second) => first.key.localeCompare(second.key)),
     }));
-  }, [permissionLabelsByKey, search, selectedRole, selectedRoleGrants]);
+  }, [
+    effectScopeFilter,
+    permissionGroupFilter,
+    permissionLabelsByKey,
+    search,
+    selectedRole,
+    selectedRoleGrants,
+  ]);
   const roleScopeTypes = useMemo(
     () => rolesByScopeType.map(([scopeType]) => scopeType),
     [rolesByScopeType],
@@ -184,6 +210,22 @@ export default function PermissionsManagement() {
     permissionGroupKeys.every((groupKey) => collapsedPermissionGroups.has(groupKey));
 
   async function handleToggleGrant(grant: PermissionMatrix['grants'][number]) {
+    if (!matrix?.capabilities.canManage) {
+      return;
+    }
+
+    const nextEnabled = !grant.isEnabled;
+
+    if (isDangerousPermissionManageToggle(grant, nextEnabled)) {
+      const confirmed = window.confirm(
+        `Bạn đang tắt permission.manage cho ${ROLE_LABELS[grant.roleKey]}. Vai trò này có thể mất khả năng sửa lại permission matrix. Tiếp tục?`,
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     const grantId = getGrantId(grant);
     setUpdatingGrantId(grantId);
 
@@ -192,7 +234,7 @@ export default function PermissionsManagement() {
         grant.roleKey,
         grant.permissionKey,
         grant.effectScope,
-        !grant.isEnabled,
+        nextEnabled,
       );
       setMatrix((currentMatrix) =>
         currentMatrix
@@ -200,7 +242,7 @@ export default function PermissionsManagement() {
               ...currentMatrix,
               grants: currentMatrix.grants.map((currentGrant) =>
                 getGrantId(currentGrant) === grantId
-                  ? { ...currentGrant, isEnabled: !currentGrant.isEnabled }
+                  ? { ...currentGrant, isEnabled: nextEnabled, updatedAt: new Date().toISOString() }
                   : currentGrant,
               ),
             }
@@ -247,16 +289,58 @@ export default function PermissionsManagement() {
       title="Phân quyền"
       count={`${selectedRoleGrants.length} quyền`}
       actions={
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Tìm quyền"
-            className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-rose-500 sm:w-72"
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Tìm quyền"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-rose-500 sm:w-64"
+            />
+          </label>
+          <select
+            value={roleScopeFilter}
+            onChange={(event) => {
+              setRoleScopeFilter(event.target.value);
+              setSelectedRoleKey(null);
+            }}
+            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
+          >
+            <option value="all">Mọi role scope</option>
+            {SCOPE_TYPE_ORDER.map((scopeType) => (
+              <option key={scopeType} value={scopeType}>
+                {SCOPE_TYPE_LABELS[scopeType]}
+              </option>
+            ))}
+          </select>
+          <select
+            value={permissionGroupFilter}
+            onChange={(event) =>
+              setPermissionGroupFilter(event.target.value as 'all' | keyof typeof PERMISSION_GROUP_LABELS)
+            }
+            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
+          >
+            <option value="all">Mọi nhóm quyền</option>
+            {Object.entries(PERMISSION_GROUP_LABELS).map(([groupKey, label]) => (
+              <option key={groupKey} value={groupKey}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={effectScopeFilter}
+            onChange={(event) => setEffectScopeFilter(event.target.value as 'all' | EffectScope)}
+            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
+          >
+            <option value="all">Mọi effect scope</option>
+            <option value="self_scope">self_scope</option>
+            <option value="child_club">child_club</option>
+            <option value="organization">organization</option>
+            <option value="owned_event">owned_event</option>
+          </select>
+        </div>
       }
     >
       <div className="relative grid min-h-72 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -347,6 +431,13 @@ export default function PermissionsManagement() {
             </div>
           ) : (
             <>
+              <div className="border-b border-slate-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-900">
+                super_admin là technical override ngoài permission matrix. Matrix này là allow-only
+                grants trực tiếp cho từng role; không có deny và không có role hierarchy ẩn.
+                {!matrix?.capabilities.canManage ? (
+                  <span className="ml-2 text-amber-800">Bạn đang ở chế độ chỉ đọc.</span>
+                ) : null}
+              </div>
               <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="text-base font-bold text-slate-950">
@@ -414,6 +505,7 @@ export default function PermissionsManagement() {
                                     )}
                                     permission={permission}
                                     roleScopeType={selectedRole.scopeType}
+                                    canManage={Boolean(matrix?.capabilities.canManage)}
                                     updatingGrantId={updatingGrantId}
                                     onToggleGrant={handleToggleGrant}
                                   />
@@ -439,6 +531,7 @@ interface PermissionRowProps {
   permission: PermissionMatrix['permissions'][number];
   grants: PermissionMatrix['grants'];
   roleScopeType: string;
+  canManage: boolean;
   updatingGrantId: string;
   onToggleGrant: (grant: PermissionMatrix['grants'][number]) => void;
 }
@@ -485,6 +578,7 @@ function PermissionRow({
   permission,
   grants,
   roleScopeType,
+  canManage,
   updatingGrantId,
   onToggleGrant,
 }: PermissionRowProps) {
@@ -510,8 +604,9 @@ function PermissionRow({
                 key={grantId}
                 type="button"
                 onClick={() => onToggleGrant(grant)}
-                disabled={isUpdating}
-                className={`inline-flex h-9 min-w-32 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                disabled={isUpdating || !canManage}
+                title={getGrantMetadataLabel(grant)}
+                className={`inline-flex min-h-9 min-w-40 flex-col items-start justify-center rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                   grant.isEnabled
                     ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                     : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'
@@ -520,7 +615,15 @@ function PermissionRow({
                 {isUpdating ? (
                   <Sharingan size={16} label="Đang cập nhật grant" />
                 ) : (
-                  formatEffectScopeLabel(grant.effectScope, roleScopeType)
+                  <>
+                    <span>{formatEffectScopeLabel(grant.effectScope, roleScopeType)}</span>
+                    <span className="mt-0.5 text-[11px] font-medium opacity-80">
+                      {grant.effectScope} · {grant.isEnabled ? 'allow' : 'off'}
+                    </span>
+                    <span className="mt-0.5 text-[11px] font-medium opacity-70">
+                      {formatGrantUpdatedLabel(grant)}
+                    </span>
+                  </>
                 )}
               </button>
             );
@@ -535,6 +638,46 @@ function HeaderCell({ children }: { children: string }) {
   return (
     <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">{children}</th>
   );
+}
+
+function isDangerousPermissionManageToggle(
+  grant: PermissionMatrix['grants'][number],
+  nextEnabled: boolean,
+) {
+  return (
+    !nextEnabled &&
+    grant.permissionKey === 'permission.manage' &&
+    (grant.roleKey === 'captain' || grant.roleKey === 'vice_captain')
+  );
+}
+
+function formatGrantUpdatedLabel(grant: PermissionMatrix['grants'][number]) {
+  const updatedAt = formatDateTime(grant.updatedAt);
+
+  if (!grant.updatedBy) {
+    return `Updated ${updatedAt}`;
+  }
+
+  return `Updated ${updatedAt} by ${grant.updatedBy}`;
+}
+
+function getGrantMetadataLabel(grant: PermissionMatrix['grants'][number]) {
+  return [
+    `effect_scope: ${grant.effectScope}`,
+    `state: ${grant.isEnabled ? 'allow' : 'off'}`,
+    `updated_at: ${grant.updatedAt}`,
+    grant.updatedBy ? `updated_by: ${grant.updatedBy}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
 function formatPermissionText(value: string) {
