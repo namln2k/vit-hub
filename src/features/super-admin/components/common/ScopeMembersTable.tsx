@@ -26,6 +26,8 @@ interface ScopeMembersTableProps {
   users: OrganizationMember[];
   isLoading: boolean;
   error: string;
+  canManage: boolean;
+  canViewContact: boolean;
   selectedUserIdSet: Set<string>;
   accent: 'indigo' | 'emerald' | 'cyan';
   onToggleUser: (userId: string) => void;
@@ -52,6 +54,8 @@ export default function ScopeMembersTable({
   users,
   isLoading,
   error,
+  canManage,
+  canViewContact,
   selectedUserIdSet,
   accent,
   onToggleUser,
@@ -63,7 +67,7 @@ export default function ScopeMembersTable({
 }: ScopeMembersTableProps) {
   const [roleActionDialog, setRoleActionDialog] = useState<RoleActionDialogState>(null);
   const [isTransferLeadModalOpen, setIsTransferLeadModalOpen] = useState(false);
-  const selectableUsers = users.filter((user) => canEndMembership(user));
+  const selectableUsers = canManage ? users.filter((user) => canEndMembership(user)) : [];
   const areAllVisibleUsersSelected =
     selectableUsers.length > 0 && selectableUsers.every((user) => selectedUserIdSet.has(user.uid));
   const leadRoleKey = getLeadRoleForScope(scopeType);
@@ -84,11 +88,18 @@ export default function ScopeMembersTable({
   return (
     <div className="relative min-h-72 flex-1">
       {isLoading && <MembersLoadingOverlay />}
-      <div className="flex justify-end border-b border-slate-200 bg-white px-5 py-3">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
+        {!canViewContact ? (
+          <p className="text-sm font-semibold text-amber-700">
+            Dữ liệu liên hệ đang bị giới hạn theo quyền xem scope.
+          </p>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           onClick={() => setIsTransferLeadModalOpen(true)}
-          disabled={!currentLead || isLoading}
+          disabled={!canManage || !currentLead || isLoading}
           className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white"
         >
           <ArrowRightLeft className="h-4 w-4" />
@@ -104,7 +115,7 @@ export default function ScopeMembersTable({
                   type="checkbox"
                   checked={areAllVisibleUsersSelected}
                   onChange={onToggleVisibleUsers}
-                  disabled={isLoading || selectableUsers.length === 0}
+                  disabled={!canManage || isLoading || selectableUsers.length === 0}
                   className={`${checkboxClassName} disabled:cursor-not-allowed disabled:opacity-40`}
                   aria-label="Chọn tất cả thành viên đang hiển thị"
                 />
@@ -146,7 +157,7 @@ export default function ScopeMembersTable({
                         type="checkbox"
                         checked={selectedUserIdSet.has(user.uid)}
                         onChange={() => onToggleUser(user.uid)}
-                        disabled={!isSelectable}
+                        disabled={!canManage || !isSelectable}
                         className={checkboxClassName}
                         aria-label={`Chọn ${getFullName(user)}`}
                       />
@@ -165,7 +176,9 @@ export default function ScopeMembersTable({
                     <td className="px-5 py-4 text-sm font-medium text-slate-600">
                       @{user.username}
                     </td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
+                    <td className="px-5 py-4 text-sm font-medium text-slate-600">
+                      <RestrictedContactValue value={user.email} />
+                    </td>
                     <td className="px-5 py-4">
                       <LifecycleStatusBadge state={lifecycleState} />
                     </td>
@@ -216,7 +229,7 @@ export default function ScopeMembersTable({
                                 roleKey: leadRoleKey,
                               })
                             }
-                            disabled={isRoleActionDisabled}
+                            disabled={!canManage || isRoleActionDisabled}
                           >
                             <ShieldCheck className="h-4 w-4" />
                           </ActionButton>
@@ -231,7 +244,7 @@ export default function ScopeMembersTable({
                               roleKey: deputyRoleKey,
                             })
                           }
-                          disabled={isRoleActionDisabled}
+                          disabled={!canManage || isRoleActionDisabled}
                         >
                           {hasDeputyRole ? (
                             <ShieldMinus className="h-4 w-4" />
@@ -243,7 +256,7 @@ export default function ScopeMembersTable({
                           label="Thu hồi"
                           tone="danger"
                           onClick={() => onRevokeMembership(user.uid)}
-                          disabled={!canRevoke}
+                          disabled={!canManage || !canRevoke}
                         >
                           <Ban className="h-4 w-4" />
                         </ActionButton>
@@ -845,10 +858,18 @@ function LifecycleActorLine({
   }
 
   return (
-    <div title={actor.email}>
+    <div title={actor.email ?? undefined}>
       {label}: {actor.name}
     </div>
   );
+}
+
+function RestrictedContactValue({ value }: { value?: string | null }) {
+  if (!value) {
+    return <span className="text-xs font-semibold text-amber-700">Bị giới hạn</span>;
+  }
+
+  return <>{value}</>;
 }
 
 function formatVietnamDateTime(value: string) {

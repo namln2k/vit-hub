@@ -52,6 +52,7 @@ interface EventRow {
   id: string;
   owner_scope_type: EventOwnerScopeRef['type'];
   owner_scope_id: string | null;
+  visibility: 'organization' | 'scope' | 'managers';
 }
 
 export interface OrganizationActor {
@@ -198,6 +199,22 @@ export async function canManageScope(
   return hasDomainPermission(actor, 'scope.member.manage', targetScope, context);
 }
 
+export async function canViewScopeContact(
+  actor: OrganizationActor,
+  targetScope: ScopeRef,
+  context: AuthorizationContext = {},
+) {
+  if (isSuperAdmin(actor) || isOrganizationManager(actor)) {
+    return true;
+  }
+
+  if (await hasDomainPermission(actor, 'scope.member.view_contact', targetScope, context)) {
+    return true;
+  }
+
+  return isActiveScopeMember(actor.id, targetScope, context);
+}
+
 export async function canCreateEventForOwner(
   actor: OrganizationActor,
   ownerScope: EventOwnerScopeRef,
@@ -224,6 +241,42 @@ export async function canViewEventPrivate(
   context: AuthorizationContext = {},
 ) {
   return hasEventPermission(actor, eventId, 'event.view_private', context);
+}
+
+export async function canViewEventBasic(
+  actor: OrganizationActor,
+  eventId: string,
+  context: AuthorizationContext = {},
+) {
+  if (isSuperAdmin(actor)) {
+    return true;
+  }
+
+  const event = await getEvent(eventId);
+
+  if (!event) {
+    throw new AuthorizationError('Không tìm thấy event.', 404);
+  }
+
+  if (event.visibility === 'organization') {
+    return true;
+  }
+
+  if (await canViewEventPrivate(actor, eventId, context)) {
+    return true;
+  }
+
+  if (event.visibility === 'scope') {
+    return (
+      (await isActiveScopeMember(
+        actor.id,
+        { type: event.owner_scope_type, id: event.owner_scope_id },
+        context,
+      )) || (await isEventParticipant(actor.id, eventId))
+    );
+  }
+
+  return false;
 }
 
 export async function canManageEventMembers(
@@ -381,7 +434,7 @@ async function listEventRoles(eventId: string, userId: string) {
 
 async function getEvent(eventId: string) {
   const query = new URLSearchParams({
-    select: 'id,owner_scope_type,owner_scope_id',
+    select: 'id,owner_scope_type,owner_scope_id,visibility',
     id: `eq.${eventId}`,
     limit: '1',
   });
@@ -392,6 +445,64 @@ async function getEvent(eventId: string) {
   }
 
   return Array.isArray(data) ? data[0] : null;
+}
+
+async function isActiveScopeMember(
+  userId: string,
+  targetScope: ScopeRef | EventOwnerScopeRef,
+  context: AuthorizationContext = {},
+) {
+  if (targetScope.type === 'organization') {
+    return true;
+  }
+
+  const table =
+    targetScope.type === 'division'
+      ? 'division_memberships'
+      : targetScope.type === 'group'
+        ? 'group_memberships'
+        : 'club_memberships';
+  const scopeIdColumn =
+    targetScope.type === 'division'
+      ? 'division_id'
+      : targetScope.type === 'group'
+        ? 'group_id'
+        : 'club_id';
+  const query = new URLSearchParams({
+    select: 'id,starts_at,ends_at,status',
+    user_id: `eq.${userId}`,
+    [scopeIdColumn]: `eq.${targetScope.id}`,
+    status: 'eq.active',
+    limit: '1',
+  });
+  const { response, data } = await supabaseFetch<
+    Array<{ starts_at: string; ends_at: string | null; status: 'active' | 'ended' | 'revoked' }>
+  >(`/rest/v1/${table}?${query.toString()}`);
+
+  if (!response.ok) {
+    throw new Error('Không thể kiểm tra membership.');
+  }
+
+  const membership = Array.isArray(data) ? data[0] : null;
+  return membership ? isEffectiveActive(membership, context.now ?? new Date()) : false;
+}
+
+async function isEventParticipant(userId: string, eventId: string) {
+  const query = new URLSearchParams({
+    select: 'id',
+    event_id: `eq.${eventId}`,
+    user_id: `eq.${userId}`,
+    limit: '1',
+  });
+  const { response, data } = await supabaseFetch<Array<{ id: string }>>(
+    `/rest/v1/event_memberships?${query.toString()}`,
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể kiểm tra event participant.');
+  }
+
+  return Array.isArray(data) && data.length > 0;
 }
 
 async function getClubParentDivisionId(clubId: string) {

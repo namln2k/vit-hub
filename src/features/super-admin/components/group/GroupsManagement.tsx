@@ -1,5 +1,5 @@
 import {
-  listGroupMembers,
+  listGroupMembersWithCapabilities,
   removeUsersFromGroup,
   revokeUsersFromGroup,
   type Group,
@@ -29,6 +29,7 @@ import {
   removeScopeRole,
   transferScopeLead,
   type OrganizationMember,
+  type ScopeMemberCapabilities,
 } from '@/services/organizationAdmin';
 import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 import { toast } from 'sonner';
@@ -56,6 +57,10 @@ export default function GroupsManagement({
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
+  const [memberCapabilities, setMemberCapabilities] = useState<ScopeMemberCapabilities>({
+    canManage: false,
+    canViewContact: false,
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [groupToEdit, setGroupToEdit] = useState<Group | null>(null);
@@ -92,10 +97,11 @@ export default function GroupsManagement({
       setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listGroupMembers(groupId);
+        const result = await listGroupMembersWithCapabilities(groupId);
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.members);
+          setMemberCapabilities(result.capabilities);
         }
       } catch (error) {
         if (isMounted()) {
@@ -106,6 +112,7 @@ export default function GroupsManagement({
               : 'Không thể tải danh sách thành viên của nhóm.',
           );
           setUsers([]);
+          setMemberCapabilities({ canManage: false, canViewContact: false });
         }
       } finally {
         if (isMounted()) {
@@ -372,7 +379,12 @@ export default function GroupsManagement({
               setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
               setIsRemoveUsersModalOpen(true);
             }}
-            disabled={!activeGroup || selectedUserIds.length === 0 || isLoadingUsers}
+            disabled={
+              !memberCapabilities.canManage ||
+              !activeGroup ||
+              selectedUserIds.length === 0 ||
+              isLoadingUsers
+            }
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
           >
             <Trash2 className="h-4 w-4" />
@@ -381,7 +393,7 @@ export default function GroupsManagement({
           <button
             type="button"
             onClick={() => setIsAddUsersModalOpen(true)}
-            disabled={!activeGroup}
+            disabled={!memberCapabilities.canManage || !activeGroup}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             <Plus className="h-4 w-4" />
@@ -395,6 +407,8 @@ export default function GroupsManagement({
         users={filteredUsers}
         isLoading={isLoadingUsers}
         error={userError}
+        canManage={memberCapabilities.canManage}
+        canViewContact={memberCapabilities.canViewContact}
         accent="emerald"
         selectedUserIdSet={selectedUserIdSet}
         onToggleUser={toggleUserSelection}
