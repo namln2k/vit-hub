@@ -121,6 +121,7 @@ interface PermissionGrantRow {
   permission_key: PermissionKey;
   effect_scope: EffectScope;
   is_enabled: boolean;
+  updated_by: string | null;
   updated_at: string;
 }
 
@@ -200,6 +201,7 @@ export interface PermissionMatrix {
     permissionKey: PermissionKey;
     effectScope: EffectScope;
     isEnabled: boolean;
+    updatedBy: string | null;
     updatedAt: string;
   }>;
 }
@@ -1751,7 +1753,7 @@ export async function listPermissionMatrix(): Promise<PermissionMatrix> {
       '/rest/v1/permissions?select=key,label,description&order=key.asc',
     ),
     supabaseFetch<PermissionGrantRow[]>(
-      '/rest/v1/role_permission_grants?select=role_key,permission_key,effect_scope,is_enabled,updated_at&order=role_key.asc',
+      '/rest/v1/role_permission_grants?select=role_key,permission_key,effect_scope,is_enabled,updated_by,updated_at&order=role_key.asc',
     ),
   ]);
 
@@ -1777,6 +1779,7 @@ export async function listPermissionMatrix(): Promise<PermissionMatrix> {
       permissionKey: grant.permission_key,
       effectScope: grant.effect_scope,
       isEnabled: grant.is_enabled,
+      updatedBy: grant.updated_by,
       updatedAt: grant.updated_at,
     })),
   };

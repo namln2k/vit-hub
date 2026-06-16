@@ -44,12 +44,25 @@ async function canManagePermissions(actor: Awaited<ReturnType<typeof requireOrga
 export async function GET(request: Request) {
   try {
     const actor = await requireOrganizationActor(request);
+    const [canView, canManage] = await Promise.all([
+      canViewPermissions(actor),
+      canManagePermissions(actor),
+    ]);
 
-    if (!(await canViewPermissions(actor))) {
+    if (!canView) {
       return jsonResponse({ error: 'Bạn không có quyền xem permission matrix.' }, 403);
     }
 
-    return jsonResponse(await listPermissionMatrix());
+    const matrix = await listPermissionMatrix();
+    return jsonResponse({
+      ...matrix,
+      capabilities: {
+        canManage,
+      },
+      technicalOverrides: {
+        superAdminBypassesMatrix: true,
+      },
+    });
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);
 
