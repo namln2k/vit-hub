@@ -1,12 +1,14 @@
 import {
+  archiveGroup,
   listGroupMembersWithCapabilities,
   removeUsersFromGroup,
   revokeUsersFromGroup,
   type Group,
 } from '@/services/groups';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Archive, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
+import ArchiveScopeModal from '@/features/super-admin/components/common/ArchiveScopeModal';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
@@ -19,7 +21,6 @@ import {
   getSearchableUserValues,
   normalizeSearchValue,
 } from '@/features/super-admin/lib/userUtils';
-import DeleteGroupModal from './DeleteGroupModal';
 import GroupFormModal from './GroupFormModal';
 import GroupsTable from './GroupsTable';
 import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
@@ -41,7 +42,6 @@ interface GroupsManagementProps {
   groupError: string;
   onGroupCreated: (group: Group) => void;
   onGroupUpdated: (group: Group) => void;
-  onGroupDeleted: (groupId: string) => void;
 }
 
 export default function GroupsManagement({
@@ -51,7 +51,6 @@ export default function GroupsManagement({
   groupError,
   onGroupCreated,
   onGroupUpdated,
-  onGroupDeleted,
 }: GroupsManagementProps) {
   const [users, setUsers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState('');
@@ -64,7 +63,7 @@ export default function GroupsManagement({
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [groupToEdit, setGroupToEdit] = useState<Group | null>(null);
-  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [groupToArchive, setGroupToArchive] = useState<Group | null>(null);
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
@@ -307,7 +306,6 @@ export default function GroupsManagement({
           isLoading={isLoadingGroups}
           error={groupError}
           onEditGroup={setGroupToEdit}
-          onDeleteGroup={setGroupToDelete}
         />
         {isCreateModalOpen && (
           <GroupFormModal
@@ -328,16 +326,6 @@ export default function GroupsManagement({
             }}
           />
         )}
-        {groupToDelete && (
-          <DeleteGroupModal
-            group={groupToDelete}
-            onClose={() => setGroupToDelete(null)}
-            onDeleted={(groupId) => {
-              onGroupDeleted(groupId);
-              setGroupToDelete(null);
-            }}
-          />
-        )}
       </AdminContentPanel>
     );
   }
@@ -352,11 +340,22 @@ export default function GroupsManagement({
           <button
             type="button"
             onClick={() => setIsEditModalOpen(true)}
+            disabled={Boolean(activeGroup.archivedAt)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
             aria-label="Chỉnh sửa nhóm"
             title="Chỉnh sửa nhóm"
           >
             <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setGroupToArchive(activeGroup)}
+            disabled={Boolean(activeGroup.archivedAt) || !memberCapabilities.canManage}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Lưu trữ nhóm"
+            title="Lưu trữ nhóm"
+          >
+            <Archive className="h-4 w-4" />
           </button>
         </>
       }
@@ -435,6 +434,18 @@ export default function GroupsManagement({
           existingUserIds={existingUserIds}
           onClose={() => setIsAddUsersModalOpen(false)}
           onAdded={() => loadGroupUsers(activeGroup.id)}
+        />
+      )}
+      {groupToArchive && (
+        <ArchiveScopeModal
+          scopeName={groupToArchive.name}
+          scopeLabel="nhóm"
+          onClose={() => setGroupToArchive(null)}
+          onArchive={(archivedAt) => archiveGroup(groupToArchive.id, archivedAt)}
+          onArchived={(archivedAt) => {
+            onGroupUpdated({ ...groupToArchive, archivedAt });
+            setGroupToArchive(null);
+          }}
         />
       )}
       {isRemoveUsersModalOpen && (

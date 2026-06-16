@@ -22,6 +22,11 @@ export interface OrganizationRoleAssignment {
   startsAt: string;
   endsAt: string | null;
   status: 'active' | 'ended' | 'revoked';
+  assignedBy: LifecycleActor | null;
+  endedBy: LifecycleActor | null;
+  revokedBy: LifecycleActor | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface OrganizationRoleAssignmentDetail extends OrganizationRoleAssignment {
@@ -79,6 +84,8 @@ export interface OrganizationMember {
     addedBy: LifecycleActor | null;
     endedBy: LifecycleActor | null;
     revokedBy: LifecycleActor | null;
+    createdAt: string;
+    updatedAt: string;
   };
   roleAssignments: OrganizationRoleAssignment[];
 }
@@ -203,6 +210,7 @@ const SCOPE_MEMBERSHIPS_API = '/api/organization/scope-memberships';
 const ROLE_ASSIGNMENTS_API = '/api/organization/role-assignments';
 const ORGANIZATION_ROLES_API = '/api/organization/organization-roles';
 const PERMISSIONS_API = '/api/organization/permissions';
+const SCOPE_LIFECYCLE_API = '/api/organization/scope-lifecycle';
 const EVENTS_API = '/api/organization/events';
 const EVENT_PARTICIPANTS_API = '/api/organization/event-participants';
 
@@ -261,6 +269,17 @@ export async function revokeScopeMembers(
   await apiFetch(SCOPE_MEMBERSHIPS_API, {
     method: 'PATCH',
     body: { scopeType, scopeId, userIds },
+  });
+}
+
+export async function archiveOrganizationScope(
+  scopeType: ManageableScopeType,
+  scopeId: string,
+  archivedAt: string,
+) {
+  await apiFetch(SCOPE_LIFECYCLE_API, {
+    method: 'PATCH',
+    body: { scopeType, scopeId, archivedAt },
   });
 }
 

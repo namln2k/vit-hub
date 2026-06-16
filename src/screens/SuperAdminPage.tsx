@@ -29,7 +29,6 @@ export default function SuperAdminPage() {
     activeClub,
     handleGroupCreated,
     handleGroupUpdated,
-    handleGroupDeleted,
     handleClubCreated,
     handleClubUpdated,
   } = useSuperAdminLayout();
@@ -54,7 +53,6 @@ export default function SuperAdminPage() {
         groupError={groupError}
         onGroupCreated={handleGroupCreated}
         onGroupUpdated={handleGroupUpdated}
-        onGroupDeleted={handleGroupDeleted}
       />
     );
   }

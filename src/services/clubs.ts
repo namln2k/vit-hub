@@ -1,5 +1,6 @@
 import {
   addScopeMembers,
+  archiveOrganizationScope,
   listScopeMembers,
   listScopeMembersWithCapabilities,
   removeScopeMembers,
@@ -64,13 +65,8 @@ export async function updateClub(
   return result.club;
 }
 
-export async function archiveClub(clubId: string): Promise<Club> {
-  const result = await apiFetch<{ club: Club }>(CLUBS_API, {
-    method: 'PATCH',
-    body: { id: clubId, archived: true },
-  });
-
-  return result.club;
+export async function archiveClub(clubId: string, archivedAt: string): Promise<void> {
+  return archiveOrganizationScope('club', clubId, archivedAt);
 }
 
 export async function listClubMembers(clubId: string): Promise<OrganizationMember[]> {
