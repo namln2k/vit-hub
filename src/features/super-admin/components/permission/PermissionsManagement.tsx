@@ -10,41 +10,27 @@ import {
   ROLE_LABELS,
   type DomainRoleKey,
   type EffectScope,
-  type PermissionKey,
 } from '@/features/organization-structure/permissions';
+import {
+  CollapseAllToggle,
+  HeaderCell,
+  PermissionMatrixFilters,
+  PermissionRow,
+} from '@/features/super-admin/components/permission/PermissionMatrixPanels';
+import {
+  getGrantId,
+  getPermissionGroupKey,
+  getRoleOrder,
+  getScopeTypeOrder,
+  isDangerousPermissionManageToggle,
+  PERMISSION_GROUP_LABELS,
+  type PermissionGroupKey,
+  SCOPE_TYPE_LABELS,
+  toggleSetValue,
+} from '@/features/super-admin/components/permission/permissionMatrixUtils';
 import Sharingan from '@/shared/loading/Sharingan';
-import { ChevronsDownUp, ChevronsUpDown, ChevronDown, Search } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
-
-const SCOPE_TYPE_LABELS: Record<string, string> = {
-  organization: 'Toàn Đội',
-  division: 'Mảng',
-  group: 'Nhóm',
-  club: 'CLB/Tổ',
-  event: 'Sự kiện',
-};
-const SCOPE_TYPE_ORDER = ['organization', 'division', 'group', 'club', 'event'] as const;
-const ROLE_ORDER: DomainRoleKey[] = [
-  'captain',
-  'vice_captain',
-  'division_lead',
-  'division_deputy',
-  'group_lead',
-  'group_deputy',
-  'club_lead',
-  'club_deputy',
-  'event_lead',
-  'event_deputy',
-  'event_staff_lead',
-  'event_volunteer',
-];
-
-const PERMISSION_GROUP_LABELS = {
-  scope: 'Thành viên và chức vụ',
-  event: 'Sự kiện',
-  permission: 'Quản lý phân quyền',
-  other: 'Khác',
-} as const;
 
 export default function PermissionsManagement() {
   const [matrix, setMatrix] = useState<PermissionMatrix | null>(null);
@@ -58,9 +44,9 @@ export default function PermissionsManagement() {
   const [effectScopeFilter, setEffectScopeFilter] = useState<'all' | EffectScope>('all');
   const [selectedRoleKey, setSelectedRoleKey] = useState<DomainRoleKey | null>(null);
   const [collapsedRoleScopeTypes, setCollapsedRoleScopeTypes] = useState<Set<string>>(new Set());
-  const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState<
-    Set<keyof typeof PERMISSION_GROUP_LABELS>
-  >(new Set());
+  const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState<Set<PermissionGroupKey>>(
+    new Set(),
+  );
   const [updatingGrantId, setUpdatingGrantId] = useState('');
 
   useEffect(() => {
@@ -139,7 +125,7 @@ export default function PermissionsManagement() {
   const filteredPermissionGroups = useMemo(() => {
     const query = search.trim().toLowerCase();
     const permissionsByGroup = new Map<
-      keyof typeof PERMISSION_GROUP_LABELS,
+      PermissionGroupKey,
       Array<PermissionMatrix['permissions'][number]>
     >();
 
@@ -263,7 +249,7 @@ export default function PermissionsManagement() {
     setCollapsedRoleScopeTypes((currentSet) => toggleSetValue(currentSet, scopeType));
   }
 
-  function togglePermissionGroup(groupKey: keyof typeof PERMISSION_GROUP_LABELS) {
+  function togglePermissionGroup(groupKey: PermissionGroupKey) {
     setCollapsedPermissionGroups((currentSet) => toggleSetValue(currentSet, groupKey));
   }
 
@@ -289,58 +275,17 @@ export default function PermissionsManagement() {
       title="Phân quyền"
       count={`${selectedRoleGrants.length} quyền`}
       actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm quyền"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-rose-500 sm:w-64"
-            />
-          </label>
-          <select
-            value={roleScopeFilter}
-            onChange={(event) => {
-              setRoleScopeFilter(event.target.value);
-              setSelectedRoleKey(null);
-            }}
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
-          >
-            <option value="all">Mọi role scope</option>
-            {SCOPE_TYPE_ORDER.map((scopeType) => (
-              <option key={scopeType} value={scopeType}>
-                {SCOPE_TYPE_LABELS[scopeType]}
-              </option>
-            ))}
-          </select>
-          <select
-            value={permissionGroupFilter}
-            onChange={(event) =>
-              setPermissionGroupFilter(event.target.value as 'all' | keyof typeof PERMISSION_GROUP_LABELS)
-            }
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
-          >
-            <option value="all">Mọi nhóm quyền</option>
-            {Object.entries(PERMISSION_GROUP_LABELS).map(([groupKey, label]) => (
-              <option key={groupKey} value={groupKey}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={effectScopeFilter}
-            onChange={(event) => setEffectScopeFilter(event.target.value as 'all' | EffectScope)}
-            className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
-          >
-            <option value="all">Mọi effect scope</option>
-            <option value="self_scope">self_scope</option>
-            <option value="child_club">child_club</option>
-            <option value="organization">organization</option>
-            <option value="owned_event">owned_event</option>
-          </select>
-        </div>
+        <PermissionMatrixFilters
+          search={search}
+          roleScopeFilter={roleScopeFilter}
+          permissionGroupFilter={permissionGroupFilter}
+          effectScopeFilter={effectScopeFilter}
+          onSearchChange={setSearch}
+          onRoleScopeFilterChange={setRoleScopeFilter}
+          onPermissionGroupFilterChange={setPermissionGroupFilter}
+          onEffectScopeFilterChange={setEffectScopeFilter}
+          onSelectedRoleKeyChange={setSelectedRoleKey}
+        />
       }
     >
       <div className="relative grid min-h-72 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -525,290 +470,4 @@ export default function PermissionsManagement() {
       </div>
     </AdminContentPanel>
   );
-}
-
-interface PermissionRowProps {
-  permission: PermissionMatrix['permissions'][number];
-  grants: PermissionMatrix['grants'];
-  roleScopeType: string;
-  canManage: boolean;
-  updatingGrantId: string;
-  onToggleGrant: (grant: PermissionMatrix['grants'][number]) => void;
-}
-
-interface CollapseAllToggleProps {
-  collapseLabel: string;
-  disabled: boolean;
-  expandLabel: string;
-  isAllCollapsed: boolean;
-  onCollapseAll: () => void;
-  onExpandAll: () => void;
-}
-
-function CollapseAllToggle({
-  collapseLabel,
-  disabled,
-  expandLabel,
-  isAllCollapsed,
-  onCollapseAll,
-  onExpandAll,
-}: CollapseAllToggleProps) {
-  const label = isAllCollapsed ? expandLabel : collapseLabel;
-
-  return (
-    <button
-      type="button"
-      onClick={isAllCollapsed ? onExpandAll : onCollapseAll}
-      disabled={disabled}
-      className="flex h-8 shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
-      aria-label={label}
-      title={label}
-    >
-      {isAllCollapsed ? (
-        <ChevronsUpDown className="h-4 w-4" />
-      ) : (
-        <ChevronsDownUp className="h-4 w-4" />
-      )}
-      <span>{isAllCollapsed ? 'Mở rộng tất cả' : 'Thu gọn tất cả'}</span>
-    </button>
-  );
-}
-
-function PermissionRow({
-  permission,
-  grants,
-  roleScopeType,
-  canManage,
-  updatingGrantId,
-  onToggleGrant,
-}: PermissionRowProps) {
-  return (
-    <tr className="hover:bg-slate-50">
-      <td className="w-1/2 px-5 py-4 align-top">
-        <div className="text-sm font-semibold text-slate-950">
-          {formatPermissionText(permission.label)}
-        </div>
-        <div className="mt-1 text-xs font-medium text-slate-500">{permission.key}</div>
-        <div className="mt-2 max-w-xl text-xs font-medium text-slate-500">
-          {formatPermissionText(permission.description)}
-        </div>
-      </td>
-      <td className="px-5 py-4 align-top">
-        <div className="flex flex-wrap gap-2">
-          {grants.map((grant) => {
-            const grantId = getGrantId(grant);
-            const isUpdating = updatingGrantId === grantId;
-
-            return (
-              <button
-                key={grantId}
-                type="button"
-                onClick={() => onToggleGrant(grant)}
-                disabled={isUpdating || !canManage}
-                title={getGrantMetadataLabel(grant)}
-                className={`inline-flex min-h-9 min-w-40 flex-col items-start justify-center rounded-lg border px-3 py-2 text-left text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                  grant.isEnabled
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    : 'border-slate-200 bg-slate-100 text-slate-500 hover:bg-slate-200'
-                }`}
-              >
-                {isUpdating ? (
-                  <Sharingan size={16} label="Đang cập nhật grant" />
-                ) : (
-                  <>
-                    <span>{formatEffectScopeLabel(grant.effectScope, roleScopeType)}</span>
-                    <span className="mt-0.5 text-[11px] font-medium opacity-80">
-                      {grant.effectScope} · {grant.isEnabled ? 'allow' : 'off'}
-                    </span>
-                    <span className="mt-0.5 text-[11px] font-medium opacity-70">
-                      {formatGrantUpdatedLabel(grant)}
-                    </span>
-                  </>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-function HeaderCell({ children }: { children: string }) {
-  return (
-    <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">{children}</th>
-  );
-}
-
-function isDangerousPermissionManageToggle(
-  grant: PermissionMatrix['grants'][number],
-  nextEnabled: boolean,
-) {
-  return (
-    !nextEnabled &&
-    grant.permissionKey === 'permission.manage' &&
-    (grant.roleKey === 'captain' || grant.roleKey === 'vice_captain')
-  );
-}
-
-function formatGrantUpdatedLabel(grant: PermissionMatrix['grants'][number]) {
-  const updatedAt = formatDateTime(grant.updatedAt);
-
-  if (!grant.updatedBy) {
-    return `Updated ${updatedAt}`;
-  }
-
-  return `Updated ${updatedAt} by ${grant.updatedBy}`;
-}
-
-function getGrantMetadataLabel(grant: PermissionMatrix['grants'][number]) {
-  return [
-    `effect_scope: ${grant.effectScope}`,
-    `state: ${grant.isEnabled ? 'allow' : 'off'}`,
-    `updated_at: ${grant.updatedAt}`,
-    grant.updatedBy ? `updated_by: ${grant.updatedBy}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('vi-VN', {
-    timeZone: 'Asia/Ho_Chi_Minh',
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
-function formatPermissionText(value: string) {
-  return value
-    .replaceAll('membership', 'tư cách thành viên')
-    .replaceAll('Membership', 'Tư cách thành viên')
-    .replaceAll('kết thúc tư cách thành viên', 'kick thành viên')
-    .replaceAll('Kết thúc tư cách thành viên', 'Kick thành viên')
-    .replaceAll('Cập nhật metadata và cấu hình sự kiện', 'Cập nhật thông tin tổng quan sự kiện')
-    .replaceAll('Cập nhật metadata và cấu hình event', 'Cập nhật thông tin tổng quan sự kiện')
-    .replaceAll('Xem dữ liệu riêng tư sự kiện', 'Xem chi tiết vận hành sự kiện')
-    .replaceAll('Xem dữ liệu riêng tư event', 'Xem chi tiết vận hành sự kiện')
-    .replaceAll(
-      'Xem chi tiết sự kiện, bao gồm thông tin vận hành không công khai như ghi chú nội bộ, cấu hình riêng tư và dữ liệu quản lý.',
-      'Xem chi tiết vận hành sự kiện, bao gồm ghi chú nội bộ, cấu hình riêng tư, danh sách thành viên, vai trò trong sự kiện và trạng thái tham gia.',
-    )
-    .replaceAll('Xem chi tiết sự kiện', 'Xem chi tiết vận hành sự kiện')
-    .replaceAll(
-      'Xem dữ liệu vận hành riêng tư của sự kiện.',
-      'Xem chi tiết vận hành sự kiện, bao gồm ghi chú nội bộ, cấu hình riêng tư, danh sách thành viên, vai trò trong sự kiện và trạng thái tham gia.',
-    )
-    .replaceAll(
-      'Xem dữ liệu vận hành riêng tư của event.',
-      'Xem chi tiết vận hành sự kiện, bao gồm ghi chú nội bộ, cấu hình riêng tư, danh sách thành viên, vai trò trong sự kiện và trạng thái tham gia.',
-    )
-    .replaceAll('Bổ nhiệm trưởng chính', 'Bổ nhiệm cấp trưởng')
-    .replaceAll('Gỡ trưởng chính', 'Gỡ cấp trưởng')
-    .replaceAll('trưởng chính', 'cấp trưởng')
-    .replaceAll('transfer', 'chuyển giao')
-    .replaceAll('attendance', 'trạng thái tham gia')
-    .replaceAll('Attendance', 'Trạng thái tham gia')
-    .replaceAll('role event', 'vai trò trong sự kiện')
-    .replaceAll('role sự kiện', 'vai trò trong sự kiện')
-    .replaceAll('role trong event', 'vai trò trong sự kiện')
-    .replaceAll('role trong sự kiện', 'vai trò trong sự kiện')
-    .replaceAll('permission matrix', 'quản lý phân quyền')
-    .replaceAll('Permission matrix', 'Quản lý phân quyền')
-    .replaceAll('ma trận phân quyền', 'quản lý phân quyền')
-    .replaceAll('Ma trận phân quyền', 'Quản lý phân quyền')
-    .replaceAll('role permission grants', 'quyền được cấp cho từng vai trò')
-    .replaceAll('permission grants', 'quyền được cấp')
-    .replaceAll('revoke', 'gỡ')
-    .replaceAll('Revoke', 'Gỡ')
-    .replaceAll('owner scope', 'phạm vi quản lý')
-    .replaceAll('event members', 'thành viên sự kiện')
-    .replaceAll('scope', 'trong phạm vi')
-    .replaceAll('Scope', 'Trong phạm vi')
-    .replaceAll('event', 'sự kiện')
-    .replaceAll('Event', 'Sự kiện');
-}
-
-function formatEffectScopeLabel(effectScope: string, roleScopeType: string) {
-  if (effectScope === 'organization') {
-    return 'Toàn Đội';
-  }
-
-  if (effectScope === 'self_scope') {
-    if (roleScopeType === 'organization') {
-      return 'Toàn Đội';
-    }
-
-    if (roleScopeType === 'division') {
-      return 'Trong mảng';
-    }
-
-    if (roleScopeType === 'group') {
-      return 'Trong nhóm';
-    }
-
-    if (roleScopeType === 'club') {
-      return 'Trong CLB/Tổ';
-    }
-
-    if (roleScopeType === 'event') {
-      return 'Trong sự kiện';
-    }
-
-    return 'Trong phạm vi';
-  }
-
-  if (effectScope === 'child_club') {
-    return 'Trong CLB/Tổ trực thuộc';
-  }
-
-  if (effectScope === 'owned_event') {
-    return 'Trong sự kiện';
-  }
-
-  return effectScope;
-}
-
-function getPermissionGroupKey(permissionKey: PermissionKey): keyof typeof PERMISSION_GROUP_LABELS {
-  if (permissionKey.startsWith('scope.')) {
-    return 'scope';
-  }
-
-  if (permissionKey.startsWith('event.')) {
-    return 'event';
-  }
-
-  if (permissionKey.startsWith('permission.')) {
-    return 'permission';
-  }
-
-  return 'other';
-}
-
-function getScopeTypeOrder(scopeType: string) {
-  const index = SCOPE_TYPE_ORDER.findIndex((currentScopeType) => currentScopeType === scopeType);
-
-  return index === -1 ? SCOPE_TYPE_ORDER.length : index;
-}
-
-function getRoleOrder(roleKey: DomainRoleKey) {
-  const index = ROLE_ORDER.findIndex((currentRoleKey) => currentRoleKey === roleKey);
-
-  return index === -1 ? ROLE_ORDER.length : index;
-}
-
-function toggleSetValue<TValue>(set: Set<TValue>, value: TValue) {
-  const nextSet = new Set(set);
-
-  if (nextSet.has(value)) {
-    nextSet.delete(value);
-  } else {
-    nextSet.add(value);
-  }
-
-  return nextSet;
-}
-
-function getGrantId(grant: PermissionMatrix['grants'][number]) {
-  return `${grant.roleKey}:${grant.permissionKey}:${grant.effectScope}`;
 }
