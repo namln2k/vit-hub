@@ -13,11 +13,7 @@ export default function PlaceholderManagement({
   statusItems = [],
 }: PlaceholderManagementProps) {
   return (
-    <AdminContentPanel
-      section={section}
-      title={section.label}
-      count={`0 ${section.countLabel}`}
-    >
+    <AdminContentPanel section={section} title={section.label} count={`0 ${section.countLabel}`}>
       <div className="space-y-4 px-5 py-8">
         <p className="text-sm font-medium text-slate-600">{description}</p>
         {statusItems.length > 0 ? (

@@ -8,10 +8,7 @@ import {
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
 import type { UserStatus } from '@/features/organization-structure/permissions';
-import {
-  parseUserImportFile,
-  USER_IMPORT_MAX_FILE_BYTES,
-} from '@/services/users/import';
+import { parseUserImportFile, USER_IMPORT_MAX_FILE_BYTES } from '@/services/users/import';
 import { Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';

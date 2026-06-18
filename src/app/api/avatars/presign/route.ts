@@ -91,7 +91,8 @@ export async function POST(request: Request) {
     const body = await readJsonBody<AvatarPresignBody>(request, 10_000);
     const contentType = typeof body.contentType === 'string' ? body.contentType : '';
     const size = Number(body.size);
-    const maxUploadBytes = Number(process.env.R2_FREE_TIER_MAX_UPLOAD_BYTES) || DEFAULT_MAX_UPLOAD_BYTES;
+    const maxUploadBytes =
+      Number(process.env.R2_FREE_TIER_MAX_UPLOAD_BYTES) || DEFAULT_MAX_UPLOAD_BYTES;
 
     if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
       return jsonResponse({ error: 'Avatar must be a JPG, PNG, or WebP image.' }, 400);

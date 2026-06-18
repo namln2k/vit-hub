@@ -45,24 +45,12 @@ export default function ProfileAccountCard() {
 
         {appUser && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ProfileAvatarSection
-              appUser={appUser}
-              onAvatarUpdate={updateUserAvatar}
-            />
-            <EditableNameField
-              appUser={appUser}
-              onUpdate={updateUserName}
-            />
-            <EditableNicknameField
-              appUser={appUser}
-              onUpdate={updateUserNickname}
-            />
+            <ProfileAvatarSection appUser={appUser} onAvatarUpdate={updateUserAvatar} />
+            <EditableNameField appUser={appUser} onUpdate={updateUserName} />
+            <EditableNicknameField appUser={appUser} onUpdate={updateUserNickname} />
             <ProfileField label="Username" value={`@${appUser.username}`} />
             <ProfileField label="Email" value={appUser.email} />
-            <PersonnelInfoSection
-              appUser={appUser}
-              onUpdate={updateUserPersonnel}
-            />
+            <PersonnelInfoSection appUser={appUser} onUpdate={updateUserPersonnel} />
             <ProfileField label="Vai trò" value={USER_ROLE_LABELS[appUser.role]} />
           </div>
         )}

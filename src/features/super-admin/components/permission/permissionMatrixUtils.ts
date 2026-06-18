@@ -1,7 +1,4 @@
-import type {
-  DomainRoleKey,
-  PermissionKey,
-} from '@/features/organization-structure/permissions';
+import type { DomainRoleKey, PermissionKey } from '@/features/organization-structure/permissions';
 import type { PermissionMatrix } from '@/services/organizationAdmin';
 
 export const SCOPE_TYPE_LABELS: Record<string, string> = {

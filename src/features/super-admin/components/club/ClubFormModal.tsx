@@ -69,9 +69,7 @@ export default function ClubFormModal({
       const message = saveError instanceof Error ? saveError.message : '';
       const actionText = isEditing ? 'cập nhật' : 'tạo';
       toast.error(
-        message
-          ? `Không thể ${actionText} CLB/tổ: ${message}`
-          : `Không thể ${actionText} CLB/tổ.`,
+        message ? `Không thể ${actionText} CLB/tổ: ${message}` : `Không thể ${actionText} CLB/tổ.`,
         { id: isEditing ? 'club-update-error' : 'club-create-error' },
       );
     } finally {

@@ -44,9 +44,9 @@ export default function PermissionsManagement() {
   const [effectScopeFilter, setEffectScopeFilter] = useState<'all' | EffectScope>('all');
   const [selectedRoleKey, setSelectedRoleKey] = useState<DomainRoleKey | null>(null);
   const [collapsedRoleScopeTypes, setCollapsedRoleScopeTypes] = useState<Set<string>>(new Set());
-  const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState<Set<PermissionGroupKey>>(
-    new Set(),
-  );
+  const [collapsedPermissionGroups, setCollapsedPermissionGroups] = useState<
+    Set<PermissionGroupKey>
+  >(new Set());
   const [updatingGrantId, setUpdatingGrantId] = useState('');
 
   useEffect(() => {

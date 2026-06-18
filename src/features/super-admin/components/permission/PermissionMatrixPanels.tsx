@@ -9,10 +9,7 @@ import {
   SCOPE_TYPE_ORDER,
   type PermissionGroupKey,
 } from '@/features/super-admin/components/permission/permissionMatrixUtils';
-import type {
-  DomainRoleKey,
-  EffectScope,
-} from '@/features/organization-structure/permissions';
+import type { DomainRoleKey, EffectScope } from '@/features/organization-structure/permissions';
 import type { PermissionMatrix } from '@/services/organizationAdmin';
 import Sharingan from '@/shared/loading/Sharingan';
 import { ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
@@ -87,7 +84,9 @@ export function PermissionMatrixFilters({
       </select>
       <select
         value={permissionGroupFilter}
-        onChange={(event) => onPermissionGroupFilterChange(event.target.value as 'all' | PermissionGroupKey)}
+        onChange={(event) =>
+          onPermissionGroupFilterChange(event.target.value as 'all' | PermissionGroupKey)
+        }
         className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-rose-500"
       >
         <option value="all">Mọi nhóm quyền</option>

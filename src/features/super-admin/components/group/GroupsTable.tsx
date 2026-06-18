@@ -11,12 +11,7 @@ interface GroupsTableProps {
   onEditGroup: (group: Group) => void;
 }
 
-export default function GroupsTable({
-  groups,
-  isLoading,
-  error,
-  onEditGroup,
-}: GroupsTableProps) {
+export default function GroupsTable({ groups, isLoading, error, onEditGroup }: GroupsTableProps) {
   return (
     <div className="relative min-h-72">
       {isLoading && <MembersLoadingOverlay />}
@@ -38,10 +33,7 @@ export default function GroupsTable({
           <tbody className="divide-y divide-slate-200 bg-white">
             {isLoading ? null : error ? (
               <tr>
-                <td
-                  className="px-5 py-10 text-center text-sm font-medium text-red-600"
-                  colSpan={3}
-                >
+                <td className="px-5 py-10 text-center text-sm font-medium text-red-600" colSpan={3}>
                   {error}
                 </td>
               </tr>

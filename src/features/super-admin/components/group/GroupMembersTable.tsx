@@ -57,10 +57,7 @@ export default function GroupMembersTable({
           <tbody className="divide-y divide-slate-200 bg-white">
             {isLoading ? null : error ? (
               <tr>
-                <td
-                  className="px-5 py-10 text-center text-sm font-medium text-red-600"
-                  colSpan={5}
-                >
+                <td className="px-5 py-10 text-center text-sm font-medium text-red-600" colSpan={5}>
                   {error}
                 </td>
               </tr>
@@ -84,9 +81,7 @@ export default function GroupMembersTable({
                       </span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-sm font-medium text-slate-600">
-                    @{user.username}
-                  </td>
+                  <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>
                   <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
                   <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.role}</td>
                 </tr>

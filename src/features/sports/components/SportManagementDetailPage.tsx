@@ -333,8 +333,8 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
                       setEditForm({
                         ...editForm,
                         type: option.value,
-                    })
-                  }
+                      })
+                    }
                     disabled={!canEdit || isSaving}
                     className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
                       SPORT_TYPE_THEMES[option.value].badge
@@ -366,9 +366,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
-                Ngày chơi
-              </span>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Ngày chơi</span>
               <input
                 type="date"
                 value={editForm.gameDate}
@@ -391,9 +389,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
               <input
                 value={editForm.locationName}
-                onChange={(event) =>
-                  setEditForm({ ...editForm, locationName: event.target.value })
-                }
+                onChange={(event) => setEditForm({ ...editForm, locationName: event.target.value })}
                 disabled={!canEdit || isSaving}
                 className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
@@ -402,9 +398,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
               <input
                 value={editForm.locationUrl}
-                onChange={(event) =>
-                  setEditForm({ ...editForm, locationUrl: event.target.value })
-                }
+                onChange={(event) => setEditForm({ ...editForm, locationUrl: event.target.value })}
                 disabled={!canEdit || isSaving}
                 className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
