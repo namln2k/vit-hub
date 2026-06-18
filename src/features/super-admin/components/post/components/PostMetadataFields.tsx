@@ -58,10 +58,9 @@ export default function PostMetadataFields({
       });
       toast.success('Đã upload thumbnail bài viết.', { id: 'post-thumbnail-upload-success' });
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Không thể upload thumbnail bài viết.',
-        { id: 'post-thumbnail-upload-error' },
-      );
+      toast.error(error instanceof Error ? error.message : 'Không thể upload thumbnail bài viết.', {
+        id: 'post-thumbnail-upload-error',
+      });
       setIsThumbnailPreviewLoading(false);
     } finally {
       setIsUploadingThumbnail(false);

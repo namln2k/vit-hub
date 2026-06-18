@@ -27,11 +27,7 @@ interface SportManagementParticipantsPanelProps {
   canManageMembers: boolean;
   canPromote: boolean;
   canTransfer: boolean;
-  onRunAction: (
-    actionId: string,
-    action: () => Promise<unknown>,
-    successMessage: string,
-  ) => void;
+  onRunAction: (actionId: string, action: () => Promise<unknown>, successMessage: string) => void;
 }
 
 export default function SportManagementParticipantsPanel({

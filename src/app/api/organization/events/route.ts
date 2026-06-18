@@ -152,9 +152,7 @@ export async function GET(request: Request) {
 
         return jsonResponse({
           event: canViewPrivate ? event : toBasicEvent(event),
-          participants: canViewPrivate
-            ? participants
-            : participants.map(toPublicEventParticipant),
+          participants: canViewPrivate ? participants : participants.map(toPublicEventParticipant),
           capabilities: {
             canViewPrivate,
             canShowParticipants,

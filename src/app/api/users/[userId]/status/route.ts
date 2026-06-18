@@ -51,7 +51,10 @@ export async function PATCH(request: Request, context: { params: Promise<{ userI
       return jsonResponse(
         {
           error:
-            data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+            data &&
+            typeof data === 'object' &&
+            'message' in data &&
+            typeof data.message === 'string'
               ? data.message
               : 'Không thể cập nhật trạng thái nhân sự.',
         },

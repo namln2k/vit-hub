@@ -88,7 +88,9 @@ async function canTransferLead(
   scopeType: 'division' | 'group' | 'club',
   scopeId: string,
 ) {
-  if (!(await hasDomainPermission(actor, 'scope.role.assign_lead', { type: scopeType, id: scopeId }))) {
+  if (
+    !(await hasDomainPermission(actor, 'scope.role.assign_lead', { type: scopeType, id: scopeId }))
+  ) {
     return false;
   }
 
@@ -109,7 +111,10 @@ async function canTransferLead(
     return true;
   }
 
-  return hasDomainPermission(filteredActor, 'scope.role.assign_lead', { type: scopeType, id: scopeId });
+  return hasDomainPermission(filteredActor, 'scope.role.assign_lead', {
+    type: scopeType,
+    id: scopeId,
+  });
 }
 
 export async function POST(request: Request) {
@@ -149,7 +154,15 @@ export async function POST(request: Request) {
       return jsonResponse({ error: 'Bạn không có quyền bổ nhiệm vai trò này.' }, 403);
     }
 
-    await assignScopeRole({ actorId: actor.id, scopeType, scopeId, userId, roleKey, startsAt, endsAt });
+    await assignScopeRole({
+      actorId: actor.id,
+      scopeType,
+      scopeId,
+      userId,
+      roleKey,
+      startsAt,
+      endsAt,
+    });
     return jsonResponse({ ok: true }, 201);
   } catch (error) {
     const authResponse = authorizationErrorResponse(error);

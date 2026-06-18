@@ -57,8 +57,8 @@ export default function DivisionsIntroduction() {
                 Chọn nơi bạn muốn góp sức trong Đội Tình nguyện SOICT.
               </h1>
               <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
-                Mỗi mảng là một cách khác nhau để bạn tham gia tổ chức hoạt động, sáng tạo nội
-                dung, hỗ trợ vận hành và đồng hành cùng các thành viên trong Đội.
+                Mỗi mảng là một cách khác nhau để bạn tham gia tổ chức hoạt động, sáng tạo nội dung,
+                hỗ trợ vận hành và đồng hành cùng các thành viên trong Đội.
               </p>
             </div>
           </div>

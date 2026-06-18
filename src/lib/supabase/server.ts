@@ -7,27 +7,21 @@ export async function createClient() {
   const cookieStore = await cookies();
   const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
 
-  return createServerClient(
-    supabaseUrl,
-    publishableKey,
-    {
-      cookieOptions: {
-        name: SUPABASE_AUTH_COOKIE_NAME,
+  return createServerClient(supabaseUrl, publishableKey, {
+    cookieOptions: {
+      name: SUPABASE_AUTH_COOKIE_NAME,
+    },
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
       },
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
-          } catch {
-            // Server Components cannot write cookies; proxy refresh handles this path.
-          }
-        },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+        } catch {
+          // Server Components cannot write cookies; proxy refresh handles this path.
+        }
       },
     },
-  );
+  });
 }

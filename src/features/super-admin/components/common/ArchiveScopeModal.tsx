@@ -41,9 +41,14 @@ export default function ArchiveScopeModal({
       toast.success(`Đã lưu trữ ${scopeLabel}.`, { id: 'scope-archive-success' });
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(message ? `Không thể lưu trữ ${scopeLabel}: ${message}` : `Không thể lưu trữ ${scopeLabel}.`, {
-        id: 'scope-archive-error',
-      });
+      toast.error(
+        message
+          ? `Không thể lưu trữ ${scopeLabel}: ${message}`
+          : `Không thể lưu trữ ${scopeLabel}.`,
+        {
+          id: 'scope-archive-error',
+        },
+      );
     } finally {
       setIsArchiving(false);
     }

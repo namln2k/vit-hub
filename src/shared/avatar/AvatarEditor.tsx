@@ -1,10 +1,5 @@
 import { Minus, Plus, RotateCcw, X } from 'lucide-react';
-import {
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 interface AvatarEditorProps {
   file: File;

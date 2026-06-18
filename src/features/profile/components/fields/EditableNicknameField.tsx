@@ -8,10 +8,7 @@ interface EditableNicknameFieldProps {
   onUpdate: (data: UpdateUserNicknameData) => Promise<void>;
 }
 
-export default function EditableNicknameField({
-  appUser,
-  onUpdate,
-}: EditableNicknameFieldProps) {
+export default function EditableNicknameField({ appUser, onUpdate }: EditableNicknameFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [nickname, setNickname] = useState('');
