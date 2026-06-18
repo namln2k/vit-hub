@@ -1,9 +1,16 @@
 'use client';
 
-import { loadOrCreateAppUser, mapSupabaseUser } from '@/features/auth/lib/authUserSession';
-import { API_ROUTES, APP_ROUTES, withRouteQuery } from '@/constants/routes';
+import { mapSupabaseUser } from '@/features/auth/lib/authUserSession';
+import { APP_ROUTES, withRouteQuery } from '@/constants/routes';
 import { deleteAvatar, uploadAvatar } from '@/services/avatarUpload';
-import { upsertUser } from '@/services/users';
+import { registerAppUserAction } from '@/actions/auth';
+import {
+  getCurrentUserProfileAction,
+  setCurrentUserAvatarAction,
+  updateCurrentUserNameAction,
+  updateCurrentUserNicknameAction,
+  updateCurrentUserPersonnelAction,
+} from '@/actions/users';
 import { supabase } from '@/services/supabase';
 import {
   AuthContext,
@@ -55,30 +62,18 @@ function getAuthRedirectUrl(path: string) {
   return `${getAppOrigin()}${path}`;
 }
 
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      const [, dataBase64 = ''] = result.split(',');
-
-      if (!dataBase64) {
-        reject(new Error('Không thể đọc ảnh đại diện.'));
-        return;
-      }
-
-      resolve(dataBase64);
-    };
-    reader.onerror = () => reject(new Error('Không thể đọc ảnh đại diện.'));
-    reader.readAsDataURL(file);
-  });
-}
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [appUser, setAppUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+export function AuthProvider({
+  children,
+  initialAppUser,
+  initialCurrentUser,
+}: {
+  children: ReactNode;
+  initialAppUser: AppUser | null;
+  initialCurrentUser: AuthUser | null;
+}) {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(initialCurrentUser);
+  const [appUser, setAppUser] = useState<AppUser | null>(initialAppUser);
+  const [loading, setLoading] = useState(!initialCurrentUser);
   const isMountedRef = useRef(false);
 
   const applySession = useCallback(async (session: Session | null) => {
@@ -97,10 +92,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUser(mapSupabaseUser(user));
 
     try {
-      const loadedUser = await loadOrCreateAppUser(user);
+      const result = await getCurrentUserProfileAction();
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
 
       if (isMountedRef.current) {
-        setAppUser(loadedUser);
+        setAppUser(result.data);
       }
     } catch (error) {
       console.error('Failed to load app user for authenticated session.', error);
@@ -152,43 +151,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (data: SignUpData) => {
-      const avatar = data.avatarFile
-        ? {
-            contentType: data.avatarFile.type,
-            dataBase64: await readFileAsBase64(data.avatarFile),
-            size: data.avatarFile.size,
-          }
-        : null;
-      const response = await fetch(API_ROUTES.authRegister, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: data.email,
-          emailRedirectTo: getAuthRedirectUrl(APP_ROUTES.login),
-          password: data.password,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          middleName: data.middleName,
-          nickname: data.nickname,
-          username: data.username,
-          avatar,
-        }),
-      });
-      const result = await response.json();
+      const formData = new FormData();
 
-      if (!response.ok) {
-        throw new Error(result.error ?? 'Không thể đăng ký tài khoản.');
+      for (const [key, value] of Object.entries({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleName: data.middleName,
+        nickname: data.nickname,
+        username: data.username,
+      })) {
+        formData.set(key, value);
       }
 
-      if (result.session?.access_token && result.session?.refresh_token) {
+      if (data.avatarFile) {
+        formData.set('avatar', data.avatarFile);
+      }
+
+      const result = await registerAppUserAction(formData);
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      if (result.data.session) {
         const {
           data: { session },
           error,
         } = await supabase.auth.setSession({
-          access_token: result.session.access_token,
-          refresh_token: result.session.refresh_token,
+          access_token: result.data.session.accessToken,
+          refresh_token: result.data.session.refreshToken,
         });
 
         if (error) {
@@ -198,7 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await applySession(session);
       }
 
-      return { needsEmailConfirmation: Boolean(result.needsEmailConfirmation) };
+      return {
+        needsEmailConfirmation: result.data.needsEmailConfirmation,
+      };
     },
     [applySession],
   );
@@ -214,11 +209,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error('Không thể tải thông tin tài khoản sau khi đăng nhập.');
     }
 
-    const loadedUser = await loadOrCreateAppUser(data.user);
-    setCurrentUser(mapSupabaseUser(data.user));
-    setAppUser(loadedUser);
+    const result = await getCurrentUserProfileAction();
 
-    return loadedUser;
+    if (!result.ok) {
+      throw new Error(result.error.message);
+    }
+
+    setCurrentUser(mapSupabaseUser(data.user));
+    setAppUser(result.data);
+
+    return result.data;
   }, []);
 
   const signInWithGoogle = useCallback(async (next?: string | null) => {
@@ -291,24 +291,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const previousAvatarKey = appUser.avatarKey;
       const avatar = await uploadAvatar(avatarFile);
-      const nextAppUser = await upsertUser({
-        ...appUser,
+      const result = await setCurrentUserAvatarAction({
         avatarUrl: avatar.avatarUrl,
         avatarKey: avatar.avatarKey,
       });
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          avatar_key: avatar.avatarKey,
-          avatar_url: avatar.avatarUrl,
-        },
-      });
+      if (!result.ok) {
+        try {
+          await deleteAvatar(avatar.avatarKey);
+        } catch {
+          // The profile update failed; abandoned upload cleanup can be retried manually.
+        }
 
-      if (error) {
-        throw new Error(getAuthErrorMessage(error));
+        throw new Error(result.error.message);
       }
 
-      setAppUser(nextAppUser);
+      setAppUser(result.data);
 
       if (previousAvatarKey) {
         try {
@@ -327,26 +325,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Bạn cần đăng nhập trước khi cập nhật họ và tên.');
       }
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          first_name: data.firstName,
-          last_name: data.lastName,
-          middle_name: data.middleName,
-        },
-      });
+      const result = await updateCurrentUserNameAction(data);
 
-      if (error) {
-        throw new Error(getAuthErrorMessage(error));
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      const nextAppUser = await upsertUser({
-        ...appUser,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        middleName: data.middleName,
-      });
-
-      setAppUser(nextAppUser);
+      setAppUser(result.data);
     },
     [appUser, currentUser],
   );
@@ -357,22 +342,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Bạn cần đăng nhập trước khi cập nhật Nickname.');
       }
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          nickname: data.nickname,
-        },
-      });
+      const result = await updateCurrentUserNicknameAction(data);
 
-      if (error) {
-        throw new Error(getAuthErrorMessage(error));
+      if (!result.ok) {
+        throw new Error(result.error.message);
       }
 
-      const nextAppUser = await upsertUser({
-        ...appUser,
-        nickname: data.nickname,
-      });
-
-      setAppUser(nextAppUser);
+      setAppUser(result.data);
     },
     [appUser, currentUser],
   );
@@ -383,16 +359,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Bạn cần đăng nhập trước khi cập nhật thông tin nhân sự.');
       }
 
-      const nextAppUser = await upsertUser({
-        ...appUser,
-        phoneNumber: data.phoneNumber || '-',
-        schoolName: data.schoolName,
-        cohort: data.cohort,
-        enterYear: data.enterYear,
-        gender: data.gender,
-      });
+      const result = await updateCurrentUserPersonnelAction(data);
 
-      setAppUser(nextAppUser);
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      setAppUser(result.data);
     },
     [appUser, currentUser],
   );

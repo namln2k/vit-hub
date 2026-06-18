@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { getSupabaseAdminServerConfig, getSupabasePublicServerConfig } from '@/server/env';
 
 interface SupabaseFetchOptions {

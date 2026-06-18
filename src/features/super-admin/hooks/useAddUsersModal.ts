@@ -1,11 +1,11 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import {
   fromVietnamDateTimeLocalValue,
   toVietnamDateTimeLocalValue,
 } from '@/features/super-admin/lib/vietnamDateTime';
 import { normalizeSearchValue } from '@/features/super-admin/lib/userUtils';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import { formatEmailList, parseEmailList } from '@/services/users/emailList';
-import { queryUsers } from '@/services/users';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -29,8 +29,8 @@ export function useAddUsersModal({
   onClose,
 }: UseAddUsersModalOptions) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<UserSearchResultDto[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserSearchResultDto[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isImportingEmails, setIsImportingEmails] = useState(false);
@@ -82,7 +82,7 @@ export function useAddUsersModal({
         setSearchError('');
 
         try {
-          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+          const nextUsers = await searchUsers({ search: queryText, limit: queryText ? 12 : 20 });
           if (isActive) {
             setUsers(nextUsers);
           }
@@ -106,7 +106,7 @@ export function useAddUsersModal({
     };
   }, [queryText]);
 
-  function selectUser(user: AppUser) {
+  function selectUser(user: UserSearchResultDto) {
     if (user.status !== 'active') {
       return;
     }
@@ -150,7 +150,7 @@ export function useAddUsersModal({
     setIsImportingEmails(true);
 
     try {
-      const matchedUsers = await queryUsers({
+      const matchedUsers = await searchUsers({
         emails: parsedEmails.emails,
         limit: parsedEmails.emails.length,
       });

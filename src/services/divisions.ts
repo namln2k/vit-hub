@@ -1,5 +1,5 @@
 import { supabase } from '@/services/supabase';
-import { mapUserRow, type UserRow } from '@/services/users';
+import { mapLegacyUserRow, type LegacyUserRow } from '@/services/users/legacyMapping';
 import type { AppUser } from '@/contexts/auth';
 import {
   addScopeMembers,
@@ -27,7 +27,7 @@ interface DivisionRow {
 }
 
 interface UserDivisionRow {
-  user: UserRow | null;
+  user: LegacyUserRow | null;
 }
 
 function mapDivisionRow(row: DivisionRow): Division {
@@ -68,8 +68,8 @@ export async function listUsersByDivision(divisionId: string): Promise<AppUser[]
 
   return data
     .map((row) => row.user)
-    .filter((user): user is UserRow => Boolean(user))
-    .map(mapUserRow)
+    .filter((user): user is LegacyUserRow => Boolean(user))
+    .map(mapLegacyUserRow)
     .sort((first, second) => getUserSortName(first).localeCompare(getUserSortName(second)));
 }
 

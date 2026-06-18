@@ -1,3 +1,5 @@
+import 'server-only';
+
 function stripTrailingSlash(value: string) {
   return value.replace(/\/$/, '');
 }

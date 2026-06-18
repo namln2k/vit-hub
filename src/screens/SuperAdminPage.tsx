@@ -10,8 +10,16 @@ import PermissionsManagement from '@/features/super-admin/components/permission/
 import PostsManagement from '@/features/super-admin/components/post/PostsManagement';
 import UsersManagement from '@/features/super-admin/components/user/UsersManagement';
 import { useSuperAdminLayout } from '@/features/super-admin/contexts/SuperAdminLayoutContext';
+import type { UserSummaryDto } from '@/features/users/types';
+import type { PostAdministrationDataDto } from '@/features/posts/types';
 
-export default function SuperAdminPage() {
+export default function SuperAdminPage({
+  initialUsers = [],
+  initialPostData,
+}: {
+  initialUsers?: UserSummaryDto[];
+  initialPostData?: PostAdministrationDataDto;
+}) {
   const {
     activeSection,
     activeSectionId,
@@ -58,11 +66,15 @@ export default function SuperAdminPage() {
   }
 
   if (activeSectionId === 'users') {
-    return <UsersManagement />;
+    return <UsersManagement initialUsers={initialUsers} />;
   }
 
   if (activeSectionId === 'posts') {
-    return <PostsManagement />;
+    return initialPostData ? (
+      <PostsManagement initialData={initialPostData} />
+    ) : (
+      <PlaceholderManagement section={activeSection} />
+    );
   }
 
   if (activeSectionId === 'permissions') {

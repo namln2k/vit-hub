@@ -1,7 +1,7 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import { formatTransferLeadApiError, type OrganizationMember } from '@/services/organizationAdmin';
-import { queryUsers } from '@/services/users';
 import Avatar from '@/shared/layout/Avatar';
 import { ArrowRightLeft, Search, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -21,8 +21,8 @@ export default function ScopeLeadTransferModal({
   onTransferLead,
 }: TransferLeadModalProps) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [targetUser, setTargetUser] = useState<AppUser | null>(null);
+  const [users, setUsers] = useState<UserSearchResultDto[]>([]);
+  const [targetUser, setTargetUser] = useState<UserSearchResultDto | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -42,7 +42,7 @@ export default function ScopeLeadTransferModal({
         setError('');
 
         try {
-          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+          const nextUsers = await searchUsers({ search: queryText, limit: queryText ? 12 : 20 });
 
           if (isActive) {
             setUsers(nextUsers);
@@ -214,7 +214,7 @@ function TransferUserCard({
   user,
 }: {
   label: string;
-  user: OrganizationMember | AppUser | null;
+  user: OrganizationMember | UserSearchResultDto | null;
 }) {
   return (
     <div className="min-h-24 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -236,7 +236,7 @@ function TransferUserCard({
   );
 }
 
-export function PickerUserStatusBadge({ status }: { status: AppUser['status'] }) {
+export function PickerUserStatusBadge({ status }: { status: UserSearchResultDto['status'] }) {
   const className =
     status === 'disabled'
       ? 'border-red-200 bg-red-50 text-red-700'

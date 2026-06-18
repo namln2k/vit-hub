@@ -38,8 +38,8 @@ SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_INTERNAL_URL=http://host.docker.internal:54321
 ```
 
-The avatar and registration APIs validate users and write pending signup users server-side.
-Wherever `/api/avatars/presign` and `/api/auth/register` run, provide:
+Avatar and registration Server Actions validate users and write pending signup users server-side.
+Wherever the Next.js server runs, provide:
 
 ```env
 SUPABASE_URL=https://your-project-ref.supabase.co
@@ -98,7 +98,8 @@ http://127.0.0.1:54321/auth/v1/callback
 ### Supabase config is missing
 
 Confirm that `.env.local` exists and has `NEXT_PUBLIC_SUPABASE_URL` plus `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Restart the dev server after changing environment variables.
-For API routes, also confirm `SUPABASE_URL`, either `SUPABASE_PUBLISHABLE_KEY` or `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are configured wherever the server route runs.
+For server operations, also confirm `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` are configured wherever the Next.js server runs.
 
 ### Register fails with permission errors
 

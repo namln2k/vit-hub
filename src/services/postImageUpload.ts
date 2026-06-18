@@ -1,5 +1,4 @@
-import { API_ROUTES } from '@/constants/routes';
-import { supabase } from '@/services/supabase';
+import { createPostImageUploadIntentAction, deletePostImageObjectsAction } from '@/actions/media';
 
 const MAX_SELECTED_POST_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_POST_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -83,19 +82,6 @@ async function compressPostImage(file: File): Promise<File> {
   }
 }
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error || !session?.access_token) {
-    throw new Error('Bạn cần đăng nhập trước khi upload ảnh bài viết.');
-  }
-
-  return session.access_token;
-}
-
 export async function uploadPostImage(file: File): Promise<UploadedPostImage> {
   const validationError = validatePostImageFile(file);
 
@@ -109,33 +95,24 @@ export async function uploadPostImage(file: File): Promise<UploadedPostImage> {
     throw new Error('Ảnh bài viết sau khi nén vẫn vượt quá 5 MB. Hãy chọn ảnh nhỏ hơn.');
   }
 
-  const accessToken = await getAccessToken();
-  const presignResponse = await fetch(API_ROUTES.postsPresign, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contentType: uploadFile.type,
-      size: uploadFile.size,
-    }),
+  const result = await createPostImageUploadIntentAction({
+    contentType: uploadFile.type,
+    size: uploadFile.size,
   });
-  const presignData = await presignResponse.json();
 
-  if (!presignResponse.ok) {
-    throw new Error(presignData.error ?? 'Không thể chuẩn bị upload ảnh bài viết.');
+  if (!result.ok) {
+    throw new Error(result.error.message);
   }
 
-  if (!isHttpUrl(presignData.uploadUrl) || !isHttpUrl(presignData.postImageUrl)) {
+  if (!isHttpUrl(result.data.uploadUrl) || !isHttpUrl(result.data.postImageUrl)) {
     throw new Error('Máy chủ trả về URL ảnh bài viết không hợp lệ.');
   }
 
-  if (typeof presignData.postImageKey !== 'string' || !presignData.postImageKey) {
+  if (!result.data.postImageKey) {
     throw new Error('Máy chủ trả về khoá ảnh bài viết không hợp lệ.');
   }
 
-  const uploadResponse = await fetch(presignData.uploadUrl, {
+  const uploadResponse = await fetch(result.data.uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': uploadFile.type,
@@ -148,8 +125,8 @@ export async function uploadPostImage(file: File): Promise<UploadedPostImage> {
   }
 
   return {
-    postImageUrl: presignData.postImageUrl,
-    postImageKey: presignData.postImageKey,
+    postImageUrl: result.data.postImageUrl,
+    postImageKey: result.data.postImageKey,
   };
 }
 
@@ -158,18 +135,9 @@ export async function deletePostImages(images: PostImageReference[]): Promise<vo
     return;
   }
 
-  const accessToken = await getAccessToken();
-  const response = await fetch(API_ROUTES.postsPresign, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ images }),
-  });
-  const data = await response.json();
+  const result = await deletePostImageObjectsAction({ images });
 
-  if (!response.ok) {
-    throw new Error(data.error ?? 'Không thể xoá ảnh bài viết khỏi Cloudflare R2.');
+  if (!result.ok) {
+    throw new Error(result.error.message);
   }
 }

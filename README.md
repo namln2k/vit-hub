@@ -32,7 +32,9 @@ VIT Hub is a React web application for VIT Volunteers management.
 
 3. Set up Cloudflare R2 if avatar uploads are enabled.
 
-   Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2 values from `.env.example` wherever `/api/auth/register` and `/api/avatars/presign` run. Do not expose R2 secrets with the `NEXT_PUBLIC_` prefix.
+   Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2
+   values from `.env.example` wherever the Next.js server runs. Do not expose R2 secrets with the
+   `NEXT_PUBLIC_` prefix.
 
 4. Start the development server with Docker Compose:
 

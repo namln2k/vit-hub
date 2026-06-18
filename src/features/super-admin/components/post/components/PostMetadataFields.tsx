@@ -1,5 +1,5 @@
 import { uploadPostImage, validatePostImageFile } from '@/services/postImageUpload';
-import { createDraftPostSlug, createPostSlug } from '@/services/posts';
+import { createDraftPostSlug, createPostSlug } from '@/features/posts/lib/content';
 import type { PostFormState } from '@/features/super-admin/lib/postFormUtils';
 import Sharingan from '@/shared/loading/Sharingan';
 import { ImagePlus, Pencil, Trash2, X } from 'lucide-react';

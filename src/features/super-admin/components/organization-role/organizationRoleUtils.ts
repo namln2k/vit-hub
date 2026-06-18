@@ -3,7 +3,7 @@ import type {
   OrganizationRoleKey,
   OrganizationTechnicalAdmin,
 } from '@/services/organizationAdmin';
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 
 export const ROLE_LABELS = {
   captain: 'Đội trưởng',
@@ -19,7 +19,7 @@ export function getRoleLifecycleState(
 }
 
 export function getDisplayName(
-  user: OrganizationRoleAssignmentDetail['user'] | OrganizationTechnicalAdmin | AppUser,
+  user: OrganizationRoleAssignmentDetail['user'] | OrganizationTechnicalAdmin | UserSearchResultDto,
 ) {
   if ('name' in user) {
     return user.name;

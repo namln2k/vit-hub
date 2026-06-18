@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createServerClient } from '@supabase/ssr';
 import { APP_ROUTES, PROTECTED_APP_ROUTES, isPathInRoute } from '@/constants/routes';
 import { getSupabasePublicServerConfig } from '@/server/env';

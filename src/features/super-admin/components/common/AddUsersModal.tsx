@@ -1,4 +1,4 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
@@ -7,7 +7,7 @@ import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 type AddUsersModalEntityId = 'group' | 'division' | 'club';
 
 interface AddUsersModalProps {
-  availableUsers: AppUser[];
+  availableUsers: UserSearchResultDto[];
   emailImportError: string;
   emailImportMessage: string;
   emailListValue: string;
@@ -20,14 +20,14 @@ interface AddUsersModalProps {
   queryText: string;
   searchError: string;
   searchValue: string;
-  selectedUsers: AppUser[];
+  selectedUsers: UserSearchResultDto[];
   startsAtValue: string;
   onClose: () => void;
   onEmailListValueChange: (value: string) => void;
   onImportEmails: () => void;
   onRemoveSelectedUser: (userId: string) => void;
   onSearchValueChange: (value: string) => void;
-  onSelectUser: (user: AppUser) => void;
+  onSelectUser: (user: UserSearchResultDto) => void;
   onStartsAtValueChange: (value: string) => void;
   onSubmit: () => void;
 }
@@ -273,7 +273,7 @@ export default function AddUsersModal({
   );
 }
 
-function UserStatusBadge({ status }: { status: AppUser['status'] }) {
+function UserStatusBadge({ status }: { status: UserSearchResultDto['status'] }) {
   const className =
     status === 'disabled'
       ? 'border-red-200 bg-red-50 text-red-700'

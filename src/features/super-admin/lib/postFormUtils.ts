@@ -1,12 +1,12 @@
-import {
-  createPostSlug,
-  type Post,
-  type PostContentBlock,
-  type PostImageBlock,
-  type PostRichTextBlock,
-  type PostStatus,
-  type PostWrite,
-} from '@/services/posts';
+import { createPostSlug } from '@/features/posts/lib/content';
+import type {
+  PostContentBlock,
+  PostDto,
+  PostImageBlock,
+  PostRichTextBlock,
+  PostStatus,
+  PostWriteInput,
+} from '@/features/posts/types';
 
 export type DraftBlock = PostRichTextBlock | PostImageBlock;
 export type DraftBlockType = DraftBlock['type'];
@@ -34,7 +34,7 @@ export function createEmptyPostForm(): PostFormState {
   };
 }
 
-export function createPostFormFromPost(post: Post): PostFormState {
+export function createPostFormFromPost(post: PostDto): PostFormState {
   const editableContent = post.content.filter(isEditableBlock);
 
   return {
@@ -48,7 +48,7 @@ export function createPostFormFromPost(post: Post): PostFormState {
   };
 }
 
-export function buildPostWrite(form: PostFormState): PostWrite {
+export function buildPostWrite(form: PostFormState): PostWriteInput {
   const fallbackThumbnail = getFirstImageThumbnail(form.content);
 
   return {
@@ -119,7 +119,7 @@ export function reorderBlocks(
   return nextBlocks;
 }
 
-export function upsertPostByUpdatedAt(posts: Post[], savedPost: Post) {
+export function upsertPostByUpdatedAt(posts: PostDto[], savedPost: PostDto) {
   return [savedPost, ...posts.filter((post) => post.id !== savedPost.id)].sort((a, b) =>
     b.updatedAt.localeCompare(a.updatedAt),
   );
