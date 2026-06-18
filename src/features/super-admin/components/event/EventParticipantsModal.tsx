@@ -1,4 +1,4 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import {
   EVENT_ROLE_KEYS,
   ROLE_LABELS,
@@ -31,7 +31,7 @@ import {
   type OrganizationEventParticipant,
   type OrganizationEventParticipantCapabilities,
 } from '@/services/organizationAdmin';
-import { queryUsers } from '@/services/users';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, Search, UserPlus, UsersRound, X } from 'lucide-react';
@@ -52,7 +52,7 @@ export default function EventParticipantsModal({ event, onClose }: EventParticip
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [userSearch, setUserSearch] = useState('');
-  const [userResults, setUserResults] = useState<AppUser[]>([]);
+  const [userResults, setUserResults] = useState<UserSearchResultDto[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [pendingAction, setPendingAction] = useState('');
   const [transferTarget, setTransferTarget] = useState<OrganizationEventParticipant | null>(null);
@@ -106,7 +106,7 @@ export default function EventParticipantsModal({ event, onClose }: EventParticip
       setIsSearchingUsers(true);
 
       try {
-        const nextUsers = await queryUsers({
+        const nextUsers = await searchUsers({
           search: userSearch.trim(),
           limit: userSearch.trim() ? 12 : 20,
         });
@@ -155,7 +155,7 @@ export default function EventParticipantsModal({ event, onClose }: EventParticip
     }
   }
 
-  async function handleAddUser(user: AppUser) {
+  async function handleAddUser(user: UserSearchResultDto) {
     if (!capabilities.canManageMembers) {
       return;
     }

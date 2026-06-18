@@ -1,4 +1,4 @@
-import type { PostRichTextBlock } from '@/services/posts';
+import type { PostRichTextBlock } from '@/features/posts/types';
 import { ListItemNode, ListNode } from '@lexical/list';
 import { LexicalComposer } from '@lexical/react/LexicalComposer';
 import { ContentEditable } from '@lexical/react/LexicalContentEditable';

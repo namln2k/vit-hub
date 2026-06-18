@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createServerClient } from '@supabase/ssr';
 import { getSupabasePublicServerConfig } from '@/server/env';
 import { SUPABASE_AUTH_COOKIE_NAME } from './config';

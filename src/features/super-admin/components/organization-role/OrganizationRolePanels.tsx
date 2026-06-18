@@ -1,4 +1,4 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import {
   formatVietnamDateTime,
   getAssignmentStatusLabel,
@@ -121,7 +121,7 @@ export function TechnicalAdminsTable({ admins }: { admins: OrganizationTechnical
 export function UserSummary({
   user,
 }: {
-  user: OrganizationRoleAssignmentDetail['user'] | OrganizationTechnicalAdmin | AppUser;
+  user: OrganizationRoleAssignmentDetail['user'] | OrganizationTechnicalAdmin | UserSearchResultDto;
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">

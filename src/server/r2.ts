@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createHash, createHmac } from 'node:crypto';
 
 const PRESIGNED_URL_TTL_SECONDS = 60;

@@ -1,4 +1,8 @@
-import { importUsers, queryUsers, updateUserStatus } from '@/services/users';
+import {
+  changeUserStatusAction,
+  importUsersAction,
+  listUsersForAdministrationAction,
+} from '@/actions/users';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
@@ -7,10 +11,11 @@ import {
 } from '@/features/super-admin/lib/userUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
+import type { UserSummaryDto } from '@/features/users/types';
 import type { UserStatus } from '@/features/organization-structure/permissions';
 import { parseUserImportFile, USER_IMPORT_MAX_FILE_BYTES } from '@/services/users/import';
 import { Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ImportUsersPanel, { type ImportValidation } from './ImportUsersPanel';
 import UsersTable from './UsersTable';
@@ -22,13 +27,13 @@ const USERS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'users') ?
 type UsersView = 'list' | 'import';
 type UserStatusFilter = 'all' | UserStatus;
 
-export default function UsersManagement() {
+export default function UsersManagement({ initialUsers }: { initialUsers: UserSummaryDto[] }) {
   const searchParams = useSearchParams();
   const activeView: UsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<AppUser[]>(initialUsers);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [userError, setUserError] = useState('');
   const [validatedImport, setValidatedImport] = useState<ImportValidation | null>(null);
@@ -67,10 +72,14 @@ export default function UsersManagement() {
       setUserError('');
 
       try {
-        const nextUsers = await queryUsers({ fetchAll: true });
+        const result = await listUsersForAdministrationAction();
+
+        if (!result.ok) {
+          throw new Error(result.error.message);
+        }
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.data);
         }
       } catch (error) {
         if (isMounted()) {
@@ -90,18 +99,6 @@ export default function UsersManagement() {
     },
     [],
   );
-
-  useEffect(() => {
-    let isActive = true;
-    const timeoutId = window.setTimeout(() => {
-      void loadUsers({ isMounted: () => isActive });
-    }, 0);
-
-    return () => {
-      isActive = false;
-      window.clearTimeout(timeoutId);
-    };
-  }, [loadUsers]);
 
   async function handleImportFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -133,7 +130,13 @@ export default function UsersManagement() {
 
     try {
       setIsImporting(true);
-      const importedCount = await importUsers(validatedImport.users);
+      const result = await importUsersAction({ users: validatedImport.users });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      const { importedCount } = result.data;
       toast.success(`Đã import ${importedCount} nhân sự từ ${validatedImport.fileName}.`, {
         id: 'users-import-success',
       });
@@ -156,10 +159,17 @@ export default function UsersManagement() {
     }
 
     try {
-      await updateUserStatus(user.uid, status);
+      const result = await changeUserStatusAction({ userId: user.uid, status });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
       setUsers((currentUsers) =>
         currentUsers.map((currentUser) =>
-          currentUser.uid === user.uid ? { ...currentUser, status } : currentUser,
+          currentUser.uid === result.data.userId
+            ? { ...currentUser, status: result.data.status }
+            : currentUser,
         ),
       );
       toast.success(`Đã cập nhật trạng thái nhân sự sang ${statusLabel}.`, {

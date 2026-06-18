@@ -11,11 +11,7 @@ export const APP_ROUTES = {
 } as const;
 
 export const API_ROUTES = {
-  authRegister: '/api/auth/register',
-  avatarsPresign: '/api/avatars/presign',
   sportsGames: '/api/sports/games',
-  postsPresign: '/api/posts/presign',
-  usersImport: '/api/users/import',
 } as const;
 
 export const PROTECTED_APP_ROUTES = [

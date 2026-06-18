@@ -1,16 +1,16 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import {
   fromVietnamDateTimeLocalValue,
   toVietnamDateTimeLocalValue,
 } from '@/features/super-admin/lib/vietnamDateTime';
 import { UserSummary } from '@/features/super-admin/components/organization-role/OrganizationRolePanels';
 import { getDisplayName } from '@/features/super-admin/components/organization-role/organizationRoleUtils';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import {
   formatOrganizationRoleApiError,
   formatTransferLeadApiError,
   type OrganizationRoleAssignmentDetail,
 } from '@/services/organizationAdmin';
-import { queryUsers } from '@/services/users';
 import Avatar from '@/shared/layout/Avatar';
 import { ArrowRightLeft, Search, X } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -22,7 +22,7 @@ export function AssignViceCaptainModal({
   onClose: () => void;
   onAssign: (userId: string, startsAt: string, endsAt: string | null) => Promise<void>;
 }) {
-  const [targetUser, setTargetUser] = useState<AppUser | null>(null);
+  const [targetUser, setTargetUser] = useState<UserSearchResultDto | null>(null);
   const [startsAtValue, setStartsAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
   const [endsAtValue, setEndsAtValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +91,7 @@ export function TransferCaptainModal({
   onClose: () => void;
   onTransfer: (targetUserId: string) => Promise<void>;
 }) {
-  const [targetUser, setTargetUser] = useState<AppUser | null>(null);
+  const [targetUser, setTargetUser] = useState<UserSearchResultDto | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -194,15 +194,15 @@ function RoleUserPickerModal({
   title: string;
   confirmLabel: string;
   currentUser?: OrganizationRoleAssignmentDetail['user'];
-  targetUser: AppUser | null;
+  targetUser: UserSearchResultDto | null;
   isSaving: boolean;
   error: string;
   onClose: () => void;
   onConfirm: () => void;
-  onTargetUserChange: (user: AppUser) => void;
+  onTargetUserChange: (user: UserSearchResultDto) => void;
 }) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<UserSearchResultDto[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
   const queryText = searchValue.trim();
@@ -222,7 +222,7 @@ function RoleUserPickerModal({
         setSearchError('');
 
         try {
-          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+          const nextUsers = await searchUsers({ search: queryText, limit: queryText ? 12 : 20 });
 
           if (isActive) {
             setUsers(nextUsers);
@@ -410,7 +410,7 @@ function RoleUserCard({
   user,
 }: {
   label: string;
-  user: OrganizationRoleAssignmentDetail['user'] | AppUser | null;
+  user: OrganizationRoleAssignmentDetail['user'] | UserSearchResultDto | null;
 }) {
   return (
     <div className="min-h-24 rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -426,7 +426,7 @@ function RoleUserCard({
   );
 }
 
-function PickerUserStatusBadge({ status }: { status: AppUser['status'] }) {
+function PickerUserStatusBadge({ status }: { status: UserSearchResultDto['status'] }) {
   const className =
     status === 'disabled'
       ? 'border-red-200 bg-red-50 text-red-700'

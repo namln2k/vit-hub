@@ -1,10 +1,10 @@
 'use client';
 
-import { queryUsers } from '@/services/users';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
 import { useAuth } from '@/contexts/useAuth';
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import { Search, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
@@ -16,14 +16,14 @@ function normalizeSearchValue(value: string) {
   return value.trim().toLowerCase();
 }
 
-function getFullName(user: AppUser) {
+function getFullName(user: UserSearchResultDto) {
   return `${user.lastName} ${user.middleName} ${user.firstName}`.trim();
 }
 
 export default function UserSearch({ variant = 'light' }: UserSearchProps) {
   const { currentUser } = useAuth();
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<UserSearchResultDto[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -83,7 +83,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       setError('');
 
       try {
-        setUsers(await queryUsers({ search: queryText, limit: 12 }));
+        setUsers(await searchUsers({ search: queryText, limit: 12 }));
       } catch {
         setError('Không thể tìm kiếm thành viên lúc này.');
       } finally {
