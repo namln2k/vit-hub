@@ -50,34 +50,34 @@ VIT Hub is a React web application for VIT Volunteers management.
 
 Docker Compose is the recommended workflow for consistent Node.js versions across the team. If you run the app directly on your machine, use the pinned project Node.js version first:
 
-   ```bash
-   nvm use
-   ```
+```bash
+nvm use
+```
 
-   On nvm-windows, pass the version explicitly:
+On nvm-windows, pass the version explicitly:
 
-   ```powershell
-   nvm install 24.16.0
-   nvm use 24.16.0
-   ```
+```powershell
+nvm install 24.16.0
+nvm use 24.16.0
+```
 
 Install dependencies:
 
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 
 Start the development server:
 
-   ```bash
-   npm run dev
-   ```
+```bash
+npm run dev
+```
 
 Open:
 
-   ```text
-   http://localhost:3000
-   ```
+```text
+http://localhost:3000
+```
 
 ## Scripts
 

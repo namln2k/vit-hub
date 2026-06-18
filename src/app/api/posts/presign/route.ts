@@ -163,10 +163,7 @@ export async function POST(request: Request) {
     }
 
     if (!Number.isSafeInteger(size) || size <= 0 || size > maxUploadBytes) {
-      return jsonResponse(
-        { error: `Post image must be ${maxUploadBytes} bytes or smaller.` },
-        400,
-      );
+      return jsonResponse({ error: `Post image must be ${maxUploadBytes} bytes or smaller.` }, 400);
     }
 
     const r2 = getRequiredR2Config();

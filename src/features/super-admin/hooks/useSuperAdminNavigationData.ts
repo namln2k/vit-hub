@@ -2,6 +2,7 @@
 
 import { listDivisions, type Division } from '@/services/divisions';
 import { listGroups, type Group } from '@/services/groups';
+import { listClubs, type Club } from '@/services/clubs';
 import {
   findAdminItemBySlug,
   getAdminItemPath,
@@ -27,6 +28,9 @@ export function useSuperAdminNavigationData({
   const [groups, setGroups] = useState<Group[]>([]);
   const [isLoadingGroups, setIsLoadingGroups] = useState(true);
   const [groupError, setGroupError] = useState('');
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [isLoadingClubs, setIsLoadingClubs] = useState(true);
+  const [clubError, setClubError] = useState('');
 
   const activeDivision = useMemo(
     () => (activeSectionId === 'divisions' ? findAdminItemBySlug(divisions, activeItemSlug) : null),
@@ -35,6 +39,10 @@ export function useSuperAdminNavigationData({
   const activeGroup = useMemo(
     () => (activeSectionId === 'groups' ? findAdminItemBySlug(groups, activeItemSlug) : null),
     [activeItemSlug, activeSectionId, groups],
+  );
+  const activeClub = useMemo(
+    () => (activeSectionId === 'clubs' ? findAdminItemBySlug(clubs, activeItemSlug) : null),
+    [activeItemSlug, activeSectionId, clubs],
   );
 
   useEffect(() => {
@@ -67,6 +75,44 @@ export function useSuperAdminNavigationData({
     }
 
     void loadDivisions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadClubs() {
+      setIsLoadingClubs(true);
+      setClubError('');
+
+      try {
+        const nextClubs = await listClubs();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setClubs(nextClubs);
+      } catch (error) {
+        if (isMounted) {
+          const message = error instanceof Error ? error.message : '';
+          setClubError(
+            message
+              ? `Không thể tải danh sách CLB/tổ: ${message}`
+              : 'Không thể tải danh sách CLB/tổ.',
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingClubs(false);
+        }
+      }
+    }
+
+    void loadClubs();
 
     return () => {
       isMounted = false;
@@ -141,6 +187,26 @@ export function useSuperAdminNavigationData({
     [router],
   );
 
+  const handleClubCreated = useCallback(
+    (club: Club) => {
+      setClubs((currentClubs) => sortClubsByName([...currentClubs, club]));
+      router.push(getAdminItemPath('clubs', club));
+    },
+    [router],
+  );
+
+  const handleClubUpdated = useCallback(
+    (club: Club) => {
+      setClubs((currentClubs) =>
+        sortClubsByName(
+          currentClubs.map((currentClub) => (currentClub.id === club.id ? club : currentClub)),
+        ),
+      );
+      router.replace(getAdminItemPath('clubs', club));
+    },
+    [router],
+  );
+
   return {
     divisions,
     isLoadingDivisions,
@@ -150,12 +216,22 @@ export function useSuperAdminNavigationData({
     groupError,
     activeDivision,
     activeGroup,
+    clubs,
+    isLoadingClubs,
+    clubError,
+    activeClub,
     handleGroupCreated,
     handleGroupUpdated,
     handleGroupDeleted,
+    handleClubCreated,
+    handleClubUpdated,
   };
 }
 
 function sortGroupsByName(groups: Group[]) {
   return groups.sort((first, second) => first.name.localeCompare(second.name));
+}
+
+function sortClubsByName(clubs: Club[]) {
+  return clubs.sort((first, second) => first.name.localeCompare(second.name));
 }

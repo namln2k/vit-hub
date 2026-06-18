@@ -13,12 +13,18 @@ function sha256(value: string) {
 }
 
 function encodePathSegment(value: string) {
-  return encodeURIComponent(value).replace(/[!'()*]/g, (char) =>
-    `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 }
 
-function getSigningKey(secretAccessKey: string, dateStamp: string, region: string, service: string) {
+function getSigningKey(
+  secretAccessKey: string,
+  dateStamp: string,
+  region: string,
+  service: string,
+) {
   const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
   const dateRegionKey = hmac(dateKey, region);
   const dateRegionServiceKey = hmac(dateRegionKey, service);

@@ -19,17 +19,19 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setName(group?.name ?? '');
-    setDescription(group?.description ?? '');
-    setError('');
+    const timeoutId = window.setTimeout(() => {
+      setName(group?.name ?? '');
+      setDescription(group?.description ?? '');
+      setError('');
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [group]);
 
   const trimmedName = name.trim();
   const trimmedDescription = description.trim();
   const hasChanges =
-    !group ||
-    trimmedName !== group.name ||
-    trimmedDescription !== group.description.trim();
+    !group || trimmedName !== group.name || trimmedDescription !== group.description.trim();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,9 +61,7 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
       const message = saveError instanceof Error ? saveError.message : '';
       const actionText = isEditing ? 'cập nhật' : 'tạo';
       toast.error(
-        message
-          ? `Không thể ${actionText} nhóm: ${message}`
-          : `Không thể ${actionText} nhóm.`,
+        message ? `Không thể ${actionText} nhóm: ${message}` : `Không thể ${actionText} nhóm.`,
         { id: isEditing ? 'group-update-error' : 'group-create-error' },
       );
     } finally {

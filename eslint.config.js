@@ -8,7 +8,11 @@ export default defineConfig([
   globalIgnores(['dist', '.next', 'next-env.d.ts']),
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [js.configs.recommended, tseslint.configs.recommended, reactHooks.configs.flat.recommended],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      reactHooks.configs.flat.recommended,
+    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {

@@ -11,10 +11,7 @@ interface PersonnelInfoSectionProps {
   onUpdate: (data: UpdateUserPersonnelData) => Promise<void>;
 }
 
-export default function PersonnelInfoSection({
-  appUser,
-  onUpdate,
-}: PersonnelInfoSectionProps) {
+export default function PersonnelInfoSection({ appUser, onUpdate }: PersonnelInfoSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({

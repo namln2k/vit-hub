@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import type { UserRole } from '@/constants/userRoles';
+import type { UserStatus } from '@/features/organization-structure/permissions';
 
 export interface AuthUser {
   id: string;
@@ -25,6 +26,7 @@ export interface AppUser {
   avatarUrl?: string;
   avatarKey?: string;
   role: UserRole;
+  status?: UserStatus;
 }
 
 export interface SignUpData {

@@ -1,9 +1,11 @@
 The commit message must follow the Conventional Commits specification. The format is as follows:
 
 ```<type>: <description>
+
 ```
 
 Where:
+
 - `<type>` is a noun that describes the type of change being made. Common types include
   - `build`: Changes that affect the build system or external dependencies
   - `chore`: Changes that do not modify src or test files

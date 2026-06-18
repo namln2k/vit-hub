@@ -320,7 +320,14 @@ function renderFormattedLexicalText(node: SerializedLexicalNode, key: string): R
 type LexicalHeadingTag = 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
 
 function getLexicalHeadingTag(tag: string | undefined): LexicalHeadingTag {
-  if (tag === 'h1' || tag === 'h2' || tag === 'h3' || tag === 'h4' || tag === 'h5' || tag === 'h6') {
+  if (
+    tag === 'h1' ||
+    tag === 'h2' ||
+    tag === 'h3' ||
+    tag === 'h4' ||
+    tag === 'h5' ||
+    tag === 'h6'
+  ) {
     return tag;
   }
 

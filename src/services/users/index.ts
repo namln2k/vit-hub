@@ -2,9 +2,10 @@ import { API_ROUTES } from '@/constants/routes';
 import { supabase } from '@/services/supabase';
 import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
+import type { UserStatus } from '@/features/organization-structure/permissions';
 
 const USER_SELECT =
-  'id, email, first_name, last_name, middle_name, nickname, username, phone_number, school_name, enter_year, cohort, gender, avatar_url, avatar_key, role';
+  'id, email, first_name, last_name, middle_name, nickname, username, phone_number, school_name, enter_year, cohort, gender, avatar_url, avatar_key, role, status';
 const DEFAULT_USERS_LIMIT = 20;
 const ALL_USERS_PAGE_SIZE = 1000;
 
@@ -46,6 +47,7 @@ export interface UserRow {
   avatar_url: string | null;
   avatar_key: string | null;
   role: UserRole;
+  status?: UserStatus;
 }
 
 export interface UserWrite {
@@ -64,6 +66,7 @@ export interface UserWrite {
   avatar_url: string;
   avatar_key: string;
   role: UserRole;
+  status: UserStatus;
 }
 
 export function mapUserRow(row: UserRow): AppUser {
@@ -83,6 +86,7 @@ export function mapUserRow(row: UserRow): AppUser {
     avatarUrl: row.avatar_url ?? '',
     avatarKey: row.avatar_key ?? '',
     role: row.role,
+    status: row.status ?? 'active',
   };
 }
 
@@ -103,6 +107,7 @@ export function mapUserToWrite(user: AppUser): UserWrite {
     avatar_url: user.avatarUrl ?? '',
     avatar_key: user.avatarKey ?? '',
     role: user.role,
+    status: user.status ?? 'active',
   };
 }
 
@@ -202,6 +207,43 @@ export async function importUsers(users: ImportUserInput[]): Promise<number> {
   }
 
   return Number(result.importedCount) || 0;
+}
+
+export async function updateUserStatus(userId: string, status: UserStatus) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error('Bạn cần đăng nhập để cập nhật trạng thái nhân sự.');
+  }
+
+  const response = await fetch(`/api/users/${userId}/status`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+  const result = (await response.json().catch(() => ({}))) as { error?: string };
+
+  if (!response.ok) {
+    const message = result.error ?? 'Không thể cập nhật trạng thái nhân sự.';
+    throw new Error(`${response.status} ${getHttpStatusLabel(response.status)}: ${message}`);
+  }
+}
+
+function getHttpStatusLabel(status: number) {
+  if (status === 403) {
+    return 'Forbidden';
+  }
+
+  if (status === 409) {
+    return 'Conflict';
+  }
+
+  return 'Error';
 }
 
 function createUserQuery(params: QueryUsersParams) {

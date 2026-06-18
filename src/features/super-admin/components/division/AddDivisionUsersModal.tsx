@@ -22,7 +22,7 @@ export default function AddDivisionUsersModal({
     entityLabel: 'mảng',
     successToastId: 'division-add-users-success',
     errorToastId: 'division-add-users-error',
-    onAddUsers: (userIds) => addUsersToDivision(divisionId, userIds),
+    onAddUsers: (userIds, startsAt) => addUsersToDivision(divisionId, userIds, startsAt),
     onAdded,
     onClose,
   });
@@ -43,12 +43,14 @@ export default function AddDivisionUsersModal({
       searchError={modal.searchError}
       searchValue={modal.searchValue}
       selectedUsers={modal.selectedUsers}
+      startsAtValue={modal.startsAtValue}
       onClose={onClose}
       onEmailListValueChange={modal.updateEmailListValue}
       onImportEmails={modal.importEmails}
       onRemoveSelectedUser={modal.removeSelectedUser}
       onSearchValueChange={modal.setSearchValue}
       onSelectUser={modal.selectUser}
+      onStartsAtValueChange={modal.setStartsAtValue}
       onSubmit={modal.submit}
     />
   );

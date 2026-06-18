@@ -70,9 +70,12 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
 
   useEffect(() => {
     if (queryText.length < 2) {
-      setError('');
-      setIsLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setError('');
+        setIsLoading(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     const timeoutId = window.setTimeout(async () => {
