@@ -2,7 +2,7 @@ import { createClub, updateClub, type Club } from '@/services/clubs';
 import type { Division } from '@/services/divisions';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, Save, X } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -36,7 +36,7 @@ export default function ClubFormModal({
     trimmedName !== club.name ||
     trimmedDescription !== club.description.trim();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!divisionId) {

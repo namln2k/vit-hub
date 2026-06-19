@@ -1,7 +1,7 @@
 import { createGroup, updateGroup, type Group } from '@/services/groups';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, Save, X } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -33,7 +33,7 @@ export default function GroupFormModal({ group, onClose, onSaved }: GroupFormMod
   const hasChanges =
     !group || trimmedName !== group.name || trimmedDescription !== group.description.trim();
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!trimmedName) {

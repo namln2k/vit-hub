@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
 interface SportManagementDetailPageProps {
@@ -148,7 +148,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
     }
   }
 
-  async function handleUpdateGame(event: FormEvent<HTMLFormElement>) {
+  async function handleUpdateGame(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!editForm) {

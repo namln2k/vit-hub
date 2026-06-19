@@ -19,7 +19,7 @@ import {
 } from '@/features/super-admin/lib/postFormUtils';
 import { Plus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
 export default function PostsManagement({
@@ -73,7 +73,7 @@ function PostEditorManagement({ initialPosts }: { initialPosts: PostDto[] }) {
     setIsSlugEditing(false);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const input = buildPostWrite(form);

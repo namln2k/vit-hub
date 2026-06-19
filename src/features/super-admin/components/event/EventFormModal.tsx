@@ -16,7 +16,7 @@ import {
 } from '@/services/organizationAdmin';
 import Sharingan from '@/shared/loading/Sharingan';
 import { ShieldCheck, UsersRound, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
 interface EventFormModalProps {
@@ -61,7 +61,7 @@ export default function EventFormModal({
     setError('');
   }
 
-  async function handleSubmit(formEvent: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(formEvent: SubmitEvent<HTMLFormElement>) {
     formEvent.preventDefault();
 
     if (!formState.name.trim()) {

@@ -12,7 +12,7 @@ import {
 import { SPORT_TYPE_ICONS, SPORT_TYPE_THEMES } from '@/features/sports/sportTypeUi';
 import Link from 'next/link';
 import Sharingan from '@/shared/loading/Sharingan';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -193,7 +193,7 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
     }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
