@@ -32,3 +32,5 @@ supabase/.temp/
 supabase/.branches/
 supabase/.migrations/
 .supabase/functions/.env
+# next-agents-md
+.next-docs/
