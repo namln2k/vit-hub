@@ -16,6 +16,8 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const identity = await getWebAuthIdentity();
+  const googleOneTapEnabled =
+    process.env.NEXT_PUBLIC_GOOGLE_ONE_TAP_ENABLED === 'true' && identity === null;
   const initialAppUser = identity ? await loadInitialAppUser(identity) : null;
   const initialCurrentUser = identity
     ? {
@@ -35,7 +37,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Providers initialAppUser={initialAppUser} initialCurrentUser={initialCurrentUser}>
           <Header />
-          <GoogleOneTap />
+          {googleOneTapEnabled ? <GoogleOneTap /> : null}
           {children}
         </Providers>
       </body>

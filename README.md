@@ -30,6 +30,10 @@ VIT Hub is a React web application for VIT Volunteers management.
 
    Follow the [Supabase setup guide](docs/supabase-setup.md), then copy the Supabase project URL, publishable key, and service role key into `.env.local`.
 
+   Google One Tap is disabled by default. To enable it, configure the application's origin in
+   Google Cloud, then set `NEXT_PUBLIC_GOOGLE_ONE_TAP_ENABLED=true` and
+   `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+
 3. Set up Cloudflare R2 if avatar uploads are enabled.
 
    Follow the [Cloudflare setup guide](docs/cloudflare-setup.md), then set the server-only R2
