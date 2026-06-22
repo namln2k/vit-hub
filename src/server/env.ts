@@ -37,7 +37,9 @@ function requireEnv(name: string) {
 export function getSupabasePublicServerConfig() {
   const publicSupabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseUrl =
-    publicSupabaseUrl && isLocalSupabaseUrl(publicSupabaseUrl)
+    process.env.DOCKER_CONTAINER === 'true' &&
+    publicSupabaseUrl &&
+    isLocalSupabaseUrl(publicSupabaseUrl)
       ? (process.env.SUPABASE_INTERNAL_URL ?? publicSupabaseUrl)
       : publicSupabaseUrl;
   const publishableKey =

@@ -7,6 +7,7 @@ import type { UserSummaryDto } from '@/features/users/types';
 import '@/app/globals.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import GoogleOneTap from '@/screens/OneTapComponent';
 
 export const metadata: Metadata = {
   title: 'VIT Hub',
@@ -34,6 +35,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       <body>
         <Providers initialAppUser={initialAppUser} initialCurrentUser={initialCurrentUser}>
           <Header />
+          <GoogleOneTap />
           {children}
         </Providers>
       </body>

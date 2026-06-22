@@ -25,6 +25,7 @@
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.106.2",
     "emoji-picker-react": "^4.19.1",
+    "google-one-tap": "^1.0.6",
     "lexical": "^0.45.0",
     "lucide-react": "^1.8.0",
     "next": "^16.2.2",
