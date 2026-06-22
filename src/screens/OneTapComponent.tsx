@@ -1,7 +1,9 @@
 'use client';
 
-import { createClient } from '@/lib/supabase/client';
+import { getGoogleOneTapConfig } from '@/config/env';
+import { supabase } from '@/lib/supabase/client';
 import type { accounts, CredentialResponse } from 'google-one-tap';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 
@@ -25,11 +27,24 @@ const generateNonce = async (): Promise<string[]> => {
 
 const GoogleOneTap = () => {
   const router = useRouter();
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const supabase = createClient();
+  const { clientId } = getGoogleOneTapConfig();
+  const [isMounted, setIsMounted] = useState(false);
+  const [isLocalHost, setIsLocalHost] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setIsLocalHost(
+      ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname),
+    );
+  }, []);
 
   const initializeGoogleOneTap = async () => {
     if (!clientId) {
+      return;
+    }
+
+    if (!window.isSecureContext || typeof crypto?.subtle?.digest !== 'function') {
+      console.warn('Skipping Google One Tap because the current origin is not secure.');
       return;
     }
 
@@ -72,6 +87,10 @@ const GoogleOneTap = () => {
   };
 
   if (!clientId) {
+    return null;
+  }
+
+  if (!isMounted || isLocalHost) {
     return null;
   }
 

@@ -5,10 +5,10 @@ import {
   type AvatarObjectRepository,
 } from '@/server/repositories/media/avatarObjectRepository';
 import type { Actor } from '@/server/services/shared/actor';
+import { getUploadLimits } from '@/server/env';
 import { DomainValidationError, ForbiddenError } from '@/server/services/shared/errors';
 
 const ALLOWED_CONTENT_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024;
 
 interface AvatarMediaDependencies {
   avatars: Pick<AvatarObjectRepository, 'createUploadIntent' | 'delete'>;
@@ -17,7 +17,7 @@ interface AvatarMediaDependencies {
 
 const defaultDependencies: AvatarMediaDependencies = {
   avatars: avatarObjectRepository,
-  maxUploadBytes: Number(process.env.R2_FREE_TIER_MAX_UPLOAD_BYTES) || DEFAULT_MAX_UPLOAD_BYTES,
+  maxUploadBytes: getUploadLimits().avatarBytes,
 };
 
 export function createAvatarMediaService(

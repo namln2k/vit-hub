@@ -21,9 +21,9 @@ import {
   DomainValidationError,
   InfrastructureError,
 } from '@/server/services/shared/errors';
+import { getUploadLimits } from '@/server/env';
 
 const ALLOWED_AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const DEFAULT_MAX_AVATAR_BYTES = 1024 * 1024;
 
 export interface RegistrationAvatarInput {
   contentType: string;
@@ -59,7 +59,7 @@ const defaultDependencies: RegistrationDependencies = {
   auth: authRepository,
   avatars: avatarObjectRepository,
   users: userRepository,
-  maxAvatarBytes: Number(process.env.R2_FREE_TIER_MAX_UPLOAD_BYTES) || DEFAULT_MAX_AVATAR_BYTES,
+  maxAvatarBytes: getUploadLimits().avatarBytes,
 };
 
 export function createRegistrationService(

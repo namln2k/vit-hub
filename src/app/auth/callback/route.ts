@@ -5,18 +5,17 @@ import {
   getSafeAuthNextPath,
 } from '@/features/auth/lib/authRedirects';
 import { getCurrentUserProfile } from '@/server/services/users/profile';
+import { getRequestOriginFromHeaders } from '@/server/requestOrigin';
 import type { UserSummaryDto } from '@/features/users/types';
 import { NextResponse } from 'next/server';
 
-function getAppOrigin() {
-  return (process.env.NEXT_PUBLIC_APP_ORIGIN ?? 'http://localhost:3000').replace(/\/$/, '');
-}
-
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  const requestHeaders = new Headers(request.headers);
+  const origin = getRequestOriginFromHeaders(requestHeaders);
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const code = searchParams.get('code');
   const next = getSafeAuthNextPath(searchParams.get('next'));
-  const origin = getAppOrigin();
 
   if (code) {
     const supabase = await createClient();

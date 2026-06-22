@@ -80,7 +80,7 @@ still fail even if the public `r2.dev` URL works.
 ```json
 [
   {
-    "AllowedOrigins": ["http://localhost:5173", "https://your-app.example.com"],
+    "AllowedOrigins": ["http://localhost:3000", "https://your-app.example.com"],
     "AllowedMethods": ["PUT"],
     "AllowedHeaders": ["content-type"],
     "ExposeHeaders": ["etag"],
@@ -91,7 +91,7 @@ still fail even if the public `r2.dev` URL works.
 
 Replace `https://your-app.example.com` with your Vercel or VPS domain.
 
-For local testing, keep `http://localhost:5173` exactly, with no trailing slash or path. For Vercel preview deployments, add the preview URL if you want avatar uploads to work before production.
+For local testing, keep `http://localhost:3000` exactly, with no trailing slash or path. For Vercel preview deployments, add the preview URL if you want avatar uploads to work before production.
 
 If the browser reports `No 'Access-Control-Allow-Origin' header is present` for a URL like
 `https://<account-id>.r2.cloudflarestorage.com/<bucket>/avatars/...`, check that the CORS policy is
@@ -137,12 +137,9 @@ Use the bucket's public `r2.dev` URL or a custom public domain instead. `R2_PUBL
 
 ## Environment Variables
 
-Set these server-only values wherever the Next.js server runs:
+Set these server-only values in both credential profiles when media uploads are needed:
 
 ```env
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 R2_ACCOUNT_ID=your-cloudflare-account-id
 R2_ACCESS_KEY_ID=your-r2-access-key-id
 R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
@@ -181,9 +178,6 @@ Vercel Project -> Settings -> Environment Variables
 ```
 
 ```env
-SUPABASE_URL
-SUPABASE_PUBLISHABLE_KEY
-SUPABASE_SERVICE_ROLE_KEY
 R2_ACCOUNT_ID
 R2_ACCESS_KEY_ID
 R2_SECRET_ACCESS_KEY
@@ -193,7 +187,7 @@ R2_FREE_TIER_MAX_UPLOAD_BYTES
 R2_POST_IMAGE_MAX_UPLOAD_BYTES
 ```
 
-Also keep the `NEXT_PUBLIC_SUPABASE_*` values configured for the browser client.
+See [Environment Profiles](environment-profiles.md) for the Vercel and local runtime matrix.
 
 ## VPS Deployment
 

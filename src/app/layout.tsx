@@ -8,6 +8,7 @@ import '@/app/globals.css';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import GoogleOneTap from '@/screens/OneTapComponent';
+import { getGoogleOneTapConfig } from '@/config/env';
 
 export const metadata: Metadata = {
   title: 'VIT Hub',
@@ -16,8 +17,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const identity = await getWebAuthIdentity();
-  const googleOneTapEnabled =
-    process.env.NEXT_PUBLIC_GOOGLE_ONE_TAP_ENABLED === 'true' && identity === null;
+  const googleOneTapEnabled = getGoogleOneTapConfig().enabled && identity === null;
   const initialAppUser = identity ? await loadInitialAppUser(identity) : null;
   const initialCurrentUser = identity
     ? {

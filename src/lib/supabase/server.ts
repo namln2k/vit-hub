@@ -1,13 +1,13 @@
 import 'server-only';
 
 import { createServerClient } from '@supabase/ssr';
-import { getSupabasePublicServerConfig } from '@/server/env';
+import { getSupabaseServerConfig } from '@/server/env';
 import { SUPABASE_AUTH_COOKIE_NAME } from './config';
 import { cookies } from 'next/headers';
 
 export async function createClient() {
   const cookieStore = await cookies();
-  const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
+  const { supabaseUrl, publishableKey } = getSupabaseServerConfig();
 
   return createServerClient(supabaseUrl, publishableKey, {
     cookieOptions: {

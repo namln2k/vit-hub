@@ -9,8 +9,17 @@
     "npm": "11.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run dev:local",
+    "dev:local": "node scripts/run-profile.mjs local host",
+    "dev:production": "node scripts/run-profile.mjs production host",
+    "docker:local": "node scripts/run-profile.mjs local docker",
+    "docker:production": "node scripts/run-profile.mjs production docker",
+    "env:check": "npm run env:check:local && npm run env:check:production",
+    "env:check:local": "node scripts/check-profile.mjs local",
+    "env:check:production": "node scripts/check-profile.mjs production",
     "build": "next build --webpack",
+    "build:local": "node scripts/run-profile.mjs local build",
+    "build:production": "node scripts/run-profile.mjs production build",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run",

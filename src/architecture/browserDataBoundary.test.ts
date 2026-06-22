@@ -6,6 +6,7 @@ const sourceRoot = path.join(process.cwd(), 'src');
 
 const browserSupabaseImportAllowlist = new Set([
   'contexts/AuthContext.tsx',
+  'screens/OneTapComponent.tsx',
   'services/clubs.ts',
   'services/divisions.ts',
   'services/groups.ts',
@@ -42,7 +43,7 @@ describe('browser data boundaries', () => {
 
     for (const filePath of await listSourceFiles(sourceRoot)) {
       const source = await readFile(filePath, 'utf8');
-      const importsBrowserSupabase = /(?:from\s*|import\s*\()\s*['"]@\/services\/supabase['"]/.test(
+      const importsBrowserSupabase = /(?:from\s*|import\s*\()\s*['"]@\/lib\/supabase\/client['"]/.test(
         source,
       );
 

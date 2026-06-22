@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getSupabaseAdminServerConfig, getSupabasePublicServerConfig } from '@/server/env';
+import { getSupabaseAdminServerConfig, getSupabaseServerConfig } from '@/server/env';
 
 interface SupabaseFetchOptions {
   key?: string;
@@ -32,7 +32,7 @@ export async function supabaseFetch<T = unknown>(
 }
 
 export async function getSupabaseUid(accessToken: string) {
-  const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
+  const { supabaseUrl, publishableKey } = getSupabaseServerConfig();
   const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
     headers: {
       apikey: publishableKey,

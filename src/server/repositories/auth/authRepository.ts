@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getSupabaseAdminServerConfig, getSupabasePublicServerConfig } from '@/server/env';
+import { getSupabaseAdminServerConfig, getSupabaseServerConfig } from '@/server/env';
 import { supabaseFetch } from '@/server/supabase';
 
 export type AuthSignUpFailureReason = 'duplicate_email' | 'email_delivery' | 'unknown';
@@ -69,7 +69,7 @@ interface SignUpResponse {
 
 export const authRepository: AuthRepository = {
   async signUpWithPassword(input) {
-    const { supabaseUrl, publishableKey } = getSupabasePublicServerConfig();
+    const { supabaseUrl, publishableKey } = getSupabaseServerConfig();
     const signupUrl = new URL(`${supabaseUrl}/auth/v1/signup`);
 
     if (input.emailRedirectTo) {

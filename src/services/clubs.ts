@@ -8,7 +8,7 @@ import {
   type ScopeMemberCapabilities,
   type OrganizationMember,
 } from '@/services/organizationAdmin';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 export interface ClubPersonSummary {
   userId: string;

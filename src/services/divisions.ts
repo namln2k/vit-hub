@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase/client';
 import { mapLegacyUserRow, type LegacyUserRow } from '@/services/users/legacyMapping';
 import type { AppUser } from '@/contexts/auth';
 import {

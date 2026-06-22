@@ -1,4 +1,4 @@
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 export async function apiFetch<T = { ok: boolean }>(
   input: RequestInfo | URL,

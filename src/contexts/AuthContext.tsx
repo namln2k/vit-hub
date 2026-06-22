@@ -11,7 +11,7 @@ import {
   updateCurrentUserNicknameAction,
   updateCurrentUserPersonnelAction,
 } from '@/actions/users';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase/client';
 import {
   AuthContext,
   type AuthContextType,
@@ -52,10 +52,7 @@ function getAuthErrorMessage(error: unknown) {
 }
 
 function getAppOrigin() {
-  const configuredOrigin = process.env.NEXT_PUBLIC_APP_ORIGIN;
-  const origin = configuredOrigin || window.location.origin;
-
-  return origin.replace(/\/$/, '');
+  return window.location.origin;
 }
 
 function getAuthRedirectUrl(path: string) {

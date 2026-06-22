@@ -43,7 +43,7 @@ export default defineConfig([
                 'Browser and client modules must use DTOs, client helpers, or Server Actions instead of importing src/server.',
             },
             {
-              group: ['@/services/supabase'],
+              group: ['@/lib/supabase/client'],
               message:
                 'Direct browser Supabase access is restricted to the temporary migration allowlist.',
             },
@@ -55,6 +55,7 @@ export default defineConfig([
   {
     files: [
       'src/contexts/AuthContext.tsx',
+      'src/screens/OneTapComponent.tsx',
       'src/services/clubs.ts',
       'src/services/divisions.ts',
       'src/services/groups.ts',

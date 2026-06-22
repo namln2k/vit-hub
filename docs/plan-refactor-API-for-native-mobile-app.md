@@ -400,7 +400,7 @@ These tasks should be completed before or alongside the first migrated vertical 
 - Add `import 'server-only'` to service, repository, server auth, Supabase admin, and R2 modules.
 - Add ESLint boundaries preventing Client Components and browser modules from importing
   `src/server/**`.
-- Add an ESLint restriction preventing direct `@/services/supabase` imports outside the temporary
+- Add an ESLint restriction preventing direct `@/lib/supabase/client` imports outside the temporary
   auth/browser allowlist.
 - Document that only repositories may call `supabaseFetch`, database REST endpoints, or RPCs.
 

@@ -13,46 +13,22 @@ VIT Hub uses Supabase Auth for email/password and Google accounts, and a `user` 
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root:
-
-```bash
-cp .env.example .env.local
-```
-
-Fill in the Supabase values:
+Use the two profiles documented in [Environment Profiles](environment-profiles.md). The canonical
+Supabase variables are:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
-NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-For local Supabase while the app runs in Docker, keep the public URL reachable from your browser and set the server-side URL reachable from the app container:
+Local Docker additionally uses:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_URL=http://127.0.0.1:54321
 SUPABASE_INTERNAL_URL=http://host.docker.internal:54321
 ```
 
-Avatar and registration Server Actions validate users and write pending signup users server-side.
-Wherever the Next.js server runs, provide:
-
-```env
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_your-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-If you are using a legacy anon key, `SUPABASE_ANON_KEY` can replace `SUPABASE_PUBLISHABLE_KEY`.
-Do not put the service role key in frontend `NEXT_PUBLIC_*` variables.
-Only the `NEXT_PUBLIC_SUPABASE_*` values are intended for the browser. Keep `SUPABASE_SERVICE_ROLE_KEY`
-and all R2 credentials server-only.
-
-Restart the dev server after changing environment variables.
+Run `npm run env:check` after changing either profile.
 
 ## Authentication Settings
 
@@ -97,9 +73,8 @@ http://127.0.0.1:54321/auth/v1/callback
 
 ### Supabase config is missing
 
-Confirm that `.env.local` exists and has `NEXT_PUBLIC_SUPABASE_URL` plus `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Restart the dev server after changing environment variables.
-For server operations, also confirm `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and
-`SUPABASE_SERVICE_ROLE_KEY` are configured wherever the Next.js server runs.
+Run `npm run env:check`. For local Supabase, also confirm `npx supabase status` reports the API at
+`http://127.0.0.1:54321`.
 
 ### Register fails with permission errors
 

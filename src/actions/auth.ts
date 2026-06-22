@@ -8,6 +8,7 @@ import {
   zodFieldErrorsToActionResult,
 } from '@/actions/shared/errorMapping';
 import type { ActionResult } from '@/actions/shared/actionResult';
+import { getRequestOrigin } from '@/server/requestOrigin';
 
 export interface RegisterAppUserActionResult {
   needsEmailConfirmation: boolean;
@@ -52,17 +53,14 @@ export async function registerAppUserAction(
       : null;
 
   try {
+    const requestOrigin = await getRequestOrigin();
     const data = await registerAppUser({
       ...parsed.data,
-      emailRedirectTo: `${getAppOrigin()}${APP_ROUTES.login}`,
+      emailRedirectTo: `${requestOrigin}${APP_ROUTES.login}`,
       avatar,
     });
     return { ok: true, data };
   } catch (error) {
     return serviceErrorToActionResult(error);
   }
-}
-
-function getAppOrigin() {
-  return (process.env.NEXT_PUBLIC_APP_ORIGIN ?? 'http://localhost:3000').replace(/\/$/, '');
 }
