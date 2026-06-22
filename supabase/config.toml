@@ -7,6 +7,10 @@ additional_redirect_urls = [
   "http://localhost:3000/login",
 ]
 
+[db.seed]
+enabled = true
+sql_paths = ["./seeds/00_prepare_production_snapshot.sql", "./seed.sql"]
+
 [auth.external.google]
 enabled = true
 client_id = "284016276871-ln2kv2hqqfhegaefv1n6mpnarb2r4v55.apps.googleusercontent.com"
