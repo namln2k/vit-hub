@@ -10,7 +10,7 @@ import {
 } from '@/services/sports';
 import type { SportCostManagement, SportPaymentStatus } from '@/features/sports/types';
 import { CircleDollarSign, Plus, RotateCcw, Save, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
 interface SportCostManagementPanelProps {
@@ -107,7 +107,11 @@ export default function SportCostManagementPanel({
   }, [canManageCosts, gameId]);
 
   useEffect(() => {
-    void loadCosts();
+    const timeoutId = window.setTimeout(() => {
+      void loadCosts();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadCosts]);
 
   async function runCostAction(
@@ -130,7 +134,7 @@ export default function SportCostManagementPanel({
     }
   }
 
-  async function handleCreateCostItem(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateCostItem(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const label = newItem.label.trim();

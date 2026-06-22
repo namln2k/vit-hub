@@ -5,7 +5,7 @@ import { joinSportGame, joinSportGameAsGuest } from '@/services/sports';
 import { LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/useAuth';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -38,7 +38,7 @@ export default function PublicSportGameActions({ gameId, isExpired }: PublicSpor
     }
   }
 
-  async function handleGuestJoin(event: FormEvent<HTMLFormElement>) {
+  async function handleGuestJoin(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!guestName.trim()) {

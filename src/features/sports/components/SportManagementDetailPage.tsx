@@ -2,14 +2,13 @@
 
 import { APP_ROUTES, getPublicSportGamePath } from '@/constants/routes';
 import SportCostManagementPanel from '@/features/sports/components/SportCostManagementPanel';
+import SportManagementParticipantsPanel from '@/features/sports/components/SportManagementParticipantsPanel';
 import type { SportManagementGame, SportParticipant, SportType } from '@/features/sports/types';
 import { SPORT_TYPE_OPTIONS, getSportTypeLabel } from '@/features/sports/sportTypes';
 import { SPORT_TYPE_ICONS, SPORT_TYPE_THEMES } from '@/features/sports/sportTypeUi';
 import {
   getSportManagementGame,
-  leaveSportGame,
   restoreSportGame,
-  runSportMemberAction,
   softDeleteSportGame,
   updateSportGame,
   type CreateSportGameData,
@@ -23,37 +22,17 @@ import {
   MapPin,
   RotateCcw,
   Save,
-  Shield,
   Trash2,
-  UserMinus,
   Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
 interface SportManagementDetailPageProps {
   gameId: string;
 }
-
-const roleLabels = {
-  host: 'Host',
-  co_host: 'Co-host',
-  participant: 'Thành viên',
-} as const;
-
-const statusLabels = {
-  active: 'Đang tham gia',
-  left: 'Đã rời',
-  kicked: 'Đã bị kick',
-} as const;
-
-const statusBadgeClasses = {
-  active: 'bg-emerald-100 text-emerald-700',
-  left: 'bg-slate-100 text-slate-700',
-  kicked: 'bg-red-100 text-red-700',
-} as const;
 
 function RequiredMark() {
   return (
@@ -139,7 +118,11 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
   }, [gameId]);
 
   useEffect(() => {
-    void loadGame();
+    const timeoutId = window.setTimeout(() => {
+      void loadGame();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadGame]);
 
   async function runAction(
@@ -165,7 +148,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
     }
   }
 
-  async function handleUpdateGame(event: FormEvent<HTMLFormElement>) {
+  async function handleUpdateGame(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!editForm) {
@@ -350,8 +333,8 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
                       setEditForm({
                         ...editForm,
                         type: option.value,
-                    })
-                  }
+                      })
+                    }
                     disabled={!canEdit || isSaving}
                     className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
                       SPORT_TYPE_THEMES[option.value].badge
@@ -383,9 +366,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               />
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-semibold text-slate-700">
-                Ngày chơi
-              </span>
+              <span className="mb-1 block text-sm font-semibold text-slate-700">Ngày chơi</span>
               <input
                 type="date"
                 value={editForm.gameDate}
@@ -408,9 +389,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
               <input
                 value={editForm.locationName}
-                onChange={(event) =>
-                  setEditForm({ ...editForm, locationName: event.target.value })
-                }
+                onChange={(event) => setEditForm({ ...editForm, locationName: event.target.value })}
                 disabled={!canEdit || isSaving}
                 className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
@@ -419,9 +398,7 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
               <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
               <input
                 value={editForm.locationUrl}
-                onChange={(event) =>
-                  setEditForm({ ...editForm, locationUrl: event.target.value })
-                }
+                onChange={(event) => setEditForm({ ...editForm, locationUrl: event.target.value })}
                 disabled={!canEdit || isSaving}
                 className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               />
@@ -441,134 +418,17 @@ export default function SportManagementDetailPage({ gameId }: SportManagementDet
           ) : null}
         </form>
 
-        <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-bold text-slate-950">Người tham gia</h2>
-            {game.currentUserStatus === 'active' &&
-            game.currentUserRole !== 'host' &&
-            !game.isExpired &&
-            !game.deletedAt ? (
-              <button
-                type="button"
-                onClick={() =>
-                  void runAction('leave', () => leaveSportGame(game.id), 'Đã rời kèo.')
-                }
-                disabled={Boolean(pendingAction)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <UserMinus className="h-4 w-4" />
-                Rời kèo
-              </button>
-            ) : null}
-          </div>
-          <div className="divide-y divide-slate-200">
-            {participants.map((participant) => {
-              const isSelf = participant.id === game.currentUserMemberId;
-              const canKickParticipant = canManageMembers && !isSelf;
-              const canPromoteParticipant =
-                canPromote &&
-                participant.status === 'active' &&
-                !participant.isGuest &&
-                participant.role === 'participant';
-              const canDemoteParticipant =
-                canPromote && participant.status === 'active' && participant.role === 'co_host';
-              const canTransferParticipant =
-                canTransfer && participant.status === 'active' && !participant.isGuest && !isSelf;
-
-              return (
-                <div key={participant.id} className="flex flex-col gap-3 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="wrap-break-word text-sm font-bold text-slate-950">
-                      {participant.name}
-                      {participant.isGuest ? (
-                        <span className="ml-2 text-xs font-bold text-slate-500">Khách</span>
-                      ) : null}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs font-bold">
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-                        {roleLabels[participant.role]}
-                      </span>
-                      <span
-                        className={`rounded-full px-2 py-1 ${statusBadgeClasses[participant.status]}`}
-                      >
-                        {statusLabels[participant.status]}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {canPromoteParticipant ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            `promote-${participant.id}`,
-                            () => runSportMemberAction(game.id, participant.id, 'promote'),
-                            'Đã promote co-host.',
-                          )
-                        }
-                        disabled={Boolean(pendingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <Shield className="h-4 w-4" />
-                        Promote
-                      </button>
-                    ) : null}
-                    {canDemoteParticipant ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            `demote-${participant.id}`,
-                            () => runSportMemberAction(game.id, participant.id, 'demote'),
-                            'Đã demote co-host.',
-                          )
-                        }
-                        disabled={Boolean(pendingAction)}
-                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Demote
-                      </button>
-                    ) : null}
-                    {canTransferParticipant ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            `transfer-${participant.id}`,
-                            () => runSportMemberAction(game.id, participant.id, 'transfer'),
-                            'Đã chuyển host.',
-                          )
-                        }
-                        disabled={Boolean(pendingAction)}
-                        className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Chuyển host
-                      </button>
-                    ) : null}
-                    {canKickParticipant && participant.status === 'active' ? (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void runAction(
-                            `kick-${participant.id}`,
-                            () => runSportMemberAction(game.id, participant.id, 'kick'),
-                            participant.isGuest ? 'Đã xóa khách.' : 'Đã kick thành viên.',
-                          )
-                        }
-                        disabled={Boolean(pendingAction)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {participant.isGuest ? 'Xóa khách' : 'Kick'}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
+        <SportManagementParticipantsPanel
+          game={game}
+          participants={participants}
+          pendingAction={pendingAction}
+          canManageMembers={canManageMembers}
+          canPromote={canPromote}
+          canTransfer={canTransfer}
+          onRunAction={(actionId, action, successMessage) =>
+            void runAction(actionId, action, successMessage)
+          }
+        />
       </div>
 
       <SportCostManagementPanel gameId={game.id} canManageCosts={game.permissions.canManageCosts} />

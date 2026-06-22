@@ -12,7 +12,7 @@ import {
 import { SPORT_TYPE_ICONS, SPORT_TYPE_THEMES } from '@/features/sports/sportTypeUi';
 import Link from 'next/link';
 import Sharingan from '@/shared/loading/Sharingan';
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -193,7 +193,7 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
     }));
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     try {
@@ -222,126 +222,126 @@ function CreateGameForm({ onClose, onCreated }: CreateGameFormProps) {
         onSubmit={handleSubmit}
         className="w-full max-w-2xl rounded-lg border border-slate-200 bg-white shadow-xl"
       >
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-        <h2 id="sports-create-title" className="text-lg font-bold text-slate-950">
-          Tạo kèo
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isSaving}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-          aria-label="Đóng form tạo kèo"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
-        <div className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">
-            Loại kèo
-            <RequiredMark />
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {SPORT_TYPE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => updateForm('type', option.value)}
-                disabled={isSaving}
-                className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
-                  SPORT_TYPE_THEMES[option.value].badge
-                } ${
-                  form.type === option.value
-                    ? `scale-[1.08] text-base font-extrabold shadow-md ring-2 ${typeAccentEffects[option.value]}`
-                    : 'text-[15px] font-semibold opacity-80 hover:scale-[1.01] hover:shadow-sm'
-                }`}
-                aria-pressed={form.type === option.value}
-              >
-                <img src={SPORT_TYPE_ICONS[option.value].src} alt="" className="h-6 w-6" />
-                {option.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+          <h2 id="sports-create-title" className="text-lg font-bold text-slate-950">
+            Tạo kèo
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+            aria-label="Đóng form tạo kèo"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">
-            Ngày chơi
-          </span>
-          <input
-            type="date"
-            value={form.gameDate}
-            onChange={(event) => updateForm('gameDate', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-          />
-        </label>
+        <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
+          <div className="block md:col-span-2">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">
+              Loại kèo
+              <RequiredMark />
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {SPORT_TYPE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => updateForm('type', option.value)}
+                  disabled={isSaving}
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                    SPORT_TYPE_THEMES[option.value].badge
+                  } ${
+                    form.type === option.value
+                      ? `scale-[1.08] text-base font-extrabold shadow-md ring-2 ${typeAccentEffects[option.value]}`
+                      : 'text-[15px] font-semibold opacity-80 hover:scale-[1.01] hover:shadow-sm'
+                  }`}
+                  aria-pressed={form.type === option.value}
+                >
+                  <img src={SPORT_TYPE_ICONS[option.value].src} alt="" className="h-6 w-6" />
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Giờ chơi</span>
-          <input
-            type="time"
-            value={form.gameTime}
-            onChange={(event) => updateForm('gameTime', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-          />
-        </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Ngày chơi</span>
+            <input
+              type="date"
+              value={form.gameDate}
+              onChange={(event) => updateForm('gameDate', event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+            />
+          </label>
 
-        <label className="block md:col-span-2">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Tên kèo tuỳ chọn</span>
-          <input
-            value={form.name}
-            onChange={(event) => updateForm('name', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            placeholder="Bỏ trống để tự tạo tên"
-          />
-        </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Giờ chơi</span>
+            <input
+              type="time"
+              value={form.gameTime}
+              onChange={(event) => updateForm('gameTime', event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+            />
+          </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
-          <input
-            value={form.locationName}
-            onChange={(event) => updateForm('locationName', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            placeholder="VD: Sân Bách Khoa"
-          />
-        </label>
+          <label className="block md:col-span-2">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">
+              Tên kèo tuỳ chọn
+            </span>
+            <input
+              value={form.name}
+              onChange={(event) => updateForm('name', event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              placeholder="Bỏ trống để tự tạo tên"
+            />
+          </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
-          <input
-            value={form.locationUrl}
-            onChange={(event) => updateForm('locationUrl', event.target.value)}
-            disabled={isSaving}
-            className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-            placeholder="https://maps..."
-          />
-        </label>
-      </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Tên địa điểm</span>
+            <input
+              value={form.locationName}
+              onChange={(event) => updateForm('locationName', event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              placeholder="VD: Sân Bách Khoa"
+            />
+          </label>
 
-      <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          disabled={isSaving}
-          className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          Hủy
-        </button>
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          <Plus className="h-4 w-4" />
-          {isSaving ? 'Đang tạo...' : 'Tạo kèo'}
-        </button>
-      </div>
+          <label className="block">
+            <span className="mb-1 block text-sm font-semibold text-slate-700">Link địa điểm</span>
+            <input
+              value={form.locationUrl}
+              onChange={(event) => updateForm('locationUrl', event.target.value)}
+              disabled={isSaving}
+              className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+              placeholder="https://maps..."
+            />
+          </label>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <Plus className="h-4 w-4" />
+            {isSaving ? 'Đang tạo...' : 'Tạo kèo'}
+          </button>
+        </div>
       </form>
     </div>
   );
@@ -370,7 +370,11 @@ export default function SportsFeaturePage() {
   }, []);
 
   useEffect(() => {
-    void loadGames();
+    const timeoutId = window.setTimeout(() => {
+      void loadGames();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadGames]);
 
   return (

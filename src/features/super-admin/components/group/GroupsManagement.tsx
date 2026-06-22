@@ -1,23 +1,38 @@
 import {
-  listUsersByGroup,
+  archiveGroup,
+  listGroupMembersWithCapabilities,
   removeUsersFromGroup,
+  revokeUsersFromGroup,
   type Group,
 } from '@/services/groups';
-import type { AppUser } from '@/contexts/auth';
-import { Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import { Archive, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import AddGroupUsersModal from './AddGroupUsersModal';
+import ArchiveScopeModal from '@/features/super-admin/components/common/ArchiveScopeModal';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
 import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
+import {
+  getFullName,
   getSearchableUserValues,
   normalizeSearchValue,
 } from '@/features/super-admin/lib/userUtils';
-import DeleteGroupModal from './DeleteGroupModal';
 import GroupFormModal from './GroupFormModal';
-import GroupMembersTable from './GroupMembersTable';
 import GroupsTable from './GroupsTable';
+import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
+import {
+  assignScopeRole,
+  formatTransferLeadApiError,
+  removeScopeRole,
+  transferScopeLead,
+  type OrganizationMember,
+  type ScopeMemberCapabilities,
+} from '@/services/organizationAdmin';
+import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
 import { toast } from 'sonner';
 
 interface GroupsManagementProps {
@@ -27,7 +42,6 @@ interface GroupsManagementProps {
   groupError: string;
   onGroupCreated: (group: Group) => void;
   onGroupUpdated: (group: Group) => void;
-  onGroupDeleted: (groupId: string) => void;
 }
 
 export default function GroupsManagement({
@@ -37,20 +51,24 @@ export default function GroupsManagement({
   groupError,
   onGroupCreated,
   onGroupUpdated,
-  onGroupDeleted,
 }: GroupsManagementProps) {
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<OrganizationMember[]>([]);
   const [search, setSearch] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [userError, setUserError] = useState('');
+  const [memberCapabilities, setMemberCapabilities] = useState<ScopeMemberCapabilities>({
+    canManage: false,
+    canViewContact: false,
+  });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [groupToEdit, setGroupToEdit] = useState<Group | null>(null);
-  const [groupToDelete, setGroupToDelete] = useState<Group | null>(null);
+  const [groupToArchive, setGroupToArchive] = useState<Group | null>(null);
   const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
   const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [endedAtValue, setEndedAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
 
   const filteredUsers = useMemo(() => {
     const queryText = normalizeSearchValue(search);
@@ -72,12 +90,17 @@ export default function GroupsManagement({
     async (groupId: string, isMounted: () => boolean = () => true) => {
       setIsLoadingUsers(true);
       setUserError('');
+      setSelectedUserIds([]);
+      setIsEditModalOpen(false);
+      setIsAddUsersModalOpen(false);
+      setIsRemoveUsersModalOpen(false);
 
       try {
-        const nextUsers = await listUsersByGroup(groupId);
+        const result = await listGroupMembersWithCapabilities(groupId);
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.members);
+          setMemberCapabilities(result.capabilities);
         }
       } catch (error) {
         if (isMounted()) {
@@ -88,6 +111,7 @@ export default function GroupsManagement({
               : 'Không thể tải danh sách thành viên của nhóm.',
           );
           setUsers([]);
+          setMemberCapabilities({ canManage: false, canViewContact: false });
         }
       } finally {
         if (isMounted()) {
@@ -100,28 +124,20 @@ export default function GroupsManagement({
 
   useEffect(() => {
     if (!activeGroup) {
-      setUsers([]);
-      setIsEditModalOpen(false);
-      setIsAddUsersModalOpen(false);
-      setSelectedUserIds([]);
-      setIsRemoveUsersModalOpen(false);
       return;
     }
 
     const groupId = activeGroup.id;
     let isMounted = true;
-
-    void loadGroupUsers(groupId, () => isMounted);
+    const timeoutId = window.setTimeout(() => {
+      void loadGroupUsers(groupId, () => isMounted);
+    }, 0);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timeoutId);
     };
   }, [activeGroup, loadGroupUsers]);
-
-  useEffect(() => {
-    const userIdSet = new Set(users.map((user) => user.uid));
-    setSelectedUserIds((currentIds) => currentIds.filter((userId) => userIdSet.has(userId)));
-  }, [users]);
 
   function toggleUserSelection(userId: string) {
     setSelectedUserIds((currentIds) =>
@@ -132,7 +148,9 @@ export default function GroupsManagement({
   }
 
   function toggleVisibleUsersSelection() {
-    const visibleUserIds = filteredUsers.map((user) => user.uid);
+    const visibleUserIds = filteredUsers
+      .filter((user) => user.membership.status === 'active')
+      .map((user) => user.uid);
     const areAllVisibleUsersSelected =
       visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
 
@@ -153,24 +171,116 @@ export default function GroupsManagement({
     setIsRemovingUsers(true);
 
     try {
-      await removeUsersFromGroup(activeGroup.id, selectedUserIds);
-      setUsers((currentUsers) =>
-        currentUsers.filter((user) => !selectedUserIds.includes(user.uid)),
+      await removeUsersFromGroup(
+        activeGroup.id,
+        selectedUserIds,
+        fromVietnamDateTimeLocalValue(endedAtValue),
       );
       setSelectedUserIds([]);
       setIsRemoveUsersModalOpen(false);
-      toast.success(`Đã xóa ${selectedUserIds.length} thành viên khỏi nhóm.`, {
+      toast.success(`Đã kết thúc membership của ${selectedUserIds.length} thành viên trong nhóm.`, {
         id: 'group-remove-users-success',
       });
-      void loadGroupUsers(activeGroup.id);
+      await loadGroupUsers(activeGroup.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : '';
       const errorMessage = message
-        ? `Không thể xóa thành viên khỏi nhóm: ${message}`
-        : 'Không thể xóa thành viên khỏi nhóm.';
+        ? `Không thể kết thúc membership trong nhóm: ${message}`
+        : 'Không thể kết thúc membership trong nhóm.';
       toast.error(errorMessage, { id: 'group-remove-users-error' });
     } finally {
       setIsRemovingUsers(false);
+    }
+  }
+
+  async function handleAssignRole(
+    userId: string,
+    roleKey: NonEventRoleKey,
+    startsAt: string,
+    endsAt: string | null,
+  ) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await assignScopeRole('group', activeGroup.id, userId, roleKey, startsAt, endsAt);
+      toast.success('Đã cập nhật chức vụ trong nhóm.', { id: 'group-role-success' });
+      await loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể cập nhật chức vụ: ${message}` : 'Không thể cập nhật chức vụ.',
+        {
+          id: 'group-role-error',
+        },
+      );
+      throw error;
+    }
+  }
+
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey, endedAt: string) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await removeScopeRole('group', activeGroup.id, userId, roleKey, endedAt);
+      toast.success('Đã gỡ chức vụ trong nhóm.', { id: 'group-role-remove-success' });
+      await loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
+        id: 'group-role-remove-error',
+      });
+      throw error;
+    }
+  }
+
+  async function handleTransferLead(targetUserId: string) {
+    if (!activeGroup) {
+      return;
+    }
+
+    try {
+      await transferScopeLead('group', activeGroup.id, targetUserId);
+      toast.success('Đã chuyển giao trưởng nhóm.', { id: 'group-transfer-lead-success' });
+      await loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = formatTransferLeadApiError(error, 'Không thể chuyển giao trưởng nhóm.');
+      toast.error(`Không thể chuyển giao trưởng nhóm: ${message}`, {
+        id: 'group-transfer-lead-error',
+      });
+      throw new Error(message);
+    }
+  }
+
+  async function handleRevokeMembership(userId: string) {
+    if (!activeGroup) {
+      return;
+    }
+
+    const user = users.find((currentUser) => currentUser.uid === userId);
+    const userName = user ? getFullName(user) : 'thành viên này';
+
+    if (!window.confirm(`Thu hồi membership của ${userName} trong nhóm này?`)) {
+      return;
+    }
+
+    try {
+      await revokeUsersFromGroup(activeGroup.id, [userId]);
+      toast.success('Đã thu hồi membership trong nhóm.', {
+        id: 'group-revoke-membership-success',
+      });
+      await loadGroupUsers(activeGroup.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể thu hồi membership trong nhóm: ${message}`
+          : 'Không thể thu hồi membership trong nhóm.',
+        { id: 'group-revoke-membership-error' },
+      );
     }
   }
 
@@ -196,7 +306,6 @@ export default function GroupsManagement({
           isLoading={isLoadingGroups}
           error={groupError}
           onEditGroup={setGroupToEdit}
-          onDeleteGroup={setGroupToDelete}
         />
         {isCreateModalOpen && (
           <GroupFormModal
@@ -217,16 +326,6 @@ export default function GroupsManagement({
             }}
           />
         )}
-        {groupToDelete && (
-          <DeleteGroupModal
-            group={groupToDelete}
-            onClose={() => setGroupToDelete(null)}
-            onDeleted={(groupId) => {
-              onGroupDeleted(groupId);
-              setGroupToDelete(null);
-            }}
-          />
-        )}
       </AdminContentPanel>
     );
   }
@@ -241,11 +340,22 @@ export default function GroupsManagement({
           <button
             type="button"
             onClick={() => setIsEditModalOpen(true)}
+            disabled={Boolean(activeGroup.archivedAt)}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
             aria-label="Chỉnh sửa nhóm"
             title="Chỉnh sửa nhóm"
           >
             <Pencil className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setGroupToArchive(activeGroup)}
+            disabled={Boolean(activeGroup.archivedAt) || !memberCapabilities.canManage}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Lưu trữ nhóm"
+            title="Lưu trữ nhóm"
+          >
+            <Archive className="h-4 w-4" />
           </button>
         </>
       }
@@ -264,17 +374,25 @@ export default function GroupsManagement({
           </label>
           <button
             type="button"
-            onClick={() => setIsRemoveUsersModalOpen(true)}
-            disabled={!activeGroup || selectedUserIds.length === 0 || isLoadingUsers}
+            onClick={() => {
+              setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
+              setIsRemoveUsersModalOpen(true);
+            }}
+            disabled={
+              !memberCapabilities.canManage ||
+              !activeGroup ||
+              selectedUserIds.length === 0 ||
+              isLoadingUsers
+            }
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
           >
             <Trash2 className="h-4 w-4" />
-            Xóa{selectedUserIds.length > 0 ? ` ${selectedUserIds.length}` : ''}
+            Kết thúc{selectedUserIds.length > 0 ? ` ${selectedUserIds.length}` : ''}
           </button>
           <button
             type="button"
             onClick={() => setIsAddUsersModalOpen(true)}
-            disabled={!activeGroup}
+            disabled={!memberCapabilities.canManage || !activeGroup}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             <Plus className="h-4 w-4" />
@@ -283,13 +401,21 @@ export default function GroupsManagement({
         </>
       }
     >
-      <GroupMembersTable
+      <ScopeMembersTable
+        scopeType="group"
         users={filteredUsers}
         isLoading={isLoadingUsers}
         error={userError}
+        canManage={memberCapabilities.canManage}
+        canViewContact={memberCapabilities.canViewContact}
+        accent="emerald"
         selectedUserIdSet={selectedUserIdSet}
         onToggleUser={toggleUserSelection}
         onToggleVisibleUsers={toggleVisibleUsersSelection}
+        onAssignRole={handleAssignRole}
+        onRemoveRole={handleRemoveRole}
+        onRevokeMembership={handleRevokeMembership}
+        onTransferLead={handleTransferLead}
       />
       {isEditModalOpen && (
         <GroupFormModal
@@ -310,18 +436,32 @@ export default function GroupsManagement({
           onAdded={() => loadGroupUsers(activeGroup.id)}
         />
       )}
+      {groupToArchive && (
+        <ArchiveScopeModal
+          scopeName={groupToArchive.name}
+          scopeLabel="nhóm"
+          onClose={() => setGroupToArchive(null)}
+          onArchive={(archivedAt) => archiveGroup(groupToArchive.id, archivedAt)}
+          onArchived={(archivedAt) => {
+            onGroupUpdated({ ...groupToArchive, archivedAt });
+            setGroupToArchive(null);
+          }}
+        />
+      )}
       {isRemoveUsersModalOpen && (
         <ConfirmRemoveUsersModal
           contextName={activeGroup.name}
           contextType="group"
           selectedCount={selectedUserIds.length}
           isRemoving={isRemovingUsers}
+          endedAtValue={endedAtValue}
           onCancel={() => {
             if (!isRemovingUsers) {
               setIsRemoveUsersModalOpen(false);
             }
           }}
           onConfirm={handleRemoveSelectedUsers}
+          onEndedAtValueChange={setEndedAtValue}
         />
       )}
     </AdminContentPanel>

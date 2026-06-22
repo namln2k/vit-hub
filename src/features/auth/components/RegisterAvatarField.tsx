@@ -65,11 +65,7 @@ export default function RegisterAvatarField({
       </div>
 
       {avatarFileToEdit && (
-        <AvatarEditor
-          file={avatarFileToEdit}
-          onCancel={onAvatarEditCancel}
-          onSave={onAvatarSave}
-        />
+        <AvatarEditor file={avatarFileToEdit} onCancel={onAvatarEditCancel} onSave={onAvatarSave} />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import type { UserRole } from '@/constants/userRoles';
+import type { UserSummaryDto } from '@/features/users/types';
 
 export interface AuthUser {
   id: string;
@@ -9,23 +9,7 @@ export interface AuthUser {
   photoURL: string | null;
 }
 
-export interface AppUser {
-  uid: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
-  nickname: string;
-  username: string;
-  phoneNumber: string;
-  schoolName: string;
-  enterYear: string;
-  cohort: string;
-  gender: 0 | 1 | null;
-  avatarUrl?: string;
-  avatarKey?: string;
-  role: UserRole;
-}
+export type AppUser = UserSummaryDto;
 
 export interface SignUpData {
   email: string;

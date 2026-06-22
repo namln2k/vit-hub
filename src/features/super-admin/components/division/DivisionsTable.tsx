@@ -29,8 +29,18 @@ export default function DivisionsTable({ divisions, isLoading, error }: Division
             </EmptyTableRow>
           ) : divisions.length > 0 ? (
             divisions.map((division) => (
-              <tr key={division.id} className="hover:bg-slate-50">
-                <td className="px-5 py-4 text-sm font-semibold text-slate-950">{division.name}</td>
+              <tr
+                key={division.id}
+                className={`hover:bg-slate-50 ${division.archivedAt ? 'bg-slate-50/70 text-slate-500' : ''}`}
+              >
+                <td className="px-5 py-4 text-sm font-semibold text-slate-950">
+                  {division.name}
+                  {division.archivedAt ? (
+                    <span className="ml-2 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      Đã lưu trữ
+                    </span>
+                  ) : null}
+                </td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">
                   {division.description || 'Chưa có mô tả'}
                 </td>

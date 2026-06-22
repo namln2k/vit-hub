@@ -86,9 +86,7 @@ export default function AvatarMenu({
         >
           {items.map((item) => {
             const itemClassName = `${baseItemClassName} ${
-              item.danger
-                ? 'text-red-600 hover:bg-red-50'
-                : 'text-slate-700 hover:bg-slate-50'
+              item.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'
             }`;
 
             if (item.to) {

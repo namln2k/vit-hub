@@ -1,12 +1,12 @@
-import type { Post } from '@/services/posts';
+import type { PostDto } from '@/features/posts/types';
 import Sharingan from '@/shared/loading/Sharingan';
 
 interface PostListSidebarProps {
   activePostId: string;
   error: string;
   isLoading: boolean;
-  posts: Post[];
-  onEditPost: (post: Post) => void;
+  posts: PostDto[];
+  onEditPost: (post: PostDto) => void;
 }
 
 export default function PostListSidebar({
@@ -45,7 +45,7 @@ export default function PostListSidebar({
 
 interface PostListItemProps {
   isActive: boolean;
-  post: Post;
+  post: PostDto;
   onClick: () => void;
 }
 

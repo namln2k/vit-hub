@@ -1,6 +1,10 @@
-function stripTrailingSlash(value: string) {
-  return value.replace(/\/$/, '');
-}
+import 'server-only';
+
+import {
+  getPublicSupabaseConfig,
+  readHttpUrl,
+  readPositiveInteger,
+} from '@/config/env';
 
 function requireEnv(name: string) {
   const value = process.env[name];
@@ -12,26 +16,23 @@ function requireEnv(name: string) {
   return value;
 }
 
-export function getSupabasePublicServerConfig() {
-  const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const publishableKey =
-    process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!supabaseUrl || !publishableKey) {
-    throw new Error(
-      'SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required for server API routes. NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are also supported for public config.',
-    );
-  }
+export function getSupabaseServerConfig() {
+  const publicConfig = getPublicSupabaseConfig();
+  const internalUrl = process.env.SUPABASE_INTERNAL_URL?.trim();
+  const supabaseUrl =
+    process.env.DOCKER_CONTAINER === 'true' && internalUrl
+      ? readHttpUrl('SUPABASE_INTERNAL_URL', internalUrl)
+      : publicConfig.supabaseUrl;
 
   return {
-    supabaseUrl: stripTrailingSlash(supabaseUrl),
-    publishableKey,
+    ...publicConfig,
+    supabaseUrl,
   };
 }
 
 export function getSupabaseAdminServerConfig() {
   return {
-    ...getSupabasePublicServerConfig(),
+    ...getSupabaseServerConfig(),
     serviceRoleKey: requireEnv('SUPABASE_SERVICE_ROLE_KEY'),
   };
 }
@@ -55,5 +56,21 @@ export function getRequiredR2Config() {
     accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
     secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
     bucketName: requireEnv('R2_BUCKET_NAME'),
+    publicBaseUrl: readHttpUrl('R2_PUBLIC_BASE_URL', process.env.R2_PUBLIC_BASE_URL),
+  };
+}
+
+export function getUploadLimits() {
+  return {
+    avatarBytes: readPositiveInteger(
+      'R2_FREE_TIER_MAX_UPLOAD_BYTES',
+      process.env.R2_FREE_TIER_MAX_UPLOAD_BYTES,
+      1024 * 1024,
+    ),
+    postImageBytes: readPositiveInteger(
+      'R2_POST_IMAGE_MAX_UPLOAD_BYTES',
+      process.env.R2_POST_IMAGE_MAX_UPLOAD_BYTES,
+      5 * 1024 * 1024,
+    ),
   };
 }

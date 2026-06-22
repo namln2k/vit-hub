@@ -1,5 +1,5 @@
 import { API_ROUTES } from '@/constants/routes';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase/client';
 import type {
   SportCostManagement,
   SportGameSummary,

@@ -1,30 +1,12 @@
-import {
-  getHomeFeaturedPostIds,
-  listPublishedPostsForFeaturedSelection,
-  type Post,
-} from '@/services/posts';
+import type { PostDto } from '@/features/posts/types';
 
 export const DEFAULT_FEATURED_POST_COUNT = 10;
 
-export async function loadHomeFeaturedPostsConfig() {
-  const [publishedPosts, configuredPostIds] = await Promise.all([
-    listPublishedPostsForFeaturedSelection(),
-    getHomeFeaturedPostIds(),
-  ]);
-  const selectedPostIds = getInitialSelectedPostIds(publishedPosts, configuredPostIds);
-
-  return {
-    posts: publishedPosts,
-    selectedPostIds,
-    isUsingDefaultSelection: configuredPostIds.length === 0,
-  };
-}
-
-export function getDefaultFeaturedPostIds(posts: Post[]) {
+export function getDefaultFeaturedPostIds(posts: PostDto[]) {
   return posts.slice(0, DEFAULT_FEATURED_POST_COUNT).map((post) => post.id);
 }
 
-export function filterPostsBySearch(posts: Post[], search: string) {
+export function filterPostsBySearch(posts: PostDto[], search: string) {
   const query = normalizePostSearchValue(search);
 
   if (!query) {
@@ -36,10 +18,10 @@ export function filterPostsBySearch(posts: Post[], search: string) {
   );
 }
 
-export function getSelectedPosts(selectedPostIds: string[], postById: Map<string, Post>) {
+export function getSelectedPosts(selectedPostIds: string[], postById: Map<string, PostDto>) {
   return selectedPostIds
     .map((postId) => postById.get(postId))
-    .filter((post): post is Post => Boolean(post));
+    .filter((post): post is PostDto => Boolean(post));
 }
 
 export function reorderPostIds(postIds: string[], sourcePostId: string, targetPostId: string) {
@@ -76,7 +58,7 @@ export function getSaveErrorMessage(error: unknown, fallbackMessage: string) {
   return error instanceof Error ? error.message : fallbackMessage;
 }
 
-function getInitialSelectedPostIds(posts: Post[], configuredPostIds: string[]) {
+export function getInitialSelectedPostIds(posts: PostDto[], configuredPostIds: string[]) {
   if (configuredPostIds.length === 0) {
     return getDefaultFeaturedPostIds(posts);
   }

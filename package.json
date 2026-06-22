@@ -3,11 +3,28 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@11.6.2",
+  "engines": {
+    "node": "24.x",
+    "npm": "11.x"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "npm run dev:local",
+    "dev:local": "node scripts/run-profile.mjs local host",
+    "dev:production": "node scripts/run-profile.mjs production host",
+    "docker:local": "node scripts/run-profile.mjs local docker",
+    "docker:production": "node scripts/run-profile.mjs production docker",
+    "env:check": "npm run env:check:local && npm run env:check:production",
+    "env:check:local": "node scripts/check-profile.mjs local",
+    "env:check:production": "node scripts/check-profile.mjs production",
     "build": "next build --webpack",
+    "build:local": "node scripts/run-profile.mjs local build",
+    "build:production": "node scripts/run-profile.mjs production build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
@@ -17,6 +34,7 @@
     "@supabase/ssr": "^0.10.0",
     "@supabase/supabase-js": "^2.106.2",
     "emoji-picker-react": "^4.19.1",
+    "google-one-tap": "^1.0.6",
     "lexical": "^0.45.0",
     "lucide-react": "^1.8.0",
     "next": "^16.2.2",
@@ -24,6 +42,7 @@
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.72.1",
     "sass": "^1.100.0",
+    "server-only": "^0.0.1",
     "sonner": "^2.0.7",
     "zod": "^4.3.6"
   },
@@ -41,6 +60,10 @@
     "supabase": "^2.105.0",
     "tailwindcss": "^4.2.2",
     "typescript": "~6.0.2",
-    "typescript-eslint": "^8.58.0"
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }

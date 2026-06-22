@@ -1,67 +1,14 @@
-'use client';
-
 import { APP_ROUTES } from '@/constants/routes';
-import { getPublishedPostBySlug, type Post } from '@/services/posts';
+import type { PublicPostDto } from '@/features/posts/types';
 import PostRenderer from '@/features/posts/components/PostRenderer';
-import Sharingan from '@/shared/loading/Sharingan';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 
-export default function PostPage() {
-  const params = useParams<{ slug?: string }>();
-  const slug = params.slug ?? '';
-  const [post, setPost] = useState<Post | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadPost() {
-      setIsLoading(true);
-      setError('');
-
-      try {
-        const nextPost = await getPublishedPostBySlug(slug);
-
-        if (isMounted) {
-          setPost(nextPost);
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          const message = loadError instanceof Error ? loadError.message : '';
-          setError(message ? `Không thể tải bài viết: ${message}` : 'Không thể tải bài viết.');
-          setPost(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadPost();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [slug]);
-
+export default function PostPage({ post }: { post: PublicPostDto | null }) {
   return (
     <div className="min-h-screen bg-slate-50">
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 lg:px-8">
-        {isLoading ? (
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-500">
-            <Sharingan />
-            Đang tải bài viết
-          </div>
-        ) : error ? (
-          <div className="rounded-lg border border-red-100 bg-red-50 p-5 text-sm font-semibold text-red-700">
-            {error}
-          </div>
-        ) : post ? (
+        {post ? (
           <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <div className="mb-8 border-b border-slate-200 pb-6">
               <div className="mb-6 flex items-center justify-between gap-3">

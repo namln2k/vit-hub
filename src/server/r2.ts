@@ -1,4 +1,7 @@
+import 'server-only';
+
 import { createHash, createHmac } from 'node:crypto';
+import { getRequiredR2Config } from '@/server/env';
 
 const PRESIGNED_URL_TTL_SECONDS = 60;
 const EMPTY_PAYLOAD_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
@@ -13,12 +16,18 @@ function sha256(value: string) {
 }
 
 function encodePathSegment(value: string) {
-  return encodeURIComponent(value).replace(/[!'()*]/g, (char) =>
-    `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  return encodeURIComponent(value).replace(
+    /[!'()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
   );
 }
 
-function getSigningKey(secretAccessKey: string, dateStamp: string, region: string, service: string) {
+function getSigningKey(
+  secretAccessKey: string,
+  dateStamp: string,
+  region: string,
+  service: string,
+) {
   const dateKey = hmac(`AWS4${secretAccessKey}`, dateStamp);
   const dateRegionKey = hmac(dateKey, region);
   const dateRegionServiceKey = hmac(dateRegionKey, service);
@@ -151,17 +160,7 @@ export function getExtension(contentType: string) {
 }
 
 export function getPublicBaseUrl() {
-  const publicBaseUrl = process.env.R2_PUBLIC_BASE_URL?.replace(/\/$/, '');
-
-  if (!publicBaseUrl) {
-    throw new Error('R2_PUBLIC_BASE_URL is required for server API routes.');
-  }
-
-  const url = new URL(publicBaseUrl);
-
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error('R2_PUBLIC_BASE_URL must be an absolute HTTP(S) URL.');
-  }
+  const url = new URL(getRequiredR2Config().publicBaseUrl);
 
   if (url.hostname.endsWith('.r2.cloudflarestorage.com')) {
     throw new Error(

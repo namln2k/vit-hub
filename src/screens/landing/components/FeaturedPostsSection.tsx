@@ -1,14 +1,11 @@
 'use client';
 
 import { getPostPath } from '@/constants/routes';
-import { listHomeFeaturedPosts, type Post } from '@/services/posts';
+import type { PublicPostDto } from '@/features/posts/types';
 import { ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from 'react';
-
-const FEATURED_POSTS_LIMIT = 10;
-const FEATURED_POST_SKELETON_COUNT = 4;
 
 function formatPostUpdatedAt(value: string) {
   const date = new Date(value);
@@ -18,6 +15,7 @@ function formatPostUpdatedAt(value: string) {
   }
 
   return new Intl.DateTimeFormat('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -27,7 +25,7 @@ function formatPostUpdatedAt(value: string) {
 }
 
 interface FeaturedPostCardProps {
-  post: Post;
+  post: PublicPostDto;
   onPostClick: (event: MouseEvent<HTMLAnchorElement>, slug: string) => void;
 }
 
@@ -63,62 +61,14 @@ function FeaturedPostCard({ post, onPostClick }: FeaturedPostCardProps) {
   );
 }
 
-function FeaturedPostsSkeleton() {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: FEATURED_POST_SKELETON_COUNT }).map((_, index) => (
-        <div
-          key={index}
-          className="h-64 animate-pulse rounded-lg border border-slate-200 bg-slate-100"
-        />
-      ))}
-    </div>
-  );
-}
-
-export default function FeaturedPostsSection() {
+export default function FeaturedPostsSection({
+  featuredPosts,
+}: {
+  featuredPosts: PublicPostDto[];
+}) {
   const router = useRouter();
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
   const [activePostIndex, setActivePostIndex] = useState(0);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadFeaturedPosts() {
-      setIsLoading(true);
-      setErrorMessage('');
-
-      try {
-        const posts = await listHomeFeaturedPosts(FEATURED_POSTS_LIMIT);
-
-        if (isMounted) {
-          setFeaturedPosts(posts);
-          setActivePostIndex(0);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setFeaturedPosts([]);
-          setActivePostIndex(0);
-          setErrorMessage(
-            error instanceof Error ? error.message : 'Không thể tải bài viết nổi bật.',
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadFeaturedPosts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const scrollToPostIndex = useCallback((index: number) => {
     const carousel = carouselRef.current;
@@ -179,7 +129,7 @@ export default function FeaturedPostsSection() {
     [router],
   );
 
-  if (!isLoading && featuredPosts.length === 0 && !errorMessage) {
+  if (featuredPosts.length === 0) {
     return null;
   }
 
@@ -216,22 +166,14 @@ export default function FeaturedPostsSection() {
           ) : null}
         </div>
 
-        {isLoading ? (
-          <FeaturedPostsSkeleton />
-        ) : errorMessage ? (
-          <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
-            Không thể tải bài viết nổi bật.
-          </div>
-        ) : (
-          <div
-            ref={carouselRef}
-            className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {featuredPosts.map((post) => (
-              <FeaturedPostCard key={post.id} post={post} onPostClick={handlePostClick} />
-            ))}
-          </div>
-        )}
+        <div
+          ref={carouselRef}
+          className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {featuredPosts.map((post) => (
+            <FeaturedPostCard key={post.id} post={post} onPostClick={handlePostClick} />
+          ))}
+        </div>
       </div>
     </section>
   );

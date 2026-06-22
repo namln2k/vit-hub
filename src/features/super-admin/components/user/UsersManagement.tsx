@@ -1,4 +1,8 @@
-import { importUsers, queryUsers } from '@/services/users';
+import {
+  changeUserStatusAction,
+  importUsersAction,
+  listUsersForAdministrationAction,
+} from '@/actions/users';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
@@ -7,12 +11,11 @@ import {
 } from '@/features/super-admin/lib/userUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
-import {
-  parseUserImportFile,
-  USER_IMPORT_MAX_FILE_BYTES,
-} from '@/services/users/import';
+import type { UserSummaryDto } from '@/features/users/types';
+import type { UserStatus } from '@/features/organization-structure/permissions';
+import { parseUserImportFile, USER_IMPORT_MAX_FILE_BYTES } from '@/services/users/import';
 import { Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ImportUsersPanel, { type ImportValidation } from './ImportUsersPanel';
 import UsersTable from './UsersTable';
@@ -22,13 +25,15 @@ import { toast } from 'sonner';
 const USERS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'users') ?? ADMIN_SECTIONS[0];
 
 type UsersView = 'list' | 'import';
+type UserStatusFilter = 'all' | UserStatus;
 
-export default function UsersManagement() {
+export default function UsersManagement({ initialUsers }: { initialUsers: UserSummaryDto[] }) {
   const searchParams = useSearchParams();
   const activeView: UsersView = searchParams.get('view') === 'import' ? 'import' : 'list';
-  const [users, setUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<AppUser[]>(initialUsers);
   const [search, setSearch] = useState('');
-  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<UserStatusFilter>('all');
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [userError, setUserError] = useState('');
   const [validatedImport, setValidatedImport] = useState<ImportValidation | null>(null);
@@ -37,16 +42,24 @@ export default function UsersManagement() {
   const filteredUsers = useMemo(() => {
     const queryText = normalizeSearchValue(search);
 
-    if (!queryText) {
-      return users;
-    }
+    return users.filter((user) => {
+      const userStatus = user.status ?? 'active';
 
-    return users.filter((user) =>
-      [...getSearchableUserValues(user), USER_ROLE_LABELS[user.role]].some((value) =>
-        normalizeSearchValue(value).includes(queryText),
-      ),
-    );
-  }, [search, users]);
+      if (statusFilter !== 'all' && userStatus !== statusFilter) {
+        return false;
+      }
+
+      if (!queryText) {
+        return true;
+      }
+
+      return [
+        ...getSearchableUserValues(user),
+        USER_ROLE_LABELS[user.role],
+        getUserStatusLabel(userStatus),
+      ].some((value) => normalizeSearchValue(value).includes(queryText));
+    });
+  }, [search, statusFilter, users]);
 
   const loadUsers = useCallback(
     async (options: { showLoading?: boolean; isMounted?: () => boolean } = {}) => {
@@ -59,10 +72,14 @@ export default function UsersManagement() {
       setUserError('');
 
       try {
-        const nextUsers = await queryUsers({ fetchAll: true });
+        const result = await listUsersForAdministrationAction();
+
+        if (!result.ok) {
+          throw new Error(result.error.message);
+        }
 
         if (isMounted()) {
-          setUsers(nextUsers);
+          setUsers(result.data);
         }
       } catch (error) {
         if (isMounted()) {
@@ -82,16 +99,6 @@ export default function UsersManagement() {
     },
     [],
   );
-
-  useEffect(() => {
-    let isActive = true;
-
-    void loadUsers({ isMounted: () => isActive });
-
-    return () => {
-      isActive = false;
-    };
-  }, [loadUsers]);
 
   async function handleImportFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -123,7 +130,13 @@ export default function UsersManagement() {
 
     try {
       setIsImporting(true);
-      const importedCount = await importUsers(validatedImport.users);
+      const result = await importUsersAction({ users: validatedImport.users });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      const { importedCount } = result.data;
       toast.success(`Đã import ${importedCount} nhân sự từ ${validatedImport.fileName}.`, {
         id: 'users-import-success',
       });
@@ -138,6 +151,40 @@ export default function UsersManagement() {
     }
   }
 
+  async function handleUpdateUserStatus(user: AppUser, status: UserStatus) {
+    const statusLabel = getUserStatusLabel(status);
+
+    if (!window.confirm(`Chuyển trạng thái ${user.email} sang ${statusLabel}?`)) {
+      return;
+    }
+
+    try {
+      const result = await changeUserStatusAction({ userId: user.uid, status });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      setUsers((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.uid === result.data.userId
+            ? { ...currentUser, status: result.data.status }
+            : currentUser,
+        ),
+      );
+      toast.success(`Đã cập nhật trạng thái nhân sự sang ${statusLabel}.`, {
+        id: 'users-status-update-success',
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? `Không thể cập nhật trạng thái nhân sự: ${error.message}`
+          : 'Không thể cập nhật trạng thái nhân sự.',
+        { id: 'users-status-update-error' },
+      );
+    }
+  }
+
   return (
     <AdminContentPanel
       section={USERS_SECTION}
@@ -149,16 +196,19 @@ export default function UsersManagement() {
       }
       actions={
         activeView === 'list' ? (
-          <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Tìm kiếm"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 sm:w-64"
-            />
-          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <StatusFilter value={statusFilter} onChange={setStatusFilter} />
+            <label className="relative block">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Tìm kiếm"
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm font-medium text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-sky-500 sm:w-64"
+              />
+            </label>
+          </div>
         ) : null
       }
     >
@@ -171,8 +221,48 @@ export default function UsersManagement() {
           onImport={handleImportValidatedUsers}
         />
       ) : (
-        <UsersTable users={filteredUsers} isLoading={isLoadingUsers} error={userError} />
+        <UsersTable
+          users={filteredUsers}
+          isLoading={isLoadingUsers}
+          error={userError}
+          onUpdateUserStatus={handleUpdateUserStatus}
+        />
       )}
     </AdminContentPanel>
   );
+}
+
+function StatusFilter({
+  value,
+  onChange,
+}: {
+  value: UserStatusFilter;
+  onChange: (value: UserStatusFilter) => void;
+}) {
+  const options: Array<{ value: UserStatusFilter; label: string }> = [
+    { value: 'all', label: 'Tất cả' },
+    { value: 'active', label: 'Active' },
+    { value: 'disabled', label: 'Disabled' },
+  ];
+
+  return (
+    <div className="inline-flex h-10 rounded-lg border border-slate-300 bg-white p-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`rounded-md px-3 text-sm font-semibold transition-colors ${
+            value === option.value ? 'bg-sky-100 text-sky-700' : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getUserStatusLabel(status: UserStatus) {
+  return status === 'active' ? 'Active' : 'Disabled';
 }

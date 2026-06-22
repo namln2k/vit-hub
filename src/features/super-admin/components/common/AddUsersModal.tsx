@@ -1,13 +1,13 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, MailPlus, Search, UserPlus, X } from 'lucide-react';
 
-type AddUsersModalEntityId = 'group' | 'division';
+type AddUsersModalEntityId = 'group' | 'division' | 'club';
 
 interface AddUsersModalProps {
-  availableUsers: AppUser[];
+  availableUsers: UserSearchResultDto[];
   emailImportError: string;
   emailImportMessage: string;
   emailListValue: string;
@@ -20,19 +20,22 @@ interface AddUsersModalProps {
   queryText: string;
   searchError: string;
   searchValue: string;
-  selectedUsers: AppUser[];
+  selectedUsers: UserSearchResultDto[];
+  startsAtValue: string;
   onClose: () => void;
   onEmailListValueChange: (value: string) => void;
   onImportEmails: () => void;
   onRemoveSelectedUser: (userId: string) => void;
   onSearchValueChange: (value: string) => void;
-  onSelectUser: (user: AppUser) => void;
+  onSelectUser: (user: UserSearchResultDto) => void;
+  onStartsAtValueChange: (value: string) => void;
   onSubmit: () => void;
 }
 
 const dialogTitleIdByEntityId = {
   division: 'add-division-users-title',
   group: 'add-group-users-title',
+  club: 'add-club-users-title',
 } satisfies Record<AddUsersModalEntityId, string>;
 
 export default function AddUsersModal({
@@ -50,12 +53,14 @@ export default function AddUsersModal({
   searchError,
   searchValue,
   selectedUsers,
+  startsAtValue,
   onClose,
   onEmailListValueChange,
   onImportEmails,
   onRemoveSelectedUser,
   onSearchValueChange,
   onSelectUser,
+  onStartsAtValueChange,
   onSubmit,
 }: AddUsersModalProps) {
   const dialogTitleId = dialogTitleIdByEntityId[entityId];
@@ -110,6 +115,22 @@ export default function AddUsersModal({
                 label="Đang tìm kiếm thành viên"
               />
             )}
+          </label>
+
+          <label className="mt-4 block rounded-lg border border-slate-200 p-3">
+            <span className="block text-xs font-bold uppercase text-slate-600">
+              Bắt đầu membership
+            </span>
+            <input
+              type="datetime-local"
+              value={startsAtValue}
+              onChange={(event) => onStartsAtValueChange(event.target.value)}
+              required
+              className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition-colors focus:border-emerald-500"
+            />
+            <span className="mt-1 block text-xs font-medium text-slate-500">
+              Múi giờ Asia/Ho_Chi_Minh.
+            </span>
           </label>
 
           <div className="mt-4 rounded-lg border border-slate-200 p-3">
@@ -190,8 +211,13 @@ export default function AddUsersModal({
                   <button
                     key={user.uid}
                     type="button"
-                    onClick={() => onSelectUser(user)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                    onClick={() => {
+                      if (user.status !== 'disabled') {
+                        onSelectUser(user);
+                      }
+                    }}
+                    disabled={user.status === 'disabled'}
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-60"
                   >
                     <span className="flex min-w-0 items-center gap-3">
                       <Avatar src={user.avatarUrl} size="sm" />
@@ -202,6 +228,7 @@ export default function AddUsersModal({
                         <span className="block truncate text-xs font-medium text-slate-500">
                           @{user.username} · {user.email}
                         </span>
+                        <UserStatusBadge status={user.status ?? 'active'} />
                       </span>
                     </span>
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500">
@@ -230,7 +257,7 @@ export default function AddUsersModal({
           <button
             type="button"
             onClick={onSubmit}
-            disabled={selectedUsers.length === 0 || isAdding}
+            disabled={selectedUsers.length === 0 || isAdding || startsAtValue.trim().length === 0}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {isAdding ? (
@@ -243,5 +270,20 @@ export default function AddUsersModal({
         </div>
       </div>
     </div>
+  );
+}
+
+function UserStatusBadge({ status }: { status: UserSearchResultDto['status'] }) {
+  const className =
+    status === 'disabled'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
+  return (
+    <span
+      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
+    >
+      {status === 'disabled' ? 'Disabled' : 'Active'}
+    </span>
   );
 }

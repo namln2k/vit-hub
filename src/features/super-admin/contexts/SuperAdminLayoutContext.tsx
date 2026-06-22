@@ -41,9 +41,7 @@ export function SuperAdminLayoutProvider({ children }: { children: ReactNode }) 
   );
 
   return (
-    <SuperAdminLayoutContext.Provider value={value}>
-      {children}
-    </SuperAdminLayoutContext.Provider>
+    <SuperAdminLayoutContext.Provider value={value}>{children}</SuperAdminLayoutContext.Provider>
   );
 }
 

@@ -2,15 +2,23 @@ import Avatar from '@/shared/layout/Avatar';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
+import type { UserStatus } from '@/features/organization-structure/permissions';
 import { getGenderLabel } from '@/features/super-admin/lib/userDisplayUtils';
+import { Power, PowerOff } from 'lucide-react';
 
 interface UsersTableProps {
   users: AppUser[];
   isLoading: boolean;
   error: string;
+  onUpdateUserStatus: (user: AppUser, status: UserStatus) => void;
 }
 
-export default function UsersTable({ users, isLoading, error }: UsersTableProps) {
+export default function UsersTable({
+  users,
+  isLoading,
+  error,
+  onUpdateUserStatus,
+}: UsersTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-slate-200">
@@ -39,6 +47,12 @@ export default function UsersTable({ users, isLoading, error }: UsersTableProps)
             <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
               Vai trò
             </th>
+            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+              Trạng thái
+            </th>
+            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+              Thao tác
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
@@ -46,14 +60,14 @@ export default function UsersTable({ users, isLoading, error }: UsersTableProps)
             <tr>
               <td
                 className="px-5 py-10 text-center text-sm font-medium text-slate-500"
-                colSpan={9}
+                colSpan={11}
               >
                 Đang tải nhân sự...
               </td>
             </tr>
           ) : error ? (
             <tr>
-              <td className="px-5 py-10 text-center text-sm font-medium text-red-600" colSpan={9}>
+              <td className="px-5 py-10 text-center text-sm font-medium text-red-600" colSpan={11}>
                 {error}
               </td>
             </tr>
@@ -86,13 +100,37 @@ export default function UsersTable({ users, isLoading, error }: UsersTableProps)
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">
                   {USER_ROLE_LABELS[user.role]}
                 </td>
+                <td className="px-5 py-4">
+                  <UserStatusBadge status={user.status ?? 'active'} />
+                </td>
+                <td className="px-5 py-4">
+                  {user.status === 'disabled' ? (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateUserStatus(user, 'active')}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                    >
+                      <Power className="h-4 w-4" />
+                      Enable
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateUserStatus(user, 'disabled')}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      <PowerOff className="h-4 w-4" />
+                      Disable
+                    </button>
+                  )}
+                </td>
               </tr>
             ))
           ) : (
             <tr>
               <td
                 className="px-5 py-10 text-center text-sm font-medium text-slate-500"
-                colSpan={9}
+                colSpan={11}
               >
                 Chưa có nhân sự.
               </td>
@@ -101,5 +139,18 @@ export default function UsersTable({ users, isLoading, error }: UsersTableProps)
         </tbody>
       </table>
     </div>
+  );
+}
+
+function UserStatusBadge({ status }: { status: UserStatus }) {
+  const className =
+    status === 'active'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : 'border-red-200 bg-red-50 text-red-700';
+
+  return (
+    <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
+      {status === 'active' ? 'Active' : 'Disabled'}
+    </span>
   );
 }

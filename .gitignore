@@ -9,6 +9,7 @@ dist/
 .env
 .env.local
 .env.*.local
+!.env.local.example
 
 # Editor
 .vscode/*
@@ -23,11 +24,18 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Browser automation artifacts
+.playwright-mcp/
+
 # TypeScript cache
 *.tsbuildinfo
 
 # Supabase
 .supabase/
 supabase/.temp/
+supabase/.branches/
 supabase/.migrations/
+supabase/seed.sql
 .supabase/functions/.env
+# next-agents-md
+.next-docs/

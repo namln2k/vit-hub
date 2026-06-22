@@ -1,7 +1,11 @@
-import type { AppUser } from '@/contexts/auth';
+import type { UserSearchResultDto } from '@/features/users/types';
+import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
 import { normalizeSearchValue } from '@/features/super-admin/lib/userUtils';
+import { searchUsers } from '@/features/users/client/searchUsers';
 import { formatEmailList, parseEmailList } from '@/services/users/emailList';
-import { queryUsers } from '@/services/users';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -10,7 +14,7 @@ interface UseAddUsersModalOptions {
   entityLabel: string;
   successToastId: string;
   errorToastId: string;
-  onAddUsers: (userIds: string[]) => Promise<void>;
+  onAddUsers: (userIds: string[], startsAt: string) => Promise<void>;
   onAdded: () => Promise<void>;
   onClose: () => void;
 }
@@ -25,12 +29,13 @@ export function useAddUsersModal({
   onClose,
 }: UseAddUsersModalOptions) {
   const [searchValue, setSearchValue] = useState('');
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [selectedUsers, setSelectedUsers] = useState<AppUser[]>([]);
+  const [users, setUsers] = useState<UserSearchResultDto[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<UserSearchResultDto[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [isImportingEmails, setIsImportingEmails] = useState(false);
   const [emailListValue, setEmailListValue] = useState('');
+  const [startsAtValue, setStartsAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
   const [searchError, setSearchError] = useState('');
   const [emailImportError, setEmailImportError] = useState('');
   const [emailImportMessage, setEmailImportMessage] = useState('');
@@ -61,10 +66,13 @@ export function useAddUsersModal({
 
   useEffect(() => {
     if (queryText.length > 0 && queryText.length < 2) {
-      setUsers([]);
-      setSearchError('');
-      setIsSearching(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setUsers([]);
+        setSearchError('');
+        setIsSearching(false);
+      }, 0);
+
+      return () => window.clearTimeout(timeoutId);
     }
 
     let isActive = true;
@@ -74,7 +82,7 @@ export function useAddUsersModal({
         setSearchError('');
 
         try {
-          const nextUsers = await queryUsers({ search: queryText, limit: queryText ? 12 : 20 });
+          const nextUsers = await searchUsers({ search: queryText, limit: queryText ? 12 : 20 });
           if (isActive) {
             setUsers(nextUsers);
           }
@@ -98,7 +106,11 @@ export function useAddUsersModal({
     };
   }, [queryText]);
 
-  function selectUser(user: AppUser) {
+  function selectUser(user: UserSearchResultDto) {
+    if (user.status !== 'active') {
+      return;
+    }
+
     setSelectedUsers((currentUsers) => [...currentUsers, user]);
   }
 
@@ -138,15 +150,19 @@ export function useAddUsersModal({
     setIsImportingEmails(true);
 
     try {
-      const matchedUsers = await queryUsers({
+      const matchedUsers = await searchUsers({
         emails: parsedEmails.emails,
         limit: parsedEmails.emails.length,
       });
       const matchedEmailSet = new Set(matchedUsers.map((user) => user.email.toLowerCase()));
       const missingEmails = parsedEmails.emails.filter((email) => !matchedEmailSet.has(email));
       const importableUsers = matchedUsers.filter(
-        (user) => !existingUserIdSet.has(user.uid) && !selectedUserIdSet.has(user.uid),
+        (user) =>
+          user.status === 'active' &&
+          !existingUserIdSet.has(user.uid) &&
+          !selectedUserIdSet.has(user.uid),
       );
+      const disabledUsers = matchedUsers.filter((user) => user.status !== 'active');
       const skippedUsers = matchedUsers.filter(
         (user) => existingUserIdSet.has(user.uid) || selectedUserIdSet.has(user.uid),
       );
@@ -157,9 +173,11 @@ export function useAddUsersModal({
       }
 
       if (importableUsers.length === 0) {
-        setEmailImportError(
-          `Tất cả email trong danh sách đã thuộc ${entityLabel} hoặc đã được chọn.`,
-        );
+        const reason =
+          disabledUsers.length > 0
+            ? `Tất cả email trong danh sách đã thuộc ${entityLabel}, đã được chọn hoặc đang Disabled.`
+            : `Tất cả email trong danh sách đã thuộc ${entityLabel} hoặc đã được chọn.`;
+        setEmailImportError(reason);
         return;
       }
 
@@ -167,7 +185,7 @@ export function useAddUsersModal({
       setEmailImportMessage(
         `Đã thêm ${importableUsers.length} user vào danh sách chọn${
           skippedUsers.length > 0 ? `, bỏ qua ${skippedUsers.length} user đã có` : ''
-        }.`,
+        }${disabledUsers.length > 0 ? `, bỏ qua ${disabledUsers.length} user Disabled` : ''}.`,
       );
       setEmailListValue('');
     } catch (error) {
@@ -189,7 +207,10 @@ export function useAddUsersModal({
     const selectedCount = selectedUsers.length;
 
     try {
-      await onAddUsers(selectedUsers.map((user) => user.uid));
+      await onAddUsers(
+        selectedUsers.map((user) => user.uid),
+        fromVietnamDateTimeLocalValue(startsAtValue),
+      );
       await onAdded();
       onClose();
       toast.success(`Đã thêm ${selectedCount} thành viên vào ${entityLabel}.`, {
@@ -221,7 +242,9 @@ export function useAddUsersModal({
     searchValue,
     selectUser,
     selectedUsers,
+    setStartsAtValue,
     setSearchValue,
+    startsAtValue,
     submit,
     updateEmailListValue,
   };

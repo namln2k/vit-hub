@@ -4,11 +4,16 @@ import {
   getDefaultAuthenticatedRoute,
   getSafeAuthNextPath,
 } from '@/features/auth/lib/authRedirects';
-import { getUserRole } from '@/server/supabase';
+import { getCurrentUserProfile } from '@/server/services/users/profile';
+import { getRequestOriginFromHeaders } from '@/server/requestOrigin';
+import type { UserSummaryDto } from '@/features/users/types';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const { origin, searchParams } = new URL(request.url);
+  const requestHeaders = new Headers(request.headers);
+  const origin = getRequestOriginFromHeaders(requestHeaders);
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const code = searchParams.get('code');
   const next = getSafeAuthNextPath(searchParams.get('next'));
 
@@ -17,28 +22,38 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      const user = data.user;
+      let profile: UserSummaryDto | null = null;
+
+      try {
+        profile = user
+          ? await getCurrentUserProfile({
+              actor: { userId: user.id },
+              email: user.email ?? '',
+              metadata: user.user_metadata,
+            })
+          : null;
+      } catch (profileError) {
+        console.error('Failed to provision the OAuth application profile.', profileError);
+        return redirectToLogin(
+          origin,
+          'Đăng nhập thành công nhưng không thể tải hồ sơ. Vui lòng thử lại.',
+        );
+      }
+
       if (next) {
         return NextResponse.redirect(`${origin}${next}`);
       }
 
-      const uid = data.session?.user.id;
-      let role: string | null = null;
-
-      if (uid) {
-        try {
-          role = (await getUserRole(uid, 'Không thể kiểm tra vai trò người dùng.')) ?? null;
-        } catch {
-          role = null;
-        }
-      }
-
-      return NextResponse.redirect(`${origin}${getDefaultAuthenticatedRoute(role)}`);
+      return NextResponse.redirect(
+        `${origin}${getDefaultAuthenticatedRoute(profile?.role ?? null)}`,
+      );
     }
   }
 
-  return NextResponse.redirect(
-    `${origin}${withRouteQuery(APP_ROUTES.login, {
-      message: 'Không thể hoàn tất đăng nhập Google.',
-    })}`,
-  );
+  return redirectToLogin(origin, 'Không thể hoàn tất đăng nhập Google.');
+}
+
+function redirectToLogin(origin: string, message: string) {
+  return NextResponse.redirect(`${origin}${withRouteQuery(APP_ROUTES.login, { message })}`);
 }

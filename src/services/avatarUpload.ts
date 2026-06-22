@@ -1,5 +1,4 @@
-import { API_ROUTES } from '@/constants/routes';
-import { supabase } from '@/services/supabase';
+import { createAvatarUploadIntentAction, deleteAvatarObjectAction } from '@/actions/media';
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
 const MAX_AVATAR_DIMENSION = 512;
@@ -61,19 +60,6 @@ async function validateStoredAvatar(file: File): Promise<void> {
   }
 }
 
-async function getAccessToken(): Promise<string> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error || !session?.access_token) {
-    throw new Error('Bạn cần đăng nhập trước khi cập nhật ảnh đại diện.');
-  }
-
-  return session.access_token;
-}
-
 export async function uploadAvatar(file: File): Promise<UploadedAvatar> {
   const validationError = validateAvatarFile(file);
 
@@ -83,33 +69,24 @@ export async function uploadAvatar(file: File): Promise<UploadedAvatar> {
 
   await validateStoredAvatar(file);
 
-  const accessToken = await getAccessToken();
-  const presignResponse = await fetch(API_ROUTES.avatarsPresign, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contentType: file.type,
-      size: file.size,
-    }),
+  const result = await createAvatarUploadIntentAction({
+    contentType: file.type,
+    size: file.size,
   });
-  const presignData = await presignResponse.json();
 
-  if (!presignResponse.ok) {
-    throw new Error(presignData.error ?? 'Không thể chuẩn bị upload ảnh đại diện.');
+  if (!result.ok) {
+    throw new Error(result.error.message);
   }
 
-  if (!isHttpUrl(presignData.uploadUrl) || !isHttpUrl(presignData.avatarUrl)) {
+  if (!isHttpUrl(result.data.uploadUrl) || !isHttpUrl(result.data.avatarUrl)) {
     throw new Error('Máy chủ trả về URL ảnh đại diện không hợp lệ.');
   }
 
-  if (typeof presignData.avatarKey !== 'string' || !presignData.avatarKey) {
+  if (!result.data.avatarKey) {
     throw new Error('Máy chủ trả về khoá ảnh đại diện không hợp lệ.');
   }
 
-  const uploadResponse = await fetch(presignData.uploadUrl, {
+  const uploadResponse = await fetch(result.data.uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': file.type,
@@ -122,8 +99,8 @@ export async function uploadAvatar(file: File): Promise<UploadedAvatar> {
   }
 
   return {
-    avatarUrl: presignData.avatarUrl,
-    avatarKey: presignData.avatarKey,
+    avatarUrl: result.data.avatarUrl,
+    avatarKey: result.data.avatarKey,
   };
 }
 
@@ -132,17 +109,9 @@ export async function deleteAvatar(avatarKey: string): Promise<void> {
     return;
   }
 
-  const accessToken = await getAccessToken();
-  const response = await fetch(API_ROUTES.avatarsPresign, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ avatarKey }),
-  });
+  const result = await deleteAvatarObjectAction({ avatarKey });
 
-  if (!response.ok) {
-    throw new Error('Không thể xoá ảnh đại diện cũ khỏi Cloudflare R2.');
+  if (!result.ok) {
+    throw new Error(result.error.message);
   }
 }

@@ -1,4 +1,4 @@
-import type { Post } from '@/services/posts';
+import type { PostDto } from '@/features/posts/types';
 import { DEFAULT_FEATURED_POST_COUNT } from '@/features/super-admin/components/post/homeFeaturedPostsManagementUtils';
 import Sharingan from '@/shared/loading/Sharingan';
 import { Check, GripVertical, ImageIcon, RotateCcw, Save, Search, X } from 'lucide-react';
@@ -47,7 +47,7 @@ export function FeaturedPostsActions({
 
 interface FeaturedPostsPickerProps {
   error: string;
-  filteredPosts: Post[];
+  filteredPosts: PostDto[];
   isLoading: boolean;
   isUsingDefaultSelection: boolean;
   search: string;
@@ -102,7 +102,7 @@ export function FeaturedPostsPicker({
 
 interface FeaturedPostsPickerBodyProps {
   error: string;
-  filteredPosts: Post[];
+  filteredPosts: PostDto[];
   isLoading: boolean;
   selectedPostIdSet: Set<string>;
   onTogglePost: (postId: string) => void;
@@ -156,7 +156,7 @@ function FeaturedPostsPickerBody({
 
 interface FeaturedPostOptionProps {
   isSelected: boolean;
-  post: Post;
+  post: PostDto;
   onToggle: (postId: string) => void;
 }
 
@@ -187,7 +187,7 @@ function FeaturedPostOption({ isSelected, post, onToggle }: FeaturedPostOptionPr
 interface SelectedFeaturedPostsListProps {
   dragTargetPostId: string;
   draggedPostId: string;
-  posts: Post[];
+  posts: PostDto[];
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<HTMLDivElement>, postId: string) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, postId: string) => void;
@@ -242,7 +242,7 @@ interface SelectedFeaturedPostItemProps {
   dragTargetPostId: string;
   draggedPostId: string;
   index: number;
-  post: Post;
+  post: PostDto;
   onDragEnd: () => void;
   onDragOver: (event: DragEvent<HTMLDivElement>, postId: string) => void;
   onDragStart: (event: DragEvent<HTMLButtonElement>, postId: string) => void;
@@ -304,7 +304,7 @@ function SelectedFeaturedPostItem({
   );
 }
 
-function PostThumb({ post }: { post: Post }) {
+function PostThumb({ post }: { post: PostDto }) {
   return (
     <span className="flex h-12 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-100 text-slate-400">
       {post.thumbnailUrl ? (
@@ -316,7 +316,7 @@ function PostThumb({ post }: { post: Post }) {
   );
 }
 
-function PostSummary({ post }: { post: Post }) {
+function PostSummary({ post }: { post: PostDto }) {
   return (
     <span className="min-w-0">
       <span className="line-clamp-2 text-sm font-bold text-slate-950">{post.title}</span>

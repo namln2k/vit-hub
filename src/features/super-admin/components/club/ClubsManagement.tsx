@@ -1,0 +1,447 @@
+import {
+  archiveClub,
+  listClubMembersWithCapabilities,
+  removeUsersFromClub,
+  revokeUsersFromClub,
+  type Club,
+} from '@/services/clubs';
+import type { Division } from '@/services/divisions';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import AddClubUsersModal from './AddClubUsersModal';
+import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
+import ArchiveScopeModal from '@/features/super-admin/components/common/ArchiveScopeModal';
+import {
+  ClubDetailActions,
+  ClubDetailSummary,
+  ClubListActions,
+} from '@/features/super-admin/components/club/ClubManagementPanels';
+import ClubFormModal from './ClubFormModal';
+import ClubsTable from './ClubsTable';
+import ConfirmRemoveUsersModal from '@/features/super-admin/components/common/ConfirmRemoveUsersModal';
+import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
+import {
+  fromVietnamDateTimeLocalValue,
+  toVietnamDateTimeLocalValue,
+} from '@/features/super-admin/lib/vietnamDateTime';
+import {
+  getFullName,
+  getSearchableUserValues,
+  normalizeSearchValue,
+} from '@/features/super-admin/lib/userUtils';
+import {
+  assignScopeRole,
+  formatTransferLeadApiError,
+  removeScopeRole,
+  transferScopeLead,
+  type OrganizationMember,
+  type ScopeMemberCapabilities,
+} from '@/services/organizationAdmin';
+import ScopeMembersTable from '@/features/super-admin/components/common/ScopeMembersTable';
+import type { NonEventRoleKey } from '@/features/organization-structure/permissions';
+import { toast } from 'sonner';
+
+interface ClubsManagementProps {
+  activeClub: Club | null;
+  clubs: Club[];
+  divisions: Division[];
+  isLoadingClubs: boolean;
+  clubError: string;
+  onClubCreated: (club: Club) => void;
+  onClubUpdated: (club: Club) => void;
+}
+
+export default function ClubsManagement({
+  activeClub,
+  clubs,
+  divisions,
+  isLoadingClubs,
+  clubError,
+  onClubCreated,
+  onClubUpdated,
+}: ClubsManagementProps) {
+  const [users, setUsers] = useState<OrganizationMember[]>([]);
+  const [search, setSearch] = useState('');
+  const [divisionFilter, setDivisionFilter] = useState('');
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [userError, setUserError] = useState('');
+  const [memberCapabilities, setMemberCapabilities] = useState<ScopeMemberCapabilities>({
+    canManage: false,
+    canViewContact: false,
+  });
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [clubToEdit, setClubToEdit] = useState<Club | null>(null);
+  const [clubToArchive, setClubToArchive] = useState<Club | null>(null);
+  const [isAddUsersModalOpen, setIsAddUsersModalOpen] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isRemoveUsersModalOpen, setIsRemoveUsersModalOpen] = useState(false);
+  const [isRemovingUsers, setIsRemovingUsers] = useState(false);
+  const [endedAtValue, setEndedAtValue] = useState(() => toVietnamDateTimeLocalValue(new Date()));
+
+  const filteredClubs = useMemo(() => {
+    const queryText = normalizeSearchValue(search);
+
+    return clubs.filter((club) => {
+      if (!includeArchived && club.archivedAt) {
+        return false;
+      }
+
+      if (divisionFilter && club.divisionId !== divisionFilter) {
+        return false;
+      }
+
+      if (!queryText) {
+        return true;
+      }
+
+      return [club.name, club.description, club.divisionName].some((value) =>
+        normalizeSearchValue(value).includes(queryText),
+      );
+    });
+  }, [clubs, divisionFilter, includeArchived, search]);
+
+  const filteredUsers = useMemo(() => {
+    const queryText = normalizeSearchValue(search);
+
+    if (!queryText) {
+      return users;
+    }
+
+    return users.filter((user) =>
+      getSearchableUserValues(user).some((value) =>
+        normalizeSearchValue(value).includes(queryText),
+      ),
+    );
+  }, [search, users]);
+  const existingUserIds = useMemo(() => users.map((user) => user.uid), [users]);
+  const selectedUserIdSet = useMemo(() => new Set(selectedUserIds), [selectedUserIds]);
+
+  const loadClubUsers = useCallback(
+    async (clubId: string, isMounted: () => boolean = () => true) => {
+      setIsLoadingUsers(true);
+      setUserError('');
+      setSelectedUserIds([]);
+      setIsAddUsersModalOpen(false);
+      setIsRemoveUsersModalOpen(false);
+
+      try {
+        const result = await listClubMembersWithCapabilities(clubId);
+
+        if (isMounted()) {
+          setUsers(result.members);
+          setMemberCapabilities(result.capabilities);
+        }
+      } catch (error) {
+        if (isMounted()) {
+          const message = error instanceof Error ? error.message : '';
+          setUserError(
+            message
+              ? `Không thể tải danh sách thành viên của CLB/tổ: ${message}`
+              : 'Không thể tải danh sách thành viên của CLB/tổ.',
+          );
+          setUsers([]);
+          setMemberCapabilities({ canManage: false, canViewContact: false });
+        }
+      } finally {
+        if (isMounted()) {
+          setIsLoadingUsers(false);
+        }
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!activeClub) {
+      return;
+    }
+
+    const clubId = activeClub.id;
+    let isMounted = true;
+    const timeoutId = window.setTimeout(() => {
+      void loadClubUsers(clubId, () => isMounted);
+    }, 0);
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [activeClub, loadClubUsers]);
+
+  function toggleUserSelection(userId: string) {
+    setSelectedUserIds((currentIds) =>
+      currentIds.includes(userId)
+        ? currentIds.filter((currentId) => currentId !== userId)
+        : [...currentIds, userId],
+    );
+  }
+
+  function toggleVisibleUsersSelection() {
+    const visibleUserIds = filteredUsers
+      .filter((user) => user.membership.status === 'active')
+      .map((user) => user.uid);
+    const areAllVisibleUsersSelected =
+      visibleUserIds.length > 0 && visibleUserIds.every((userId) => selectedUserIdSet.has(userId));
+
+    setSelectedUserIds((currentIds) => {
+      if (areAllVisibleUsersSelected) {
+        return currentIds.filter((userId) => !visibleUserIds.includes(userId));
+      }
+
+      return Array.from(new Set([...currentIds, ...visibleUserIds]));
+    });
+  }
+
+  async function handleRemoveSelectedUsers() {
+    if (!activeClub || selectedUserIds.length === 0) {
+      return;
+    }
+
+    setIsRemovingUsers(true);
+
+    try {
+      await removeUsersFromClub(
+        activeClub.id,
+        selectedUserIds,
+        fromVietnamDateTimeLocalValue(endedAtValue),
+      );
+      setSelectedUserIds([]);
+      setIsRemoveUsersModalOpen(false);
+      toast.success(
+        `Đã kết thúc membership của ${selectedUserIds.length} thành viên trong CLB/tổ.`,
+        {
+          id: 'club-remove-users-success',
+        },
+      );
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể kết thúc membership trong CLB/tổ: ${message}`
+          : 'Không thể kết thúc membership trong CLB/tổ.',
+        { id: 'club-remove-users-error' },
+      );
+    } finally {
+      setIsRemovingUsers(false);
+    }
+  }
+
+  async function handleAssignRole(
+    userId: string,
+    roleKey: NonEventRoleKey,
+    startsAt: string,
+    endsAt: string | null,
+  ) {
+    if (!activeClub) {
+      return;
+    }
+
+    try {
+      await assignScopeRole('club', activeClub.id, userId, roleKey, startsAt, endsAt);
+      toast.success('Đã cập nhật chức vụ trong CLB/tổ.', { id: 'club-role-success' });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message ? `Không thể cập nhật chức vụ: ${message}` : 'Không thể cập nhật chức vụ.',
+        { id: 'club-role-error' },
+      );
+      throw error;
+    }
+  }
+
+  async function handleRemoveRole(userId: string, roleKey: NonEventRoleKey, endedAt: string) {
+    if (!activeClub) {
+      return;
+    }
+
+    try {
+      await removeScopeRole('club', activeClub.id, userId, roleKey, endedAt);
+      toast.success('Đã gỡ chức vụ trong CLB/tổ.', { id: 'club-role-remove-success' });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(message ? `Không thể gỡ chức vụ: ${message}` : 'Không thể gỡ chức vụ.', {
+        id: 'club-role-remove-error',
+      });
+      throw error;
+    }
+  }
+
+  async function handleTransferLead(targetUserId: string) {
+    if (!activeClub) {
+      return;
+    }
+
+    try {
+      await transferScopeLead('club', activeClub.id, targetUserId);
+      toast.success('Đã chuyển giao chủ nhiệm CLB/tổ.', { id: 'club-transfer-lead-success' });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = formatTransferLeadApiError(error, 'Không thể chuyển giao chủ nhiệm CLB/tổ.');
+      toast.error(`Không thể chuyển giao chủ nhiệm CLB/tổ: ${message}`, {
+        id: 'club-transfer-lead-error',
+      });
+      throw new Error(message);
+    }
+  }
+
+  async function handleRevokeMembership(userId: string) {
+    if (!activeClub) {
+      return;
+    }
+
+    const user = users.find((currentUser) => currentUser.uid === userId);
+    const userName = user ? getFullName(user) : 'thành viên này';
+
+    if (!window.confirm(`Thu hồi membership của ${userName} trong CLB/tổ này?`)) {
+      return;
+    }
+
+    try {
+      await revokeUsersFromClub(activeClub.id, [userId]);
+      toast.success('Đã thu hồi membership trong CLB/tổ.', {
+        id: 'club-revoke-membership-success',
+      });
+      await loadClubUsers(activeClub.id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(
+        message
+          ? `Không thể thu hồi membership trong CLB/tổ: ${message}`
+          : 'Không thể thu hồi membership trong CLB/tổ.',
+        { id: 'club-revoke-membership-error' },
+      );
+    }
+  }
+
+  const isViewingClubList = !activeClub;
+  const visibleCount = isViewingClubList
+    ? `${filteredClubs.length} CLB/tổ`
+    : `${filteredUsers.length} thành viên`;
+
+  return (
+    <AdminContentPanel
+      section={ADMIN_SECTIONS[2]}
+      className={activeClub ? 'flex flex-col' : undefined}
+      title={activeClub?.name ?? 'Quản lý CLB/tổ'}
+      count={visibleCount}
+      actions={
+        isViewingClubList ? (
+          <ClubListActions
+            search={search}
+            divisionFilter={divisionFilter}
+            divisions={divisions}
+            includeArchived={includeArchived}
+            onSearchChange={setSearch}
+            onDivisionFilterChange={setDivisionFilter}
+            onIncludeArchivedChange={setIncludeArchived}
+            onCreate={() => setIsCreateModalOpen(true)}
+          />
+        ) : (
+          <ClubDetailActions
+            search={search}
+            selectedUserCount={selectedUserIds.length}
+            isArchived={Boolean(activeClub.archivedAt)}
+            canManageMembers={memberCapabilities.canManage}
+            onSearchChange={setSearch}
+            onEdit={() => setClubToEdit(activeClub)}
+            onArchive={() => setClubToArchive(activeClub)}
+            onOpenAddUsersModal={() => setIsAddUsersModalOpen(true)}
+            onOpenRemoveUsersModal={() => {
+              setEndedAtValue(toVietnamDateTimeLocalValue(new Date()));
+              setIsRemoveUsersModalOpen(true);
+            }}
+          />
+        )
+      }
+    >
+      {isViewingClubList ? (
+        <ClubsTable
+          clubs={filteredClubs}
+          isLoading={isLoadingClubs}
+          error={clubError}
+          onEditClub={setClubToEdit}
+          onArchiveClub={setClubToArchive}
+        />
+      ) : (
+        <>
+          <ClubDetailSummary club={activeClub} />
+          <ScopeMembersTable
+            scopeType="club"
+            users={filteredUsers}
+            isLoading={isLoadingUsers}
+            error={userError}
+            canManage={memberCapabilities.canManage}
+            canViewContact={memberCapabilities.canViewContact}
+            accent="cyan"
+            selectedUserIdSet={selectedUserIdSet}
+            onToggleUser={toggleUserSelection}
+            onToggleVisibleUsers={toggleVisibleUsersSelection}
+            onAssignRole={handleAssignRole}
+            onRemoveRole={handleRemoveRole}
+            onRevokeMembership={handleRevokeMembership}
+            onTransferLead={handleTransferLead}
+          />
+        </>
+      )}
+
+      {isCreateModalOpen && (
+        <ClubFormModal
+          divisions={divisions}
+          initialDivisionId={divisionFilter}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSaved={(club) => {
+            onClubCreated(club);
+            setIsCreateModalOpen(false);
+          }}
+        />
+      )}
+      {clubToEdit && (
+        <ClubFormModal
+          club={clubToEdit}
+          divisions={divisions}
+          onClose={() => setClubToEdit(null)}
+          onSaved={(club) => {
+            onClubUpdated(club);
+            setClubToEdit(null);
+          }}
+        />
+      )}
+      {clubToArchive && (
+        <ArchiveScopeModal
+          scopeName={clubToArchive.name}
+          scopeLabel="CLB/tổ"
+          onClose={() => setClubToArchive(null)}
+          onArchive={(archivedAt) => archiveClub(clubToArchive.id, archivedAt)}
+          onArchived={(archivedAt) => {
+            onClubUpdated({ ...clubToArchive, archivedAt });
+            setClubToArchive(null);
+          }}
+        />
+      )}
+      {activeClub && isAddUsersModalOpen && (
+        <AddClubUsersModal
+          clubId={activeClub.id}
+          clubName={activeClub.name}
+          existingUserIds={existingUserIds}
+          onClose={() => setIsAddUsersModalOpen(false)}
+          onAdded={() => loadClubUsers(activeClub.id)}
+        />
+      )}
+      {activeClub && isRemoveUsersModalOpen && (
+        <ConfirmRemoveUsersModal
+          contextName={activeClub.name}
+          contextType="club"
+          selectedCount={selectedUserIds.length}
+          isRemoving={isRemovingUsers}
+          endedAtValue={endedAtValue}
+          onCancel={() => setIsRemoveUsersModalOpen(false)}
+          onConfirm={handleRemoveSelectedUsers}
+          onEndedAtValueChange={setEndedAtValue}
+        />
+      )}
+    </AdminContentPanel>
+  );
+}

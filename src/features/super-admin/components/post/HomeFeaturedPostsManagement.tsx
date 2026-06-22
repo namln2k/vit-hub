@@ -1,4 +1,5 @@
-import { saveHomeFeaturedPostIds, type Post } from '@/services/posts';
+import { setHomeFeaturedPostsAction } from '@/actions/posts';
+import type { PostDto } from '@/features/posts/types';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import {
@@ -10,13 +11,12 @@ import {
   arePostIdsEqual,
   filterPostsBySearch,
   getDefaultFeaturedPostIds,
-  getLoadErrorMessage,
   getSaveErrorMessage,
   getSelectedPosts,
-  loadHomeFeaturedPostsConfig,
+  getInitialSelectedPostIds,
   reorderPostIds,
 } from '@/features/super-admin/components/post/homeFeaturedPostsManagementUtils';
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useCallback, useMemo, useState, type DragEvent } from 'react';
 import { toast } from 'sonner';
 
 const POSTS_SECTION = ADMIN_SECTIONS.find((section) => section.id === 'posts') ?? ADMIN_SECTIONS[0];
@@ -25,14 +25,23 @@ const SAVE_ERROR_TOAST_ID = 'home-featured-posts-save-error';
 const DEFAULT_SUCCESS_TOAST_ID = 'home-featured-posts-default-success';
 const DEFAULT_ERROR_TOAST_ID = 'home-featured-posts-default-error';
 
-export default function HomeFeaturedPostsManagement() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
-  const [savedPostIds, setSavedPostIds] = useState<string[]>([]);
-  const [isUsingDefaultSelection, setIsUsingDefaultSelection] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+export default function HomeFeaturedPostsManagement({
+  initialPosts,
+  initialFeaturedPostIds,
+}: {
+  initialPosts: PostDto[];
+  initialFeaturedPostIds: string[];
+}) {
+  const initialSelectedPostIds = getInitialSelectedPostIds(initialPosts, initialFeaturedPostIds);
+  const [posts] = useState<PostDto[]>(initialPosts);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>(initialSelectedPostIds);
+  const [savedPostIds, setSavedPostIds] = useState<string[]>(initialSelectedPostIds);
+  const [isUsingDefaultSelection, setIsUsingDefaultSelection] = useState(
+    initialFeaturedPostIds.length === 0,
+  );
+  const isLoading = false;
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
+  const error = '';
   const [search, setSearch] = useState('');
   const [draggedPostId, setDraggedPostId] = useState('');
   const [dragTargetPostId, setDragTargetPostId] = useState('');
@@ -48,43 +57,6 @@ export default function HomeFeaturedPostsManagement() {
     () => !arePostIdsEqual(selectedPostIds, savedPostIds),
     [savedPostIds, selectedPostIds],
   );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadFeaturedPostsConfig() {
-      setIsLoading(true);
-      setError('');
-
-      try {
-        const nextConfig = await loadHomeFeaturedPostsConfig();
-
-        if (isMounted) {
-          setPosts(nextConfig.posts);
-          setSelectedPostIds(nextConfig.selectedPostIds);
-          setSavedPostIds(nextConfig.selectedPostIds);
-          setIsUsingDefaultSelection(nextConfig.isUsingDefaultSelection);
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          setError(getLoadErrorMessage(loadError));
-          setPosts([]);
-          setSelectedPostIds([]);
-          setSavedPostIds([]);
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadFeaturedPostsConfig();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const togglePost = useCallback((postId: string) => {
     setSelectedPostIds((currentPostIds) =>
@@ -107,7 +79,13 @@ export default function HomeFeaturedPostsManagement() {
 
     try {
       setIsSaving(true);
-      await saveHomeFeaturedPostIds(selectedPostIds);
+      const result = await setHomeFeaturedPostsAction({
+        postIds: selectedPostIds,
+      });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
       setSavedPostIds(selectedPostIds);
       setIsUsingDefaultSelection(false);
       toast.success('Đã lưu bài viết nổi bật trên trang chủ.', { id: SAVE_SUCCESS_TOAST_ID });
@@ -130,7 +108,11 @@ export default function HomeFeaturedPostsManagement() {
 
     try {
       setIsSaving(true);
-      await saveHomeFeaturedPostIds([]);
+      const result = await setHomeFeaturedPostsAction({ postIds: [] });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
 
       const latestPostIds = getDefaultFeaturedPostIds(posts);
       setSelectedPostIds(latestPostIds);

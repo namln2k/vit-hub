@@ -1,4 +1,5 @@
-import { createPost, deletePost, listAdminPosts, updatePost, type Post } from '@/services/posts';
+import { createPostAction, deletePostAction, updatePostAction } from '@/actions/posts';
+import type { PostAdministrationDataDto, PostDto } from '@/features/posts/types';
 import AdminContentPanel from '@/features/super-admin/components/common/AdminContentPanel';
 import { ADMIN_SECTIONS } from '@/features/super-admin/constants/adminSections';
 import HomeFeaturedPostsManagement from '@/features/super-admin/components/post/HomeFeaturedPostsManagement';
@@ -18,25 +19,34 @@ import {
 } from '@/features/super-admin/lib/postFormUtils';
 import { Plus } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useState, type SubmitEvent } from 'react';
 import { toast } from 'sonner';
 
-export default function PostsManagement() {
+export default function PostsManagement({
+  initialData,
+}: {
+  initialData: PostAdministrationDataDto;
+}) {
   const searchParams = useSearchParams();
   const activeView = searchParams.get('view') === 'featured' ? 'featured' : 'editor';
 
   if (activeView === 'featured') {
-    return <HomeFeaturedPostsManagement />;
+    return (
+      <HomeFeaturedPostsManagement
+        initialPosts={initialData.publishedPosts}
+        initialFeaturedPostIds={initialData.featuredPostIds}
+      />
+    );
   }
 
-  return <PostEditorManagement />;
+  return <PostEditorManagement initialPosts={initialData.posts} />;
 }
 
-function PostEditorManagement() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+function PostEditorManagement({ initialPosts }: { initialPosts: PostDto[] }) {
+  const [posts, setPosts] = useState<PostDto[]>(initialPosts);
+  const isLoading = false;
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
+  const error = '';
   const [form, setForm] = useState<PostFormState>(() => createEmptyPostForm());
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isSlugEditing, setIsSlugEditing] = useState(false);
@@ -51,51 +61,19 @@ function PostEditorManagement() {
     [form.id, form.slug, posts],
   );
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function loadPosts() {
-      setIsLoading(true);
-      setError('');
-
-      try {
-        const nextPosts = await listAdminPosts();
-
-        if (isMounted) {
-          setPosts(nextPosts);
-        }
-      } catch (loadError) {
-        if (isMounted) {
-          const message = loadError instanceof Error ? loadError.message : '';
-          setError(message ? `Không thể tải bài viết: ${message}` : 'Không thể tải bài viết.');
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadPosts();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   function startNewPost() {
     setForm(createEmptyPostForm());
     setIsPreviewing(false);
     setIsSlugEditing(false);
   }
 
-  function editPost(post: Post) {
+  function editPost(post: PostDto) {
     setForm(createPostFormFromPost(post));
     setIsPreviewing(false);
     setIsSlugEditing(false);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const input = buildPostWrite(form);
@@ -124,7 +102,15 @@ function PostEditorManagement() {
     setIsSaving(true);
 
     try {
-      const savedPost = isEditing ? await updatePost(form.id, input) : await createPost(input);
+      const result = isEditing
+        ? await updatePostAction({ postId: form.id, post: input })
+        : await createPostAction(input);
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+
+      const savedPost = result.data;
       setPosts((currentPosts) => upsertPostByUpdatedAt(currentPosts, savedPost));
       editPost(savedPost);
       toast.success(successMessage, { id: 'post-save-success' });
@@ -136,7 +122,7 @@ function PostEditorManagement() {
     }
   }
 
-  async function handleDelete(post: Post) {
+  async function handleDelete(post: PostDto) {
     const shouldDelete = window.confirm(`Xóa bài viết "${post.title}"?`);
 
     if (!shouldDelete) {
@@ -144,7 +130,11 @@ function PostEditorManagement() {
     }
 
     try {
-      await deletePost(post.id);
+      const result = await deletePostAction({ postId: post.id });
+
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
       setPosts((currentPosts) => currentPosts.filter((currentPost) => currentPost.id !== post.id));
 
       if (form.id === post.id) {
