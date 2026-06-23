@@ -3,7 +3,7 @@
 import { getGoogleOneTapConfig } from '@/config/env';
 import { supabase } from '@/lib/supabase/client';
 import type { accounts, CredentialResponse } from 'google-one-tap';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 
@@ -12,6 +12,11 @@ declare global {
     google: { accounts: accounts };
   }
 }
+
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '0.0.0.0', '::1']);
+const subscribeToBrowserEnvironment = () => () => {};
+const getServerBrowserEligibility = () => false;
+const getBrowserEligibility = () => !LOCAL_HOSTNAMES.has(window.location.hostname);
 
 // generate nonce to use for google id token sign-in
 const generateNonce = async (): Promise<string[]> => {
@@ -28,15 +33,11 @@ const generateNonce = async (): Promise<string[]> => {
 const GoogleOneTap = () => {
   const router = useRouter();
   const { clientId } = getGoogleOneTapConfig();
-  const [isMounted, setIsMounted] = useState(false);
-  const [isLocalHost, setIsLocalHost] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-    setIsLocalHost(
-      ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(window.location.hostname),
-    );
-  }, []);
+  const isBrowserEligible = useSyncExternalStore(
+    subscribeToBrowserEnvironment,
+    getBrowserEligibility,
+    getServerBrowserEligibility,
+  );
 
   const initializeGoogleOneTap = async () => {
     if (!clientId) {
@@ -86,11 +87,7 @@ const GoogleOneTap = () => {
     window.google.accounts.id.prompt(); // Display the One Tap UI
   };
 
-  if (!clientId) {
-    return null;
-  }
-
-  if (!isMounted || isLocalHost) {
+  if (!clientId || !isBrowserEligible) {
     return null;
   }
 
