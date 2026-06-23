@@ -51,12 +51,18 @@ npm run env:check
 
 ## Quality gates
 
+GitHub Actions runs these checks for pull requests targeting `main` and again after changes
+are merged into `main`:
+
 ```bash
 npm run lint
 npm run typecheck
 npm test
 npm run build
 ```
+
+After a successful push-to-`main` check, the workflow triggers the configured Vercel deploy
+hook. Commits authored by `namln2k` retain the existing deploy-hook exclusion.
 
 ## Documentation
 
