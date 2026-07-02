@@ -87,7 +87,7 @@ export function TransferCaptainModal({
   onClose,
   onTransfer,
 }: {
-  currentCaptain: OrganizationRoleAssignmentDetail;
+  currentCaptain: OrganizationRoleAssignmentDetail | null;
   onClose: () => void;
   onTransfer: (targetUserId: string) => Promise<void>;
 }) {
@@ -107,7 +107,11 @@ export function TransferCaptainModal({
       await onTransfer(targetUser.uid);
       onClose();
     } catch (transferError) {
-      setError(formatTransferLeadApiError(transferError, 'Không thể chuyển giao Đội trưởng.'));
+      setError(
+        currentCaptain
+          ? formatTransferLeadApiError(transferError, 'Không thể chuyển giao Đội trưởng.')
+          : formatOrganizationRoleApiError(transferError, 'Không thể bổ nhiệm Đội trưởng.'),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -115,15 +119,15 @@ export function TransferCaptainModal({
 
   return (
     <RoleUserPickerModal
-      title="Chuyển giao Đội trưởng"
-      confirmLabel="Xác nhận chuyển giao"
+      title={currentCaptain ? 'Chuyển giao Đội trưởng' : 'Bổ nhiệm Đội trưởng'}
+      confirmLabel={currentCaptain ? 'Xác nhận chuyển giao' : 'Bổ nhiệm'}
       isSaving={isSaving}
       targetUser={targetUser}
       error={error}
       onClose={onClose}
       onConfirm={() => void handleSubmit()}
       onTargetUserChange={setTargetUser}
-      currentUser={currentCaptain.user}
+      currentUser={currentCaptain?.user}
     />
   );
 }

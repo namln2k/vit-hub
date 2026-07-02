@@ -11,6 +11,17 @@ export const ROLE_LABELS = {
 } satisfies Record<OrganizationRoleKey, string>;
 
 export type RoleLifecycleState = 'current' | 'upcoming';
+export type CaptainActionMode = 'assign_initial' | 'transfer';
+
+export function getCaptainActionMode(
+  currentCaptain: OrganizationRoleAssignmentDetail | null,
+): CaptainActionMode {
+  return currentCaptain ? 'transfer' : 'assign_initial';
+}
+
+export function getCaptainActionLabel(mode: CaptainActionMode) {
+  return mode === 'transfer' ? 'Chuyển giao Đội trưởng' : 'Bổ nhiệm Đội trưởng';
+}
 
 export function getRoleLifecycleState(
   assignment: OrganizationRoleAssignmentDetail,

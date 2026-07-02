@@ -49,6 +49,24 @@ Validate configuration:
 npm run env:check
 ```
 
+## Sync production data to local
+
+Use this when local Supabase should mirror the hosted production database data:
+
+```bash
+npx supabase start
+npx supabase link --project-ref lausvdwsgrlhzpbpthxg
+npx supabase db dump --linked --data-only --file supabase/seed.sql
+npx supabase db reset --local
+```
+
+`supabase db pull` only pulls schema, not data. The reset command wipes the local database, runs
+local migrations, then loads `supabase/seed.sql` through the seed configuration in
+`supabase/config.toml`.
+
+Do not commit a freshly dumped `supabase/seed.sql` if it contains production user/session data.
+Check `git status` before committing.
+
 ## Quality gates
 
 GitHub Actions runs these checks for pull requests targeting `main` and again after changes

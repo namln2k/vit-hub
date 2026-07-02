@@ -9,7 +9,11 @@ import {
   RoleAssignmentGroup,
   TechnicalAdminsTable,
 } from '@/features/super-admin/components/organization-role/OrganizationRolePanels';
-import { getRoleLifecycleState } from '@/features/super-admin/components/organization-role/organizationRoleUtils';
+import {
+  getCaptainActionLabel,
+  getCaptainActionMode,
+  getRoleLifecycleState,
+} from '@/features/super-admin/components/organization-role/organizationRoleUtils';
 import {
   assignOrganizationRole,
   endOrganizationRole,
@@ -101,6 +105,22 @@ export default function OrganizationRolesManagement() {
     () => assignments.filter((assignment) => assignment.roleKey === 'vice_captain'),
     [assignments],
   );
+  const captainActionMode = getCaptainActionMode(currentCaptain);
+  const captainActionLabel = getCaptainActionLabel(captainActionMode);
+
+  async function handleAssignInitialCaptain(userId: string) {
+    try {
+      await assignOrganizationRole(userId, 'captain');
+      toast.success('Đã bổ nhiệm Đội trưởng.', { id: 'organization-assign-captain-success' });
+      await loadOrganizationRoles({ showLoading: false });
+    } catch (assignError) {
+      const message = formatOrganizationRoleApiError(assignError, 'Không thể bổ nhiệm Đội trưởng.');
+      toast.error(`Không thể bổ nhiệm Đội trưởng: ${message}`, {
+        id: 'organization-assign-captain-error',
+      });
+      throw new Error(message);
+    }
+  }
 
   async function handleAssignViceCaptain(userId: string, startsAt: string, endsAt: string | null) {
     try {
@@ -163,11 +183,15 @@ export default function OrganizationRolesManagement() {
           <button
             type="button"
             onClick={() => setIsTransferCaptainModalOpen(true)}
-            disabled={!currentCaptain || isLoading}
+            disabled={isLoading}
             className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-teal-200 bg-white px-4 text-sm font-semibold text-teal-700 transition-colors hover:bg-teal-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white"
           >
-            <ArrowRightLeft className="h-4 w-4" />
-            Chuyển giao Đội trưởng
+            {captainActionMode === 'transfer' ? (
+              <ArrowRightLeft className="h-4 w-4" />
+            ) : (
+              <ShieldPlus className="h-4 w-4" />
+            )}
+            {captainActionLabel}
           </button>
           <button
             type="button"
@@ -236,11 +260,13 @@ export default function OrganizationRolesManagement() {
           onEnd={handleEndViceCaptain}
         />
       )}
-      {isTransferCaptainModalOpen && currentCaptain && (
+      {isTransferCaptainModalOpen && (
         <TransferCaptainModal
           currentCaptain={currentCaptain}
           onClose={() => setIsTransferCaptainModalOpen(false)}
-          onTransfer={handleTransferCaptain}
+          onTransfer={
+            captainActionMode === 'transfer' ? handleTransferCaptain : handleAssignInitialCaptain
+          }
         />
       )}
     </AdminContentPanel>
