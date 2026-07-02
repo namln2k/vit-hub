@@ -121,6 +121,7 @@ interface UserRow extends UserAccountRow {
 export interface UserRepository {
   findAccountById(userId: string): Promise<UserAccountRecord | null>;
   findById(userId: string): Promise<UserRecord | null>;
+  findByUsername(username: string): Promise<UserRecord | null>;
   findExistingEmails(emails: string[]): Promise<string[]>;
   listUsernames(): Promise<string[]>;
   usernameExists(username: string): Promise<boolean>;
@@ -179,6 +180,24 @@ export const userRepository: UserRepository = {
 
   async findById(userId) {
     return findUserById(userId);
+  },
+
+  async findByUsername(username) {
+    const query = new URLSearchParams({
+      select: USER_SELECT,
+      username: `ilike.${escapeSearchPattern(username)}`,
+      limit: '1',
+    });
+    const { response, data } = await supabaseFetch<UserRow[]>(
+      `/rest/v1/user?${query.toString()}`,
+    );
+
+    if (!response.ok) {
+      throw new InfrastructureError('Không thể tải hồ sơ thành viên.');
+    }
+
+    const row = Array.isArray(data) ? data[0] : null;
+    return row ? mapUserRow(row) : null;
   },
 
   async findExistingEmails(emails) {

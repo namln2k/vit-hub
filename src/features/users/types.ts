@@ -1,5 +1,47 @@
 import type { UserRole } from '@/constants/userRoles';
-import type { UserStatus } from '@/features/organization-structure/permissions';
+import type {
+  MembershipStatus,
+  NonEventRoleKey,
+  NonEventScopeType,
+  UserStatus,
+} from '@/features/organization-structure/permissions';
+
+export interface UserOrganizationRoleDto {
+  id: string;
+  roleKey: NonEventRoleKey;
+  roleLabel: string;
+  scopeType: NonEventScopeType;
+  scopeName: string;
+  startsAt: string;
+  endsAt: string | null;
+  status: MembershipStatus;
+}
+
+export interface UserOrganizationMembershipDto {
+  id: string;
+  scopeId: string;
+  scopeName: string;
+  startsAt: string;
+  endsAt: string | null;
+  status: MembershipStatus;
+}
+
+export interface UserOrganizationProfileDto {
+  currentRoles: UserOrganizationRoleDto[];
+  pastRoles: UserOrganizationRoleDto[];
+  divisions: {
+    current: UserOrganizationMembershipDto[];
+    past: UserOrganizationMembershipDto[];
+  };
+  groups: {
+    current: UserOrganizationMembershipDto[];
+    past: UserOrganizationMembershipDto[];
+  };
+  clubs: {
+    current: UserOrganizationMembershipDto[];
+    past: UserOrganizationMembershipDto[];
+  };
+}
 
 export interface UserSummaryDto {
   uid: string;
@@ -18,6 +60,7 @@ export interface UserSummaryDto {
   avatarKey: string;
   role: UserRole;
   status: UserStatus;
+  organizationProfile: UserOrganizationProfileDto;
 }
 
 export type UserSearchResultDto = Pick<

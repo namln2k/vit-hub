@@ -4,6 +4,7 @@ export const APP_ROUTES = {
   register: '/register',
   forgotPassword: '/forgot-password',
   profile: '/profile',
+  users: '/users',
   features: '/features',
   sportsFeature: '/features/sports',
   superAdmin: '/super-admin',
@@ -16,6 +17,7 @@ export const API_ROUTES = {
 
 export const PROTECTED_APP_ROUTES = [
   APP_ROUTES.profile,
+  APP_ROUTES.users,
   APP_ROUTES.features,
   APP_ROUTES.superAdmin,
 ] as const;
@@ -30,6 +32,10 @@ export function getPostPath(slug: string) {
 
 export function getPublicSportGamePath(gameId: string) {
   return `/sports/games/${gameId}`;
+}
+
+export function getPublicUserProfilePath(username: string) {
+  return `${APP_ROUTES.users}/${encodeURIComponent(username)}`;
 }
 
 export function getSportGameManagementPath(gameId: string) {

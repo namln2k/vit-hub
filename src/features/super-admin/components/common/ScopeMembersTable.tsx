@@ -15,10 +15,12 @@ import {
   isActiveNowAssignment,
   isCurrentOrUpcomingAssignment,
 } from '@/features/super-admin/components/common/scopeMemberLifecycle';
+import { getPublicUserProfilePath } from '@/constants/routes';
 import type {
   RoleActionDialogState,
   ScopeMembersTableProps,
 } from '@/features/super-admin/components/common/scopeMemberTypes';
+import type { OrganizationMember } from '@/services/organizationAdmin';
 import {
   getDeputyRoleForScope,
   getLeadRoleForScope,
@@ -27,6 +29,7 @@ import {
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import Avatar from '@/shared/layout/Avatar';
 import { ArrowRightLeft, Ban, ShieldCheck, ShieldMinus, ShieldPlus } from 'lucide-react';
+import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
 
 export default function ScopeMembersTable({
@@ -176,18 +179,10 @@ export default function ScopeMembersTable({
                       />
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar src={user.avatarUrl} size="sm" />
-                        <span className="min-w-0">
-                          <span className="block font-semibold whitespace-nowrap text-slate-950">
-                            {getFullName(user)}
-                          </span>
-                          <PickerUserStatusBadge status={user.status ?? 'active'} />
-                        </span>
-                      </div>
+                      <MemberIdentity user={user} />
                     </td>
                     <td className="px-5 py-4 text-sm font-medium text-slate-600">
-                      @{user.username}
+                      <MemberUsername user={user} />
                     </td>
                     <td className="px-5 py-4 text-sm font-medium text-slate-600">
                       <RestrictedContactValue value={user.email} />
@@ -307,6 +302,45 @@ export default function ScopeMembersTable({
         />
       )}
     </div>
+  );
+}
+
+function MemberIdentity({ user }: { user: OrganizationMember }) {
+  const content = (
+    <>
+      <Avatar src={user.avatarUrl} size="sm" />
+      <span className="min-w-0">
+        <span className="block font-semibold whitespace-nowrap text-slate-950">
+          {getFullName(user)}
+        </span>
+        <PickerUserStatusBadge status={user.status ?? 'active'} />
+      </span>
+    </>
+  );
+
+  if (user.status !== 'active') {
+    return <div className="flex items-center gap-3">{content}</div>;
+  }
+
+  return (
+    <Link href={getPublicUserProfilePath(user.username)} className="flex items-center gap-3">
+      {content}
+    </Link>
+  );
+}
+
+function MemberUsername({ user }: { user: OrganizationMember }) {
+  if (user.status !== 'active') {
+    return <>@{user.username}</>;
+  }
+
+  return (
+    <Link
+      href={getPublicUserProfilePath(user.username)}
+      className="hover:text-indigo-700 hover:underline"
+    >
+      @{user.username}
+    </Link>
   );
 }
 

@@ -1,5 +1,6 @@
 import type { AppUser } from '@/contexts/auth';
 import type { UserRole } from '@/constants/userRoles';
+import { getEmptyOrganizationProfile } from '@/features/users/organizationProfile';
 
 export interface LegacyUserRow {
   id: string;
@@ -37,5 +38,6 @@ export function mapLegacyUserRow(row: LegacyUserRow): AppUser {
     avatarKey: row.avatar_key ?? '',
     role: row.role,
     status: 'active',
+    organizationProfile: getEmptyOrganizationProfile(),
   };
 }

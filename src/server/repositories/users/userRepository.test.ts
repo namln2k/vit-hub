@@ -86,6 +86,20 @@ describe('userRepository', () => {
     );
   });
 
+  it('finds a profile by username case-insensitively', async () => {
+    const fetchMock = vi.fn(async () => Response.json([userRow]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(userRepository.findByUsername('Member')).resolves.toMatchObject({
+      id: 'user-1',
+      username: 'member',
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/username=ilike\.Member.*limit=1/),
+      expect.any(Object),
+    );
+  });
+
   it('creates application profiles with fixed member and active account state', async () => {
     const fetchMock = vi.fn(async () => Response.json([userRow]));
     vi.stubGlobal('fetch', fetchMock);

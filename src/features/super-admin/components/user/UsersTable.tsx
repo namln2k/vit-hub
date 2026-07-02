@@ -1,10 +1,12 @@
 import Avatar from '@/shared/layout/Avatar';
+import { getPublicUserProfilePath } from '@/constants/routes';
 import { getFullName } from '@/features/super-admin/lib/userUtils';
 import { USER_ROLE_LABELS } from '@/constants/userRoles';
 import type { AppUser } from '@/contexts/auth';
 import type { UserStatus } from '@/features/organization-structure/permissions';
 import { getGenderLabel } from '@/features/super-admin/lib/userDisplayUtils';
 import { Power, PowerOff } from 'lucide-react';
+import Link from 'next/link';
 
 interface UsersTableProps {
   users: AppUser[];
@@ -75,14 +77,11 @@ export default function UsersTable({
             users.map((user) => (
               <tr key={user.uid} className="hover:bg-slate-50">
                 <td className="px-5 py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar src={user.avatarUrl} size="sm" />
-                    <span className="font-semibold text-slate-950 whitespace-nowrap">
-                      {getFullName(user)}
-                    </span>
-                  </div>
+                  <UserIdentity user={user} />
                 </td>
-                <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>
+                <td className="px-5 py-4 text-sm font-medium text-slate-600">
+                  <UsernameText user={user} />
+                </td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.phoneNumber}</td>
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">
@@ -139,6 +138,40 @@ export default function UsersTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function UserIdentity({ user }: { user: AppUser }) {
+  const content = (
+    <>
+      <Avatar src={user.avatarUrl} size="sm" />
+      <span className="font-semibold text-slate-950 whitespace-nowrap">{getFullName(user)}</span>
+    </>
+  );
+
+  if (user.status !== 'active') {
+    return <div className="flex items-center gap-3">{content}</div>;
+  }
+
+  return (
+    <Link href={getPublicUserProfilePath(user.username)} className="flex items-center gap-3">
+      {content}
+    </Link>
+  );
+}
+
+function UsernameText({ user }: { user: AppUser }) {
+  if (user.status !== 'active') {
+    return <>@{user.username}</>;
+  }
+
+  return (
+    <Link
+      href={getPublicUserProfilePath(user.username)}
+      className="hover:text-indigo-700 hover:underline"
+    >
+      @{user.username}
+    </Link>
   );
 }
 

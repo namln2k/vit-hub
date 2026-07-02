@@ -1,11 +1,13 @@
 'use client';
 
 import { searchUsers } from '@/features/users/client/searchUsers';
+import { getPublicUserProfilePath } from '@/constants/routes';
 import Avatar from '@/shared/layout/Avatar';
 import Sharingan from '@/shared/loading/Sharingan';
 import { useAuth } from '@/contexts/useAuth';
 import type { UserSearchResultDto } from '@/features/users/types';
 import { Search, X } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface UserSearchProps {
@@ -39,6 +41,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
       .filter(
         (user) =>
           user.uid !== currentUser?.uid &&
+          user.status === 'active' &&
           [user.username, user.email, user.firstName, user.lastName, user.nickname].some((value) =>
             normalizeSearchValue(value).includes(queryText),
           ),
@@ -145,8 +148,10 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
           ) : results.length > 0 ? (
             <div className="max-h-80 overflow-y-auto py-1">
               {results.map((user) => (
-                <div
+                <Link
                   key={user.uid}
+                  href={getPublicUserProfilePath(user.username)}
+                  onClick={() => setIsFocused(false)}
                   className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50"
                 >
                   <Avatar src={user.avatarUrl} size="sm" />
@@ -159,7 +164,7 @@ export default function UserSearch({ variant = 'light' }: UserSearchProps) {
                       {user.email}
                     </p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : isLoading ? (

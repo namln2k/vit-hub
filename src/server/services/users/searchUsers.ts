@@ -13,6 +13,7 @@ import type {
   UserSearchResultDto,
   UserSummaryDto,
 } from '@/features/users/types';
+import { getEmptyOrganizationProfile } from '@/features/users/organizationProfile';
 
 const DEFAULT_LIMIT = 20;
 const MAX_SEARCH_LIMIT = 100;
@@ -111,6 +112,7 @@ export function mapUserSummary(record: UserRecord): UserSummaryDto {
     avatarKey: record.avatarKey ?? '',
     role: record.role,
     status: record.status,
+    organizationProfile: getEmptyOrganizationProfile(),
   };
 }
 

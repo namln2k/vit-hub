@@ -3,16 +3,23 @@ import 'server-only';
 import {
   userRepository,
   type UpdateUserProfileRecordInput,
+  type UserRecord,
   type UserRepository,
 } from '@/server/repositories/users/userRepository';
+import {
+  userOrganizationProfileRepository,
+  type UserOrganizationProfileRepository,
+} from '@/server/repositories/users/userOrganizationProfileRepository';
 import type { AuthIdentity } from '@/server/services/auth/identity';
 import type { Actor } from '@/server/services/shared/actor';
 import { ForbiddenError, NotFoundError } from '@/server/services/shared/errors';
 import { mapUserSummary } from '@/server/services/users/searchUsers';
+import { getEmptyOrganizationProfile } from '@/features/users/organizationProfile';
 import type { UserSummaryDto } from '@/features/users/types';
 
 interface UserProfileDependencies {
   users: Pick<UserRepository, 'create' | 'findById' | 'updateProfile' | 'usernameExists'>;
+  organizationProfiles?: UserOrganizationProfileRepository;
   now(): Date;
 }
 
@@ -20,6 +27,7 @@ const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 
 const defaultDependencies: UserProfileDependencies = {
   users: userRepository,
+  organizationProfiles: userOrganizationProfileRepository,
   now: () => new Date(),
 };
 
@@ -30,7 +38,7 @@ export function createUserProfileService(
     const existing = await dependencies.users.findById(identity.actor.userId);
 
     if (existing) {
-      return mapUserSummary(existing);
+      return mapUserProfile(existing);
     }
 
     const email = identity.email.trim().toLowerCase();
@@ -60,7 +68,7 @@ export function createUserProfileService(
       avatarKey,
     });
 
-    return mapUserSummary(created);
+    return mapUserProfile(created);
   }
 
   async function updateCurrentUserProfile(
@@ -78,7 +86,21 @@ export function createUserProfileService(
       input,
       dependencies.now().toISOString(),
     );
-    return mapUserSummary(updated);
+    return mapUserProfile(updated);
+  }
+
+  async function mapUserProfile(record: UserRecord): Promise<UserSummaryDto> {
+    const organizationProfile = dependencies.organizationProfiles
+      ? await dependencies.organizationProfiles.getForUser(
+          record.id,
+          dependencies.now().toISOString(),
+        )
+      : getEmptyOrganizationProfile();
+
+    return {
+      ...mapUserSummary(record),
+      organizationProfile,
+    };
   }
 
   return {
