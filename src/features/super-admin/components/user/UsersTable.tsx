@@ -52,7 +52,7 @@ export default function UsersTable({
             <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
               Trạng thái
             </th>
-            <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+            <th className="px-3 py-3 text-center text-xs font-bold uppercase text-slate-500">
               Thao tác
             </th>
           </tr>
@@ -99,27 +99,27 @@ export default function UsersTable({
                 <td className="px-5 py-4 text-sm font-medium text-slate-600">
                   {USER_ROLE_LABELS[user.role]}
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-5 py-4 whitespace-nowrap">
                   <UserStatusBadge status={user.status ?? 'active'} />
                 </td>
-                <td className="px-5 py-4">
+                <td className="px-3 py-4 text-center">
                   {user.status === 'disabled' ? (
                     <button
                       type="button"
                       onClick={() => onUpdateUserStatus(user, 'active')}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+                      className="inline-flex h-9 w-max items-center justify-start gap-2 whitespace-nowrap rounded-lg border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
                     >
                       <Power className="h-4 w-4" />
-                      Enable
+                      <span className="whitespace-nowrap">Enable</span>
                     </button>
                   ) : (
                     <button
                       type="button"
                       onClick={() => onUpdateUserStatus(user, 'disabled')}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
+                      className="inline-flex h-9 w-max items-center justify-start gap-2 whitespace-nowrap rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50"
                     >
                       <PowerOff className="h-4 w-4" />
-                      Disable
+                      <span className="whitespace-nowrap">Disable</span>
                     </button>
                   )}
                 </td>
@@ -182,7 +182,9 @@ function UserStatusBadge({ status }: { status: UserStatus }) {
       : 'border-red-200 bg-red-50 text-red-700';
 
   return (
-    <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
+    <span
+      className={`inline-flex w-max items-center whitespace-nowrap rounded-full border px-2 py-1 text-xs font-semibold ${className}`}
+    >
       {status === 'active' ? 'Active' : 'Disabled'}
     </span>
   );

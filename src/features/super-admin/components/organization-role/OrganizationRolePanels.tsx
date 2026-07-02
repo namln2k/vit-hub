@@ -28,7 +28,7 @@ export function RoleAssignmentGroup({
     <div className="overflow-hidden rounded-lg border border-slate-200">
       <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3">
         <h3 className="text-sm font-extrabold uppercase text-slate-700">{title}</h3>
-        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-500">
+        <span className="inline-flex w-max items-center whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-500">
           {assignments.length}
         </span>
       </div>
@@ -95,7 +95,7 @@ export function TechnicalAdminsTable({ admins }: { admins: OrganizationTechnical
                 <UserSummary user={admin} />
               </td>
               <td className="px-5 py-4">
-                <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700">
+                <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-sky-200 bg-sky-50 px-2 py-1 text-xs font-semibold text-sky-700">
                   super_admin
                 </span>
               </td>
@@ -104,7 +104,7 @@ export function TechnicalAdminsTable({ admins }: { admins: OrganizationTechnical
                   {admin.hasCaptainAssignment && <DomainRoleChip label="Đội trưởng" />}
                   {admin.hasViceCaptainAssignment && <DomainRoleChip label="Đội phó" />}
                   {!admin.hasCaptainAssignment && !admin.hasViceCaptainAssignment && (
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
+                    <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700">
                       Không có domain role Đội
                     </span>
                   )}
@@ -144,7 +144,9 @@ function RoleStateBadge({ assignment }: { assignment: OrganizationRoleAssignment
       : 'border-emerald-200 bg-emerald-50 text-emerald-700';
 
   return (
-    <span className={`w-fit rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
+    <span
+      className={`inline-flex w-max items-center whitespace-nowrap rounded-full border px-2 py-1 text-xs font-semibold ${className}`}
+    >
       {state === 'upcoming' ? 'Sắp hiệu lực' : 'Đang hiệu lực'}
     </span>
   );
@@ -152,7 +154,7 @@ function RoleStateBadge({ assignment }: { assignment: OrganizationRoleAssignment
 
 function DomainRoleChip({ label }: { label: string }) {
   return (
-    <span className="rounded-full border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700">
+    <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700">
       {label}
     </span>
   );
@@ -160,6 +162,8 @@ function DomainRoleChip({ label }: { label: string }) {
 
 function HeaderCell({ children }: { children: string }) {
   return (
-    <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">{children}</th>
+    <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+      {children}
+    </th>
   );
 }

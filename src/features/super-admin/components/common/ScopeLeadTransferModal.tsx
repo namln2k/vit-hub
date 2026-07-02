@@ -244,7 +244,7 @@ export function PickerUserStatusBadge({ status }: { status: UserSearchResultDto[
 
   return (
     <span
-      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
+      className={`mt-1 inline-flex w-max items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold ${className}`}
     >
       {status === 'disabled' ? 'Disabled' : 'Active'}
     </span>

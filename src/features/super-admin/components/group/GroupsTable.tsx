@@ -25,7 +25,7 @@ export default function GroupsTable({ groups, isLoading, error, onEditGroup }: G
               <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
                 Mô tả
               </th>
-              <th className="w-32 px-5 py-3 text-right text-xs font-bold uppercase text-slate-500">
+              <th className="px-3 py-3 text-center text-xs font-bold uppercase text-slate-500">
                 Thao tác
               </th>
             </tr>
@@ -59,19 +59,17 @@ export default function GroupsTable({ groups, isLoading, error, onEditGroup }: G
                   <td className="max-w-xl px-5 py-4 text-sm font-medium text-slate-600">
                     {group.description || <span className="text-slate-400">Chưa có mô tả</span>}
                   </td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onEditGroup(group)}
-                        disabled={Boolean(group.archivedAt)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
-                        aria-label={`Chỉnh sửa ${group.name}`}
-                        title="Chỉnh sửa"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                    </div>
+                  <td className="px-3 py-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onEditGroup(group)}
+                      disabled={Boolean(group.archivedAt)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950"
+                      aria-label={`Chỉnh sửa ${group.name}`}
+                      title="Chỉnh sửa"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))

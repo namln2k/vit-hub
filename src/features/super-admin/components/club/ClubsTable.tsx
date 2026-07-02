@@ -29,7 +29,7 @@ export default function ClubsTable({
             <HeaderCell>Thành viên</HeaderCell>
             <HeaderCell>Chủ nhiệm</HeaderCell>
             <HeaderCell>Trạng thái</HeaderCell>
-            <HeaderCell>Thao tác</HeaderCell>
+            <ActionHeaderCell>Thao tác</ActionHeaderCell>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200 bg-white">
@@ -72,33 +72,33 @@ export default function ClubsTable({
                 </td>
                 <td className="px-5 py-4">
                   {club.archivedAt ? (
-                    <span className="rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                    <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                       Đã lưu trữ
                     </span>
                   ) : (
-                    <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
+                    <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-xs font-semibold text-cyan-700">
                       Đang hoạt động
                     </span>
                   )}
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex flex-wrap gap-2">
+                <td className="px-3 py-4">
+                  <div className="mx-auto flex w-max flex-col items-center gap-2">
                     <button
                       type="button"
                       onClick={() => onEditClub(club)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950"
+                      className="inline-flex h-9 w-max items-center justify-start gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950"
                     >
                       <Pencil className="h-4 w-4" />
-                      Sửa
+                      <span className="whitespace-nowrap">Sửa</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => onArchiveClub(club)}
                       disabled={Boolean(club.archivedAt)}
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex h-9 w-max items-center justify-start gap-2 whitespace-nowrap rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-45"
                     >
                       <Archive className="h-4 w-4" />
-                      Lưu trữ
+                      <span className="whitespace-nowrap">Lưu trữ</span>
                     </button>
                   </div>
                 </td>
@@ -116,6 +116,14 @@ export default function ClubsTable({
 function HeaderCell({ children }: { children: string }) {
   return (
     <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">{children}</th>
+  );
+}
+
+function ActionHeaderCell({ children }: { children: string }) {
+  return (
+    <th className="whitespace-nowrap px-3 py-3 text-center text-xs font-bold uppercase text-slate-500">
+      {children}
+    </th>
   );
 }
 

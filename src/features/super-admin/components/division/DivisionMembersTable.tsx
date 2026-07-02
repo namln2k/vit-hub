@@ -47,16 +47,13 @@ export default function DivisionMembersTable({
                 Username
               </th>
               <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
-                Email
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
                 Vai trò
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {isLoading ? null : error ? (
-              <EmptyTableRow className="text-red-600" colSpan={5}>
+              <EmptyTableRow className="text-red-600" colSpan={4}>
                 {error}
               </EmptyTableRow>
             ) : users.length > 0 ? (
@@ -80,12 +77,11 @@ export default function DivisionMembersTable({
                     </div>
                   </td>
                   <td className="px-5 py-4 text-sm font-medium text-slate-600">@{user.username}</td>
-                  <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.email}</td>
                   <td className="px-5 py-4 text-sm font-medium text-slate-600">{user.role}</td>
                 </tr>
               ))
             ) : (
-              <EmptyTableRow colSpan={5}>Chưa có thành viên trong mảng này.</EmptyTableRow>
+              <EmptyTableRow colSpan={4}>Chưa có thành viên trong mảng này.</EmptyTableRow>
             )}
           </tbody>
         </table>

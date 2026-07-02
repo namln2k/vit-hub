@@ -6,7 +6,6 @@ import MembersLoadingOverlay from '@/features/super-admin/components/common/Memb
 import {
   LifecycleActorLine,
   LifecycleStatusBadge,
-  RestrictedContactValue,
   RoleAssignmentBadge,
   canEndMembership,
   canRevokeMembership,
@@ -38,7 +37,6 @@ export default function ScopeMembersTable({
   isLoading,
   error,
   canManage,
-  canViewContact,
   selectedUserIdSet,
   accent,
   onToggleUser,
@@ -80,13 +78,7 @@ export default function ScopeMembersTable({
     <div className="relative min-h-72 flex-1">
       {isLoading && <MembersLoadingOverlay />}
       <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-5 py-3">
-        {!canViewContact ? (
-          <p className="text-sm font-semibold text-amber-700">
-            Dữ liệu liên hệ đang bị giới hạn theo quyền xem scope.
-          </p>
-        ) : (
-          <span />
-        )}
+        <span />
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
             <button
@@ -135,18 +127,17 @@ export default function ScopeMembersTable({
               </th>
               <HeaderCell>Thành viên</HeaderCell>
               <HeaderCell>Username</HeaderCell>
-              <HeaderCell>Email</HeaderCell>
               <HeaderCell>Trạng thái</HeaderCell>
               <HeaderCell>Nguồn</HeaderCell>
               <HeaderCell>Thời hạn</HeaderCell>
               <HeaderCell>Lifecycle</HeaderCell>
               <HeaderCell>Chức vụ</HeaderCell>
-              <HeaderCell>Thao tác</HeaderCell>
+              <ActionHeaderCell>Thao tác</ActionHeaderCell>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {isLoading ? null : error ? (
-              <EmptyTableRow className="text-red-600" colSpan={10}>
+              <EmptyTableRow className="text-red-600" colSpan={9}>
                 {error}
               </EmptyTableRow>
             ) : visibleUsers.length > 0 ? (
@@ -184,14 +175,11 @@ export default function ScopeMembersTable({
                     <td className="px-5 py-4 text-sm font-medium text-slate-600">
                       <MemberUsername user={user} />
                     </td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-600">
-                      <RestrictedContactValue value={user.email} />
-                    </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 whitespace-nowrap">
                       <LifecycleStatusBadge state={lifecycleState} />
                     </td>
                     <td className="px-5 py-4">
-                      <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                      <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
                         {user.membership.source === 'manual' ? 'Manual' : 'Role auto'}
                       </span>
                     </td>
@@ -222,12 +210,14 @@ export default function ScopeMembersTable({
                             <RoleAssignmentBadge key={assignment.id} assignment={assignment} />
                           ))
                         ) : (
-                          <span className="text-sm font-medium text-slate-400">Thành viên</span>
+                          <span className="whitespace-nowrap text-sm font-medium text-slate-400">
+                            Thành viên
+                          </span>
                         )}
                       </div>
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="px-3 py-4">
+                      <div className="flex w-max flex-col items-center gap-2">
                         {!currentLead && (
                           <ActionButton
                             label="Gán trưởng"
@@ -276,7 +266,7 @@ export default function ScopeMembersTable({
                 );
               })
             ) : (
-              <EmptyTableRow colSpan={10}>
+              <EmptyTableRow colSpan={9}>
                 {viewMode === 'history'
                   ? 'Chưa có lịch sử thành viên trong scope này.'
                   : 'Chưa có thành viên đang hiệu lực trong scope này.'}
@@ -346,7 +336,17 @@ function MemberUsername({ user }: { user: OrganizationMember }) {
 
 function HeaderCell({ children }: { children: string }) {
   return (
-    <th className="px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">{children}</th>
+    <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-bold uppercase text-slate-500">
+      {children}
+    </th>
+  );
+}
+
+function ActionHeaderCell({ children }: { children: string }) {
+  return (
+    <th className="whitespace-nowrap px-3 py-3 text-center text-xs font-bold uppercase text-slate-500">
+      {children}
+    </th>
   );
 }
 
@@ -369,10 +369,10 @@ function ActionButton({ children, label, tone, onClick, disabled = false }: Acti
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-white px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white ${className}`}
+      className={`inline-flex h-9 w-max items-center justify-start gap-2 whitespace-nowrap rounded-lg border bg-white px-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300 disabled:hover:bg-white ${className}`}
     >
       {children}
-      {label}
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }

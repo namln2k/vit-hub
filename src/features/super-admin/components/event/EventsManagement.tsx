@@ -273,7 +273,9 @@ export default function EventsManagement({ divisions, groups, clubs }: EventsMan
                   <TableHeader>Thời gian</TableHeader>
                   <TableHeader>Visibility</TableHeader>
                   <TableHeader>Participants</TableHeader>
-                  <TableHeader align="right">Thao tác</TableHeader>
+                  <TableHeader align="right" className="px-3">
+                    Thao tác
+                  </TableHeader>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 bg-white">
@@ -306,13 +308,13 @@ export default function EventsManagement({ divisions, groups, clubs }: EventsMan
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      <span className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
                         {VISIBILITY_LABELS[event.visibility]}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                        className={`inline-flex w-max items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
                           event.showParticipantsPublicly
                             ? 'border-sky-200 bg-sky-50 text-sky-700'
                             : 'border-slate-200 bg-slate-50 text-slate-600'
@@ -321,8 +323,8 @@ export default function EventsManagement({ divisions, groups, clubs }: EventsMan
                         {event.showParticipantsPublicly ? 'Công khai' : 'Ẩn danh sách'}
                       </span>
                     </TableCell>
-                    <TableCell align="right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell align="right" className="px-3">
+                      <div className="mx-auto flex w-max flex-col items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setBasicDetailEvent(event)}

@@ -21,7 +21,7 @@ export function RoleAssignmentBadge({ assignment }: { assignment: RoleAssignment
 
   return (
     <span
-      className={`rounded-full border px-2 py-1 text-xs font-semibold ${config.className}`}
+      className={`inline-flex w-max max-w-none items-center whitespace-nowrap rounded-full border px-2 py-1 text-xs font-semibold ${config.className}`}
       title={metadata}
     >
       {ROLE_LABELS[assignment.roleKey]} · {config.label}
@@ -162,7 +162,9 @@ export function LifecycleStatusBadge({ state }: { state: MembershipLifecycleStat
   const config = lifecycleStatusConfig[state];
 
   return (
-    <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${config.className}`}>
+    <span
+      className={`inline-flex w-max max-w-none items-center whitespace-nowrap rounded-full border px-2 py-1 text-xs font-semibold ${config.className}`}
+    >
       {config.label}
     </span>
   );

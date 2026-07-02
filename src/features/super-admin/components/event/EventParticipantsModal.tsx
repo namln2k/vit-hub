@@ -397,7 +397,7 @@ export default function EventParticipantsModal({ event, onClose }: EventParticip
                               </select>
                             ) : (
                               <span
-                                className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                                className={`inline-flex w-max items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${
                                   EVENT_MEMBERSHIP_STATUS_STYLES[participant.membership.status]
                                 }`}
                               >
@@ -415,7 +415,7 @@ export default function EventParticipantsModal({ event, onClose }: EventParticip
                                 participant.roleAssignments.map((assignment) => (
                                   <span
                                     key={assignment.id}
-                                    className="inline-flex rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700"
+                                    className="inline-flex w-max items-center whitespace-nowrap rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-700"
                                   >
                                     {ROLE_LABELS[assignment.roleKey]}
                                   </span>
