@@ -46,16 +46,6 @@ export function isDangerousPermissionManageToggle(
   );
 }
 
-export function formatGrantUpdatedLabel(grant: PermissionMatrix['grants'][number]) {
-  const updatedAt = formatDateTime(grant.updatedAt);
-
-  if (!grant.updatedBy) {
-    return `Updated ${updatedAt}`;
-  }
-
-  return `Updated ${updatedAt} by ${grant.updatedBy}`;
-}
-
 export function getGrantMetadataLabel(grant: PermissionMatrix['grants'][number]) {
   return [
     `effect_scope: ${grant.effectScope}`,

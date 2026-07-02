@@ -1,6 +1,5 @@
 import {
   formatEffectScopeLabel,
-  formatGrantUpdatedLabel,
   formatPermissionText,
   getGrantId,
   getGrantMetadataLabel,
@@ -185,9 +184,6 @@ export function PermissionRow({
                     <span>{formatEffectScopeLabel(grant.effectScope, roleScopeType)}</span>
                     <span className="mt-0.5 text-[11px] font-medium opacity-80">
                       {grant.effectScope} · {grant.isEnabled ? 'allow' : 'off'}
-                    </span>
-                    <span className="mt-0.5 text-[11px] font-medium opacity-70">
-                      {formatGrantUpdatedLabel(grant)}
                     </span>
                   </>
                 )}
